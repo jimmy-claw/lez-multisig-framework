@@ -9,8 +9,3 @@ members = [
 exclude = [
     "methods/guest",
 ]
-
-# Patch token_core to use main branch (bedrock doesn't have it as separate crate)
-[patch."https://github.com/logos-blockchain/lssa.git"]
-token_core = { git = "https://github.com/logos-blockchain/lssa.git", branch = "main" }
-token_program = { git = "https://github.com/logos-blockchain/lssa.git", branch = "main" }

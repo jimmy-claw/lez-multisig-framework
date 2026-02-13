@@ -1,9 +1,8 @@
-//! Handler for Send — transfers tokens from treasury vault to a recipient.
+//! Handler for Deposit — receives tokens from external sender into treasury vault.
 
-use nssa_core::account::{Account, AccountPostState, AccountWithMetadata};
-use nssa_core::program::{ChainedCall, InstructionData, ProgramId, ProgramOutput};
+use nssa_core::account::{AccountPostState, AccountWithMetadata};
+use nssa_core::program::{ChainedCall, InstructionData, ProgramOutput};
 use nssa_core::program::Program;
-use treasury_core::compute_vault_holding_pda;
 
 /// Token transfer instruction: [0x01 || amount (16 bytes LE)]
 fn build_transfer_instruction(amount: u128) -> InstructionData {
@@ -24,38 +23,34 @@ fn build_transfer_instruction(amount: u128) -> InstructionData {
 pub fn handle(accounts: &mut [AccountWithMetadata], amount: u128) -> ProgramOutput {
     if accounts.len() != 3 {
         return ProgramOutput::error(format!(
-            "Send requires 3 accounts (treasury_state, vault, recipient), got {}",
+            "Deposit requires 3 accounts (treasury_state, sender, vault), got {}",
             accounts.len()
         ));
     }
 
     let treasury_state = &mut accounts[0];
-    let vault_holding = &mut accounts[1];
-    let recipient = &mut accounts[2];
+    let sender = &mut accounts[1];
+    let vault_holding = &mut accounts[2];
 
     // Treasury state accessed but unchanged
     treasury_state.post_state = AccountPostState::new(treasury_state.account.clone());
 
-    // Mark vault as authorized (treasury is the authority)
-    vault_holding.is_authorized = true;
+    // Sender is authorized by the user's signature (not a PDA)
+    sender.post_state = AccountPostState::new(sender.account.clone());
+
+    // Vault is the receiver - mark as accessed
     vault_holding.post_state = AccountPostState::new(vault_holding.account.clone());
 
-    // Recipient is not a PDA, just a regular account
-    recipient.post_state = AccountPostState::new(recipient.account.clone());
-
     // Build chained call to Token program
+    // Sender authorizes the transfer, vault receives
     let token_program_id = Program::token().id();
     let instruction_data = build_transfer_instruction(amount);
-    
-    // We need to provide the vault account as pre-state for the chain
-    let vault_account = vault_holding.account.clone();
-    let recipient_account = recipient.account.clone();
     
     let chained_call = ChainedCall {
         program_id: token_program_id,
         instruction_data,
-        pre_states: vec![vault_account, recipient_account],
-        pda_seeds: vec![], // No PDA seeds needed - vault is already in pre_states
+        pre_states: vec![sender.account.clone(), vault_holding.account.clone()],
+        pda_seeds: vec![], // No PDA seeds - sender is authorized by signature, vault is receiver
     };
 
     ProgramOutput {
@@ -63,8 +58,8 @@ pub fn handle(accounts: &mut [AccountWithMetadata], amount: u128) -> ProgramOutp
         pre_states: accounts.to_vec(),
         post_states: vec![
             treasury_state.post_state.clone(),
+            sender.post_state.clone(),
             vault_holding.post_state.clone(),
-            recipient.post_state.clone(),
         ],
         chained_calls: vec![chained_call],
     }
