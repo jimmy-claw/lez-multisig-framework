@@ -1,18 +1,34 @@
-//! Treasury guest binary — entry point for the Risc0 zkVM.
+//! Treasury guest binary
 
-#![no_main]
+use nssa_core::program::{ProgramInput, read_nssa_inputs, write_nssa_outputs};
 
-use nssa_core::program::{read_nssa_inputs, write_nssa_outputs};
+type Instruction = u8;
 
 fn main() {
-    // Read inputs - but don't try to deserialize instruction
-    let (program_input, instruction_words) = read_nssa_inputs::<()>();
-    
-    // Just pass through the accounts unchanged
-    let post_states = program_input.pre_states
+    let (
+        ProgramInput {
+            pre_states,
+            instruction,
+        },
+        instruction_words,
+    ) = read_nssa_inputs::<Instruction>();
+
+    let post_states: Vec<nssa_core::program::AccountPostState> = pre_states
         .iter()
-        .map(|pre| nssa_core::program::AccountPostState::new(pre.account.clone()))
+        .enumerate()
+        .map(|(i, pre)| {
+            if instruction == 0 && i == 0 {
+                // CreateVault: first account is treasury state
+                nssa_core::program::AccountPostState::new(pre.account.clone())
+            } else if instruction == 0 {
+                // CreateVault: other accounts get claimed
+                nssa_core::program::AccountPostState::new_claimed(pre.account.clone())
+            } else {
+                // Default: just pass through
+                nssa_core::program::AccountPostState::new(pre.account.clone())
+            }
+        })
         .collect();
-    
-    write_nssa_outputs(instruction_words, program_input.pre_states, post_states);
+
+    write_nssa_outputs(instruction_words, pre_states, post_states);
 }
