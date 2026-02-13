@@ -109,7 +109,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -120,7 +120,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1270,7 +1270,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ab67060fc6b8ef687992d439ca0fa36e7ed17e9a0b16b25b601e8757df720de"
 dependencies = [
  "data-encoding",
- "syn 1.0.109",
+ "syn 2.0.115",
 ]
 
 [[package]]
@@ -2317,7 +2317,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3999,9 +3999,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-build"
-version = "3.0.5"
+version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f89937fa1c424b188cc4cabf65335736eca9c1e3df79c127f48636f55682f3a4"
+checksum = "e744682b661f2a022fddffddfe242608f8b194e839d9e83ddbb3378974942241"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -4139,9 +4139,9 @@ dependencies = [
 
 [[package]]
 name = "risc0-zkvm"
-version = "3.0.5"
+version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22b7eafb5d85be59cbd9da83f662cf47d834f1b836e14f675d1530b12c666867"
+checksum = "c39d9943fe71decea1e8b6a99480cefa33799ab08b5abfccd7e2a18fb07121c1"
 dependencies = [
  "anyhow",
  "bincode",
@@ -5171,6 +5171,7 @@ dependencies = [
 name = "treasury-examples"
 version = "0.1.0"
 dependencies = [
+ "borsh",
  "nssa",
  "nssa_core",
  "risc0-zkvm",
@@ -5178,6 +5179,17 @@ dependencies = [
  "tokio",
  "treasury_core",
  "wallet",
+]
+
+[[package]]
+name = "treasury-guest"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "nssa_core",
+ "risc0-zkvm",
+ "treasury_core",
+ "treasury_program",
 ]
 
 [[package]]
@@ -5202,6 +5214,7 @@ version = "0.1.0"
 dependencies = [
  "borsh",
  "nssa_core",
+ "risc0-zkvm",
  "serde",
  "treasury_core",
 ]
@@ -5540,7 +5553,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

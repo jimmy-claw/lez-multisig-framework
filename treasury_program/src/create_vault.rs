@@ -1,63 +1,61 @@
-//! Handler for CreateVault — creates a token definition and mints to treasury vault.
+use nssa_core::account::{Account, AccountWithMetadata};
+use nssa_core::program::{AccountPostState, ChainedCall, ProgramId};
+use treasury_core::{TreasuryState, vault_holding_pda_seed};
 
-use borsh::BorshDeserialize;
-use nssa_core::account::AccountWithMetadata;
-use nssa_core::program::{AccountPostState, ChainedCall, InstructionData, PdaSeed, ProgramId, ProgramOutput};
-use treasury_core::TreasuryState;
+/// Handle the `CreateVault` instruction.
+///
+/// Accounts: [treasury_state, token_definition, vault_holding]
+pub fn handle(
+    accounts: &[AccountWithMetadata],
+    token_name: &[u8; 6],
+    initial_supply: u128,
+    token_program_id: &ProgramId,
+) -> (Vec<AccountPostState>, Vec<ChainedCall>) {
+    assert!(accounts.len() == 3, "CreateVault requires exactly 3 accounts");
 
-/// Token instruction: [0x00 || total_supply (16 bytes LE) || name (6 bytes)]
-fn build_token_instruction(total_supply: u128, name: &str) -> InstructionData {
-    let mut name_bytes = [0u8; 6];
-    for (i, byte) in name.as_bytes().iter().take(6).enumerate() {
-        name_bytes[i] = *byte;
-    }
-    
-    let mut instruction = vec![0u8; 23];
-    instruction[1..17].copy_from_slice(&total_supply.to_le_bytes());
-    instruction[17..].copy_from_slice(&name_bytes);
-    
-    instruction
-        .chunks(4)
-        .map(|chunk| {
-            let mut word = [0u8; 4];
-            word.copy_from_slice(chunk);
-            u32::from_le_bytes(word)
-        })
-        .collect()
-}
+    let treasury_state_acct = &accounts[0];
+    let token_definition = &accounts[1];
+    let vault_holding = &accounts[2];
 
-pub fn handle(accounts: &mut [AccountWithMetadata], instruction: u128) -> ProgramOutput {
-    if accounts.len() != 3 {
-        return ProgramOutput {
-            instruction_data: vec![],
-            pre_states: accounts.to_vec(),
-            post_states: vec![],
-            chained_calls: vec![],
-        };
-    }
-
-    // For now, just claim the accounts but don't actually chain
-    // We need to extract the token_program_id from the instruction first
-    
-    // Read data from accounts first (avoid borrow issues)
-    let treasury_data = accounts[0].account.data.clone();
-    let token_def_data = accounts[1].account.clone();
-    let vault_data = accounts[2].account.clone();
-
-    // Update treasury state
-    let mut state = TreasuryState::try_from_slice(&*treasury_data).unwrap_or_default();
+    // -- 1. Update treasury state -----------------------------------------------
+    let is_first_time = treasury_state_acct.account == Account::default();
+    let mut state: TreasuryState = if is_first_time {
+        TreasuryState::default()
+    } else {
+        let data: Vec<u8> = treasury_state_acct.account.data.clone().into();
+        borsh::from_slice(&data).expect("failed to deserialize TreasuryState")
+    };
     state.vault_count += 1;
-    accounts[0].account.data = borsh::to_vec(&state).unwrap().try_into().unwrap();
 
-    let treasury_post = AccountPostState::new(accounts[0].account.clone());
-    let token_def_post = AccountPostState::new_claimed(token_def_data);
-    let vault_post = AccountPostState::new_claimed(vault_data);
+    let mut treasury_post = treasury_state_acct.account.clone();
+    let state_bytes = borsh::to_vec(&state).unwrap();
+    treasury_post.data = state_bytes.try_into().expect("TreasuryState too large for Data");
 
-    // Return without chained call for now - just test basic execution
-    ProgramOutput {
-        instruction_data: vec![],
-        pre_states: accounts.to_vec(),
-        post_states: vec![treasury_post, token_def_post, vault_post],
-        chained_calls: vec![],
-    }
+    let treasury_post_state = if is_first_time {
+        AccountPostState::new_claimed(treasury_post)
+    } else {
+        AccountPostState::new(treasury_post)
+    };
+
+    // -- 2. Build chained call to Token::NewFungibleDefinition ------------------
+    // Token instruction format: [0x00 || total_supply (16 bytes LE) || name (6 bytes)] = 23 bytes
+    let mut token_ix_bytes = vec![0u8; 23];
+    token_ix_bytes[0] = 0x00;
+    token_ix_bytes[1..17].copy_from_slice(&initial_supply.to_le_bytes());
+    token_ix_bytes[17..23].copy_from_slice(token_name);
+
+    let instruction_data = risc0_zkvm::serde::to_vec(&token_ix_bytes).unwrap();
+
+    // vault_holding needs is_authorized = true for PDA authorization
+    let mut vault_holding_authorized = vault_holding.clone();
+    vault_holding_authorized.is_authorized = true;
+
+    let chained_call = ChainedCall {
+        program_id: *token_program_id,
+        instruction_data,
+        pre_states: vec![token_definition.clone(), vault_holding_authorized],
+        pda_seeds: vec![vault_holding_pda_seed(&token_definition.account_id)],
+    };
+
+    (vec![treasury_post_state], vec![chained_call])
 }

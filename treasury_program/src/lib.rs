@@ -1,38 +1,29 @@
-//! Treasury program
+pub mod create_vault;
+pub mod deposit;
+pub mod send;
 
 use nssa_core::account::AccountWithMetadata;
-use nssa_core::program::AccountPostState;
+use nssa_core::program::{AccountPostState, ChainedCall};
+use treasury_core::Instruction;
 
-pub type Instruction = u8;
-
-pub fn process(pre_states: &[AccountWithMetadata], instruction: Instruction) -> (Vec<AccountPostState>, Vec<u8>) {
+/// Main entry point called from the guest binary.
+pub fn process(
+    accounts: &[AccountWithMetadata],
+    instruction: &Instruction,
+) -> (Vec<AccountPostState>, Vec<ChainedCall>) {
     match instruction {
-        0 => create_vault(pre_states),
-        _ => noop(pre_states),
+        Instruction::CreateVault {
+            token_name,
+            initial_supply,
+            token_program_id,
+        } => create_vault::handle(accounts, token_name, *initial_supply, token_program_id),
+        Instruction::Send {
+            amount,
+            token_program_id,
+        } => send::handle(accounts, *amount, token_program_id),
+        Instruction::Deposit {
+            amount,
+            token_program_id,
+        } => deposit::handle(accounts, *amount, token_program_id),
     }
-}
-
-fn create_vault(pre_states: &[AccountWithMetadata]) -> (Vec<AccountPostState>, Vec<u8>) {
-    let post_states: Vec<AccountPostState> = pre_states
-        .iter()
-        .enumerate()
-        .map(|(i, pre)| {
-            if i == 0 {
-                // Treasury state - just return as-is for now
-                AccountPostState::new(pre.account.clone())
-            } else {
-                // Claim other accounts
-                AccountPostState::new_claimed(pre.account.clone())
-            }
-        })
-        .collect();
-    (post_states, vec![])
-}
-
-fn noop(pre_states: &[AccountWithMetadata]) -> (Vec<AccountPostState>, Vec<u8>) {
-    let post_states: Vec<AccountPostState> = pre_states
-        .iter()
-        .map(|pre| AccountPostState::new(pre.account.clone()))
-        .collect();
-    (post_states, vec![])
 }

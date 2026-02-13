@@ -1,31 +1,22 @@
-//! Treasury guest binary - follows exact noop pattern from lssa
+#![no_main]
 
-use nssa_core::program::{AccountPostState, ProgramInput, read_nssa_inputs, write_nssa_outputs};
+use nssa_core::program::{ProgramInput, read_nssa_inputs, write_nssa_outputs_with_chained_call};
+use treasury_core::Instruction;
 
-type Instruction = Vec<u8>;
+risc0_zkvm::guest::entry!(main);
 
 fn main() {
-    // Log that we're starting
-    println!("TREASURY: Guest starting");
-    
-    let (
-        ProgramInput { pre_states, instruction },
+    let (ProgramInput { pre_states, instruction }, instruction_words) =
+        read_nssa_inputs::<Instruction>();
+
+    let pre_states_clone = pre_states.clone();
+
+    let (post_states, chained_calls) = treasury_program::process(&pre_states, &instruction);
+
+    write_nssa_outputs_with_chained_call(
         instruction_words,
-    ) = read_nssa_inputs::<Instruction>();
-
-    println!("TREASURY: Read {} pre_states", pre_states.len());
-    println!("TREASURY: Instruction length: {} bytes", instruction.len());
-    
-    // For now, just pass through all accounts unchanged
-    let post_states: Vec<AccountPostState> = pre_states
-        .iter()
-        .map(|pre| AccountPostState::new(pre.account.clone()))
-        .collect();
-    
-    println!("TREASURY: Created {} post_states", post_states.len());
-    println!("TREASURY: Calling write_nssa_outputs");
-
-    write_nssa_outputs(instruction_words, pre_states, post_states);
-    
-    println!("TREASURY: Guest complete!");
+        pre_states_clone,
+        post_states,
+        chained_calls,
+    );
 }
