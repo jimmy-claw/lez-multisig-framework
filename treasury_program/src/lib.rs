@@ -14,13 +14,15 @@ pub fn process(
     accounts: &mut [AccountWithMetadata],
     instruction: &Instruction,
 ) -> ProgramOutput {
-    match instruction {
-        Instruction::CreateVault {
-            token_name,
-            initial_supply,
-            token_program_id,
-        } => create_vault::handle(accounts, token_name, *initial_supply, token_program_id),
-        Instruction::Send { amount, token_program_id } => send::handle(accounts, *amount, token_program_id),
-        Instruction::Deposit { amount, token_program_id } => deposit::handle(accounts, *amount, token_program_id),
+    match instruction.variant() {
+        0 => create_vault::handle(accounts, instruction),
+        1 => send::handle(accounts, instruction),
+        2 => deposit::handle(accounts, instruction),
+        _ => ProgramOutput {
+            instruction_data: vec![],
+            pre_states: accounts.to_vec(),
+            post_states: vec![],
+            chained_calls: vec![],
+        }
     }
 }

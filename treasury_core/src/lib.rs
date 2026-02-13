@@ -9,50 +9,56 @@ use serde::{Deserialize, Serialize};
 // Instructions
 // ---------------------------------------------------------------------------
 
-/// Instructions that the Treasury program understands.
-/// 
-/// This treasury demonstrates PDA patterns with Token program integration.
-/// It creates token vaults and can send tokens from them.
+/// Simple instruction encoding for the treasury program.
+/// Format: [variant: u8][data...]
+/// - variant 0: CreateVault -> [0][name_len: u8][name bytes][initial_supply: u128][token_program_id: 8 u32s]
+/// - variant 1: Send -> [1][amount: u128][token_program_id: 8 u32s]
+/// - variant 2: Deposit -> [2][amount: u128][token_program_id: 8 u32s]
 #[derive(Debug, Clone, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
-pub enum Instruction {
-    /// Create a new vault for a token.
-    ///
-    /// Chains to Token::NewFungibleDefinition to create a new token definition
-    /// and mint the initial supply into the treasury's PDA vault.
-    CreateVault {
-        /// Name of the token (up to 6 bytes)
-        token_name: String,
-        /// Initial supply to mint
-        initial_supply: u128,
-        /// The token program ID to chain to
-        token_program_id: ProgramId,
-    },
+pub struct Instruction(pub Vec<u8>);
 
-    /// Send tokens from the treasury vault to a recipient.
-    Send {
-        /// Amount to send
-        amount: u128,
-        /// The token program ID to chain to
-        token_program_id: ProgramId,
-    },
+impl Instruction {
+    pub fn create_vault(token_name: &str, initial_supply: u128, token_program_id: ProgramId) -> Self {
+        let mut data = vec![0u8]; // variant 0
+        data.push(token_name.len() as u8);
+        data.extend_from_slice(token_name.as_bytes());
+        data.extend_from_slice(&initial_supply.to_le_bytes());
+        data.extend_from_slice(&token_program_id.to_le_bytes());
+        Instruction(data)
+    }
 
-    /// Deposit tokens into the treasury vault from an external sender.
-    Deposit {
-        /// Amount to deposit
-        amount: u128,
-        /// The token program ID to chain to
-        token_program_id: ProgramId,
-    },
+    pub fn send(amount: u128, token_program_id: ProgramId) -> Self {
+        let mut data = vec![1u8]; // variant 1
+        data.extend_from_slice(&amount.to_le_bytes());
+        data.extend_from_slice(&token_program_id.to_le_bytes());
+        Instruction(data)
+    }
+
+    pub fn deposit(amount: u128, token_program_id: ProgramId) -> Self {
+        let mut data = vec![2u8]; // variant 2
+        data.extend_from_slice(&amount.to_le_bytes());
+        data.extend_from_slice(&token_program_id.to_le_bytes());
+        Instruction(data)
+    }
+
+    pub fn variant(&self) -> u8 {
+        self.0[0]
+    }
+}
+
+impl ProgramId {
+    pub fn to_le_bytes(&self) -> Vec<u8> {
+        self.0.iter().flat_map(|&x| x.to_le_bytes()).collect()
+    }
 }
 
 // ---------------------------------------------------------------------------
-// Vault state (persisted in the treasury_state PDA)
+// Vault state
 // ---------------------------------------------------------------------------
 
 /// State stored in the treasury_state PDA.
-#[derive(Debug, Clone, Default, BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, BorshSerialize, BorshDeserialize)]
 pub struct TreasuryState {
-    /// How many vaults have been created.
     pub vault_count: u64,
 }
 
@@ -60,7 +66,6 @@ pub struct TreasuryState {
 // PDA derivation helpers
 // ---------------------------------------------------------------------------
 
-/// Fixed 32-byte seed for treasury state PDA.
 const TREASURY_STATE_SEED: [u8; 32] = {
     let mut seed = [0u8; 32];
     let tag = b"treasury_state";
@@ -72,12 +77,10 @@ const TREASURY_STATE_SEED: [u8; 32] = {
     seed
 };
 
-/// Compute the treasury state PDA account ID.
 pub fn compute_treasury_state_pda(treasury_program_id: &ProgramId) -> AccountId {
     AccountId::from((treasury_program_id, &treasury_state_pda_seed()))
 }
 
-/// Compute the vault holding PDA for a given token definition.
 pub fn compute_vault_holding_pda(
     treasury_program_id: &ProgramId,
     token_definition_id: &AccountId,
@@ -85,12 +88,10 @@ pub fn compute_vault_holding_pda(
     AccountId::from((treasury_program_id, &vault_holding_pda_seed(token_definition_id)))
 }
 
-/// Build the PdaSeed for treasury state.
 pub fn treasury_state_pda_seed() -> PdaSeed {
     PdaSeed::new(TREASURY_STATE_SEED)
 }
 
-/// Build the PdaSeed for a vault holding PDA.
 pub fn vault_holding_pda_seed(token_definition_id: &AccountId) -> PdaSeed {
     PdaSeed::new(*token_definition_id.value())
 }
