@@ -6,13 +6,12 @@ pub mod deposit;
 
 pub use treasury_core::Instruction;
 
-use nssa_core::account::{Account, AccountId, AccountWithMetadata};
-use nssa_core::program::{ChainedCall, InstructionData, PdaSeed, ProgramId, ProgramOutput};
-use treasury_core::{compute_treasury_state_pda, compute_vault_holding_pda, TreasuryState};
+use nssa_core::account::AccountWithMetadata;
+use nssa_core::program::{AccountPostState, ProgramOutput};
+use treasury_core::TreasuryState;
 
 /// Dispatch incoming instructions to their handlers.
 pub fn process(
-    program_id: &ProgramId,
     accounts: &mut [AccountWithMetadata],
     instruction: &Instruction,
 ) -> ProgramOutput {
@@ -20,7 +19,7 @@ pub fn process(
         Instruction::CreateVault {
             token_name,
             initial_supply,
-        } => create_vault::handle(accounts, program_id, token_name, *initial_supply),
+        } => create_vault::handle(accounts, token_name, *initial_supply),
         Instruction::Send { amount } => send::handle(accounts, *amount),
         Instruction::Deposit { amount } => deposit::handle(accounts, *amount),
     }
