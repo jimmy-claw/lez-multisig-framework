@@ -10,12 +10,9 @@ use serde::{Deserialize, Serialize};
 // ---------------------------------------------------------------------------
 
 /// Simple instruction encoding for the treasury program.
-/// Format: [variant: u8][data...]
-/// - variant 0: CreateVault -> [0][name_len: u8][name bytes][initial_supply: u128][token_program_id: 8 u32s]
-/// - variant 1: Send -> [1][amount: u128][token_program_id: 8 u32s]
-/// - variant 2: Deposit -> [2][amount: u128][token_program_id: 8 u32s]
-#[derive(Debug, Clone, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
-pub struct Instruction(pub Vec<u8>);
+/// The Instruction is a Vec<u8> wrapper - serialization is handled by Message::try_new
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Instruction(Vec<u8>);
 
 impl Instruction {
     pub fn create_vault(token_name: &str, initial_supply: u128, token_program_id: ProgramId) -> Self {
@@ -23,32 +20,37 @@ impl Instruction {
         data.push(token_name.len() as u8);
         data.extend_from_slice(token_name.as_bytes());
         data.extend_from_slice(&initial_supply.to_le_bytes());
-        data.extend_from_slice(&token_program_id.to_le_bytes());
+        // ProgramId is [u32; 8]
+        for &word in &token_program_id {
+            data.extend_from_slice(&word.to_le_bytes());
+        }
         Instruction(data)
     }
 
     pub fn send(amount: u128, token_program_id: ProgramId) -> Self {
         let mut data = vec![1u8]; // variant 1
         data.extend_from_slice(&amount.to_le_bytes());
-        data.extend_from_slice(&token_program_id.to_le_bytes());
+        for &word in &token_program_id {
+            data.extend_from_slice(&word.to_le_bytes());
+        }
         Instruction(data)
     }
 
     pub fn deposit(amount: u128, token_program_id: ProgramId) -> Self {
         let mut data = vec![2u8]; // variant 2
         data.extend_from_slice(&amount.to_le_bytes());
-        data.extend_from_slice(&token_program_id.to_le_bytes());
+        for &word in &token_program_id {
+            data.extend_from_slice(&word.to_le_bytes());
+        }
         Instruction(data)
     }
 
     pub fn variant(&self) -> u8 {
         self.0[0]
     }
-}
 
-impl ProgramId {
-    pub fn to_le_bytes(&self) -> Vec<u8> {
-        self.0.iter().flat_map(|&x| x.to_le_bytes()).collect()
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
     }
 }
 
@@ -56,7 +58,6 @@ impl ProgramId {
 // Vault state
 // ---------------------------------------------------------------------------
 
-/// State stored in the treasury_state PDA.
 #[derive(Debug, Clone, Default, BorshSerialize, BorshDeserialize)]
 pub struct TreasuryState {
     pub vault_count: u64,
