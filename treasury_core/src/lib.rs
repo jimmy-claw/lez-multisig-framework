@@ -15,6 +15,8 @@ pub enum Instruction {
         token_name: [u8; 6],
         initial_supply: u128,
         token_program_id: ProgramId,
+        /// Account IDs authorized to send from the vault. Any one of them can sign.
+        authorized_accounts: Vec<[u8; 32]>,
     },
     Send {
         amount: u128,
@@ -33,6 +35,9 @@ pub enum Instruction {
 #[derive(Debug, Clone, Default, BorshSerialize, BorshDeserialize)]
 pub struct TreasuryState {
     pub vault_count: u64,
+    /// Account IDs that can authorize Send instructions.
+    /// Stored as raw bytes for borsh simplicity.
+    pub authorized_accounts: Vec<[u8; 32]>,
 }
 
 // ---------------------------------------------------------------------------

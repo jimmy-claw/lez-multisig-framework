@@ -10,8 +10,10 @@ pub fn handle(
     token_name: &[u8; 6],
     initial_supply: u128,
     token_program_id: &ProgramId,
+    authorized_accounts: &Vec<[u8; 32]>,
 ) -> (Vec<AccountPostState>, Vec<ChainedCall>) {
     assert!(accounts.len() == 3, "CreateVault requires exactly 3 accounts");
+    assert!(!authorized_accounts.is_empty(), "At least one authorized account required");
 
     let treasury_state_acct = &accounts[0];
     let token_definition = &accounts[1];
@@ -26,6 +28,7 @@ pub fn handle(
         borsh::from_slice(&data).expect("failed to deserialize TreasuryState")
     };
     state.vault_count += 1;
+    state.authorized_accounts = authorized_accounts.clone();
 
     let mut treasury_post = treasury_state_acct.account.clone();
     let state_bytes = borsh::to_vec(&state).unwrap();
@@ -38,13 +41,10 @@ pub fn handle(
     };
 
     // -- 2. Post states for all accounts ----------------------------------------
-    // token_definition and vault_holding are passed unchanged; the Token program
-    // will mutate them via the chained call.
     let token_def_post = AccountPostState::new(token_definition.account.clone());
     let vault_post = AccountPostState::new(vault_holding.account.clone());
 
     // -- 3. Build chained call to Token::NewFungibleDefinition ------------------
-    // Token instruction format: [0x00 || total_supply (16 bytes LE) || name (6 bytes)] = 23 bytes
     let mut token_ix_bytes = vec![0u8; 23];
     token_ix_bytes[0] = 0x00;
     token_ix_bytes[1..17].copy_from_slice(&initial_supply.to_le_bytes());
@@ -52,7 +52,6 @@ pub fn handle(
 
     let instruction_data = risc0_zkvm::serde::to_vec(&token_ix_bytes).unwrap();
 
-    // vault_holding needs is_authorized = true for PDA authorization
     let mut vault_holding_authorized = vault_holding.clone();
     vault_holding_authorized.is_authorized = true;
 

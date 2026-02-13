@@ -16,7 +16,8 @@ pub fn process(
             token_name,
             initial_supply,
             token_program_id,
-        } => create_vault::handle(accounts, token_name, *initial_supply, token_program_id),
+            authorized_accounts,
+        } => create_vault::handle(accounts, token_name, *initial_supply, token_program_id, authorized_accounts),
         Instruction::Send {
             amount,
             token_program_id,

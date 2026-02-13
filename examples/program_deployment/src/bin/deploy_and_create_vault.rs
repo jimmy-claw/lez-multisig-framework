@@ -12,7 +12,7 @@ async fn main() {
 
     // Args: <treasury.bin> <token.bin> <token_def_account_id>
     let treasury_path = std::env::args_os().nth(1)
-        .expect("Usage: deploy_and_create_vault <treasury.bin> <token.bin> <token_def_account_id>")
+        .expect("Usage: deploy_and_create_vault <treasury.bin> <token.bin> <token_def_id> <signer_id>")
         .into_string().unwrap();
     let token_path = std::env::args_os().nth(2)
         .expect("Missing <token.bin> path")
@@ -41,6 +41,16 @@ async fn main() {
     println!("Token definition:       {}", token_def_id);
     println!("Vault holding PDA:      {}", vault_holding_id);
 
+    // The signer account is the authorized account for future Send instructions.
+    // For now, use the token_def_id as the authorized signer (replace with your actual signer).
+    let signer_id: AccountId = std::env::args_os()
+        .nth(4)
+        .expect("Missing <signer_account_id> — the account authorized to send from the vault")
+        .into_string().unwrap()
+        .parse().unwrap();
+
+    println!("Authorized signer:      {}", signer_id);
+
     // Build the CreateVault instruction
     let mut token_name = [0u8; 6];
     token_name[..4].copy_from_slice(b"TRSY");
@@ -49,6 +59,7 @@ async fn main() {
         token_name,
         initial_supply: 1_000_000,
         token_program_id,
+        authorized_accounts: vec![*signer_id.value()],
     };
 
     // Message::try_new handles risc0 serialization internally

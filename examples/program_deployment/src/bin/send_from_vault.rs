@@ -10,9 +10,9 @@ use wallet::WalletCore;
 async fn main() {
     let wallet_core = WalletCore::from_env().unwrap();
 
-    // Args: <treasury.bin> <token.bin> <token_def_id> <recipient_id> <amount>
+    // Args: <treasury.bin> <token.bin> <token_def_id> <recipient_id> <amount> <signer_id> <signer_private_key>
     let treasury_path = std::env::args_os().nth(1)
-        .expect("Usage: send_from_vault <treasury.bin> <token.bin> <token_def_id> <recipient_id> <amount>")
+        .expect("Usage: send_from_vault <treasury.bin> <token.bin> <token_def_id> <recipient_id> <amount> <signer_id> <signer_private_key>")
         .into_string().unwrap();
     let token_path = std::env::args_os().nth(2)
         .expect("Missing <token.bin> path")
@@ -29,6 +29,13 @@ async fn main() {
         .expect("Missing <amount>")
         .into_string().unwrap()
         .parse().unwrap();
+    let signer_id: AccountId = std::env::args_os().nth(6)
+        .expect("Missing <signer_account_id> — must be an authorized account from CreateVault")
+        .into_string().unwrap()
+        .parse().unwrap();
+    let signer_private_key = std::env::args_os().nth(7)
+        .expect("Missing <signer_private_key> — private key for the signer account")
+        .into_string().unwrap();
 
     // Load programs to get their IDs
     let treasury_bytecode: Vec<u8> = std::fs::read(&treasury_path).unwrap();
@@ -46,6 +53,7 @@ async fn main() {
     println!("Treasury state PDA:     {}", treasury_state_id);
     println!("Vault holding PDA:      {}", vault_holding_id);
     println!("Recipient:              {}", recipient_id);
+    println!("Signer:                 {}", signer_id);
     println!("Amount:                 {}", amount);
 
     // Build the Send instruction
@@ -54,10 +62,19 @@ async fn main() {
         token_program_id,
     };
 
-    // Message::try_new handles risc0 serialization internally
-    let account_ids = vec![treasury_state_id, vault_holding_id, recipient_id];
-    let nonces = vec![];
-    let signing_keys = [];
+    // Include signer_id as the 4th account — Send checks it's authorized
+    let account_ids = vec![treasury_state_id, vault_holding_id, recipient_id, signer_id];
+
+    // Parse the signer's private key for signing
+    let signer_key_bytes: [u8; 32] = hex::decode(&signer_private_key)
+        .expect("Invalid hex for signer private key")
+        .try_into()
+        .expect("Private key must be 32 bytes");
+    let signing_keys = [signer_key_bytes];
+
+    // Signer's nonce (need to match current on-chain nonce)
+    let nonces = vec![0u128]; // TODO: fetch actual nonce
+
     let message = Message::try_new(
         treasury_program_id,
         account_ids,
