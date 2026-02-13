@@ -19,7 +19,7 @@ PROGRAMS_DIR := target/riscv32im-risc0-zkvm-elf/docker
 # Token program binary — set this to point to your lssa build
 # e.g. LSSA_DIR=../lssa
 LSSA_DIR ?= $(error Set LSSA_DIR to your lssa repo root, e.g. make build LSSA_DIR=../lssa)
-TOKEN_BIN := $(LSSA_DIR)/$(PROGRAMS_DIR)/token.bin
+TOKEN_BIN := $(LSSA_DIR)/artifacts/program_methods/token.bin
 
 TREASURY_BIN := $(PROGRAMS_DIR)/treasury.bin
 
