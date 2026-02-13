@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 /// 
 /// This treasury demonstrates PDA patterns with Token program integration.
 /// It creates token vaults and can send tokens from them.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
 pub enum Instruction {
     /// Create a new vault for a token.
     ///
