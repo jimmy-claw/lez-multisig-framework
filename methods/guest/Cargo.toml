@@ -3,8 +3,6 @@ name = "treasury-guest"
 version = "0.1.0"
 edition = "2024"
 
-[workspace]
-
 [[bin]]
 name = "treasury"
 path = "src/bin/treasury.rs"

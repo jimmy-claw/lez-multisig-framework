@@ -4,10 +4,8 @@ members = [
     "treasury_core",
     "treasury_program",
     "methods",
-    "examples/program_deployment",
-]
-exclude = [
     "methods/guest",
+    "examples/program_deployment",
 ]
 
 [workspace.dependencies]
