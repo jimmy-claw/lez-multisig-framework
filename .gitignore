@@ -1,1 +1,5 @@
 target/
+
+# Local treasury state
+.treasury-state
+.treasury-state.tmp
