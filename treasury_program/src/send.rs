@@ -21,7 +21,8 @@ pub fn handle(
     let vault_data: Vec<u8> = vault_holding.account.data.clone().into();
     assert!(
         vault_data.len() >= 33,
-        "vault_holding data too short to read definition_id"
+        "vault_holding data too short to read definition_id (len={})",
+        vault_data.len()
     );
     let mut def_id_bytes = [0u8; 32];
     def_id_bytes.copy_from_slice(&vault_data[1..33]);
@@ -32,7 +33,6 @@ pub fn handle(
     let mut token_ix_bytes = vec![0u8; 23];
     token_ix_bytes[0] = 0x01;
     token_ix_bytes[1..17].copy_from_slice(&amount.to_le_bytes());
-    // bytes 17..23 are already 0x00
 
     let instruction_data = risc0_zkvm::serde::to_vec(&token_ix_bytes).unwrap();
 
@@ -47,8 +47,13 @@ pub fn handle(
         pda_seeds: vec![vault_holding_pda_seed(&definition_id)],
     };
 
-    // Treasury state unchanged
+    // Post states for all 3 accounts (unchanged — Token handles mutations via chained call)
     let treasury_post = AccountPostState::new(treasury_state_acct.account.clone());
+    let vault_post = AccountPostState::new(vault_holding.account.clone());
+    let recipient_post = AccountPostState::new(recipient.account.clone());
 
-    (vec![treasury_post], vec![chained_call])
+    (
+        vec![treasury_post, vault_post, recipient_post],
+        vec![chained_call],
+    )
 }

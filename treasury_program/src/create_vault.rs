@@ -37,7 +37,13 @@ pub fn handle(
         AccountPostState::new(treasury_post)
     };
 
-    // -- 2. Build chained call to Token::NewFungibleDefinition ------------------
+    // -- 2. Post states for all accounts ----------------------------------------
+    // token_definition and vault_holding are passed unchanged; the Token program
+    // will mutate them via the chained call.
+    let token_def_post = AccountPostState::new(token_definition.account.clone());
+    let vault_post = AccountPostState::new(vault_holding.account.clone());
+
+    // -- 3. Build chained call to Token::NewFungibleDefinition ------------------
     // Token instruction format: [0x00 || total_supply (16 bytes LE) || name (6 bytes)] = 23 bytes
     let mut token_ix_bytes = vec![0u8; 23];
     token_ix_bytes[0] = 0x00;
@@ -57,5 +63,8 @@ pub fn handle(
         pda_seeds: vec![vault_holding_pda_seed(&token_definition.account_id)],
     };
 
-    (vec![treasury_post_state], vec![chained_call])
+    (
+        vec![treasury_post_state, token_def_post, vault_post],
+        vec![chained_call],
+    )
 }

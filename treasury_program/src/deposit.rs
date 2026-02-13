@@ -20,7 +20,6 @@ pub fn handle(
     let mut token_ix_bytes = vec![0u8; 23];
     token_ix_bytes[0] = 0x01;
     token_ix_bytes[1..17].copy_from_slice(&amount.to_le_bytes());
-    // bytes 17..23 are already 0x00
 
     let instruction_data = risc0_zkvm::serde::to_vec(&token_ix_bytes).unwrap();
 
@@ -32,8 +31,13 @@ pub fn handle(
         pda_seeds: vec![],
     };
 
-    // Treasury state unchanged
+    // Post states for all 3 accounts (unchanged — Token handles mutations via chained call)
     let treasury_post = AccountPostState::new(treasury_state_acct.account.clone());
+    let sender_post = AccountPostState::new(sender_holding.account.clone());
+    let vault_post = AccountPostState::new(vault_holding.account.clone());
 
-    (vec![treasury_post], vec![chained_call])
+    (
+        vec![treasury_post, sender_post, vault_post],
+        vec![chained_call],
+    )
 }
