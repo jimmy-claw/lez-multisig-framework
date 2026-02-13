@@ -82,22 +82,12 @@ async fn main() {
         token_program_id,
     };
 
-    // Serialize instruction
-    let instruction_data = Program::serialize_instruction(&instruction).unwrap();
-    let instruction_bytes: Vec<u8> = instruction_data
-        .iter()
-        .flat_map(|w| w.to_le_bytes())
-        .collect();
-
-    // Build and submit the transaction
-    let account_ids = vec![treasury_state_id, vault_holding_id, recipient_id];
-    let nonces = vec![];
-    let signing_keys = [];
+    // Message::try_new serializes automatically
     let message = Message::try_new(
         treasury_program_id,
         account_ids,
         nonces,
-        instruction_bytes,
+        instruction,
     )
     .unwrap();
     let witness_set = WitnessSet::for_message(&message, &signing_keys);

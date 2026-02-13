@@ -68,23 +68,12 @@ async fn main() {
         token_program_id,
     };
 
-    // Serialize instruction using nssa's serialize_instruction
-    let instruction_data = Program::serialize_instruction(&instruction).unwrap();
-    // Convert to bytes for Message
-    let instruction_bytes: Vec<u8> = instruction_data
-        .iter()
-        .flat_map(|w| w.to_le_bytes())
-        .collect();
-
-    // Build and submit the transaction
-    let account_ids = vec![treasury_state_id, token_def_id, vault_holding_id];
-    let nonces = vec![];
-    let signing_keys = [];
+    // Message::try_new serializes automatically - don't convert to bytes!
     let message = Message::try_new(
         treasury_program_id,
         account_ids,
         nonces,
-        instruction_bytes,
+        instruction,
     )
     .unwrap();
     let witness_set = WitnessSet::for_message(&message, &signing_keys);
