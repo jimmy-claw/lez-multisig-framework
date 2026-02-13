@@ -9,49 +9,41 @@ use serde::{Deserialize, Serialize};
 // Instructions
 // ---------------------------------------------------------------------------
 
-/// Simple instruction encoding for the treasury program.
-/// The Instruction is a Vec<u8> wrapper - serialization is handled by Message::try_new
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Instruction(Vec<u8>);
+/// Treasury instruction encoding using simple u128:
+/// - High 8 bits: variant (0=create_vault, 1=send, 2=deposit)
+/// - Remaining bits: encoded data
+pub type Instruction = u128;
 
-impl Instruction {
-    pub fn create_vault(token_name: &str, initial_supply: u128, token_program_id: ProgramId) -> Self {
-        let mut data = vec![0u8]; // variant 0
-        data.push(token_name.len() as u8);
-        data.extend_from_slice(token_name.as_bytes());
-        data.extend_from_slice(&initial_supply.to_le_bytes());
-        // ProgramId is [u32; 8]
-        for &word in &token_program_id {
-            data.extend_from_slice(&word.to_le_bytes());
-        }
-        Instruction(data)
-    }
+pub const VARIANT_CREATE_VAULT: u128 = 0;
+pub const VARIANT_SEND: u128 = 1;
+pub const VARIANT_DEPOSIT: u128 = 2;
 
-    pub fn send(amount: u128, token_program_id: ProgramId) -> Self {
-        let mut data = vec![1u8]; // variant 1
-        data.extend_from_slice(&amount.to_le_bytes());
-        for &word in &token_program_id {
-            data.extend_from_slice(&word.to_le_bytes());
-        }
-        Instruction(data)
-    }
+pub fn get_variant(instruction: Instruction) -> u128 {
+    instruction >> 120 // top 8 bits
+}
 
-    pub fn deposit(amount: u128, token_program_id: ProgramId) -> Self {
-        let mut data = vec![2u8]; // variant 2
-        data.extend_from_slice(&amount.to_le_bytes());
-        for &word in &token_program_id {
-            data.extend_from_slice(&word.to_le_bytes());
-        }
-        Instruction(data)
+pub fn create_vault_instruction(token_name: &str, initial_supply: u128, token_program_id: ProgramId) -> Instruction {
+    // Format: [variant: 8][name_len: 8][name: 48][supply: 128][program_id: 256] = 448 bits
+    let variant = VARIANT_CREATE_VAULT << 120;
+    let name_len = (token_name.len() as u128) << 112;
+    // Pack name into 48 bits (6 bytes)
+    let name_bytes = token_name.as_bytes();
+    let mut name_packed = 0u128;
+    for (i, &b) in name_bytes.iter().take(6).enumerate() {
+        name_packed |= (b as u128) << (40 - i * 8);
     }
+    let name_packed_bits = name_packed << 64;
+    let supply_bits = initial_supply << 128;
+    
+    variant | name_len | name_packed_bits | supply_bits | 0 // TODO: encode program_id
+}
 
-    pub fn variant(&self) -> u8 {
-        self.0[0]
-    }
+pub fn send_instruction(amount: u128) -> Instruction {
+    (VARIANT_SEND << 120) | amount
+}
 
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.0
-    }
+pub fn deposit_instruction(amount: u128) -> Instruction {
+    (VARIANT_DEPOSIT << 120) | amount
 }
 
 // ---------------------------------------------------------------------------

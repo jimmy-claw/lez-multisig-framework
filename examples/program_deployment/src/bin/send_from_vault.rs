@@ -5,7 +5,7 @@ use nssa::{
     program::Program,
     public_transaction::{Message, WitnessSet},
 };
-use treasury_core::{compute_treasury_state_pda, compute_vault_holding_pda, Instruction};
+use treasury_core::{compute_treasury_state_pda, compute_vault_holding_pda, send_instruction, Instruction};
 use wallet::WalletCore;
 
 #[tokio::main]
@@ -48,10 +48,6 @@ async fn main() {
     let treasury_program = Program::new(treasury_bytecode).unwrap();
     let treasury_program_id = treasury_program.id();
 
-    let token_bytecode: Vec<u8> = std::fs::read(&token_bin_path).unwrap();
-    let token_program = Program::new(token_bytecode).unwrap();
-    let token_program_id = token_program.id();
-
     let treasury_state_id = compute_treasury_state_pda(&treasury_program_id);
     let vault_holding_id = compute_vault_holding_pda(&treasury_program_id, &token_def_id);
 
@@ -60,8 +56,7 @@ async fn main() {
     println!("Recipient:              {}", recipient_id);
     println!("Amount:                 {}", amount);
 
-    // Build instruction
-    let instruction = Instruction::send(amount, token_program_id);
+    let instruction = send_instruction(amount);
 
     let account_ids = vec![treasury_state_id, vault_holding_id, recipient_id];
     let nonces = vec![];

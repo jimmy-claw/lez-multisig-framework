@@ -47,10 +47,9 @@ async fn main() {
     println!("Token definition:       {}", token_def_id);
     println!("Vault holding PDA:      {}", vault_holding_id);
 
-    // Build instruction - simple Vec<u8> style
-    let instruction = Instruction::create_vault("TreasuryToken", 1_000_000, token_program_id);
+    // Simple u128 instruction - just test execution first
+    let instruction = treasury_core::create_vault_instruction("Test", 1000, token_program_id);
 
-    // Pass directly to Message::try_new like hello_world does!
     let account_ids = vec![treasury_state_id, token_def_id, vault_holding_id];
     let nonces = vec![];
     let signing_keys = [];
