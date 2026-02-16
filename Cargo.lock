@@ -5172,6 +5172,7 @@ name = "treasury-examples"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "clap",
  "nssa",
  "nssa_core",
  "risc0-zkvm",

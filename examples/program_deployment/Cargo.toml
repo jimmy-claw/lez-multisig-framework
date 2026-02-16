@@ -12,18 +12,11 @@ name = "send_from_vault"
 path = "src/bin/send_from_vault.rs"
 
 [[bin]]
-name = "create_multisig"
-path = "src/bin/create_multisig.rs"
-
-[[bin]]
-name = "multisig_execute"
-path = "src/bin/multisig_execute.rs"
-
-[[bin]]
-name = "multisig_manage"
-path = "src/bin/multisig_manage.rs"
+name = "treasury"
+path = "src/bin/treasury.rs"
 
 [dependencies]
+clap = { version = "4", features = ["derive"] }
 treasury_core = { path = "../../treasury_core" }
 nssa_core = { git = "https://github.com/logos-blockchain/lssa.git", branch = "schouhy/full-bedrock-integration" }
 nssa = { git = "https://github.com/logos-blockchain/lssa.git", branch = "schouhy/full-bedrock-integration" }
