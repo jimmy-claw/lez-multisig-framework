@@ -10,6 +10,7 @@
 
 use nssa_core::account::AccountWithMetadata;
 use nssa_core::program::{AccountPostState, ChainedCall};
+use nssa_core::program::PdaSeed;
 use multisig_core::{MultisigState, ProposalStatus};
 
 pub fn handle(
@@ -56,7 +57,7 @@ pub fn handle(
     // Extract ChainedCall parameters from proposal before modifying state
     let target_program_id = proposal.target_program_id.clone();
     let target_instruction_data = proposal.target_instruction_data.clone();
-    let pda_seeds = proposal.pda_seeds.clone();
+    let pda_seeds: Vec<PdaSeed> = proposal.pda_seeds.iter().map(|s| PdaSeed::new(*s)).collect();
 
     // Mark as executed and clean up
     proposal.status = ProposalStatus::Executed;

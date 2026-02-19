@@ -47,7 +47,7 @@ pub enum Instruction {
         /// (Account IDs are not stored — they're passed as tx accounts at execute time.)
         target_account_count: u8,
         /// PDA seeds for authorization in the chained call
-        pda_seeds: Vec<PdaSeed>,
+        pda_seeds: Vec<[u8; 32]>,
     },
 
     /// Approve an existing proposal (any member, one approval per member)
@@ -100,7 +100,7 @@ pub struct Proposal {
     /// Expected number of target accounts at execute time
     pub target_account_count: u8,
     /// PDA seeds for the chained call
-    pub pda_seeds: Vec<PdaSeed>,
+    pub pda_seeds: Vec<[u8; 32]>,
 
     // -- Voting state --
     /// Account IDs that have approved (proposer auto-approves)
@@ -118,7 +118,7 @@ impl Proposal {
         target_program_id: ProgramId,
         target_instruction_data: InstructionData,
         target_account_count: u8,
-        pda_seeds: Vec<PdaSeed>,
+        pda_seeds: Vec<[u8; 32]>,
     ) -> Self {
         Self {
             index,
@@ -217,7 +217,7 @@ impl MultisigState {
         target_program_id: ProgramId,
         target_instruction_data: InstructionData,
         target_account_count: u8,
-        pda_seeds: Vec<PdaSeed>,
+        pda_seeds: Vec<[u8; 32]>,
     ) -> u64 {
         self.transaction_index += 1;
         let index = self.transaction_index;

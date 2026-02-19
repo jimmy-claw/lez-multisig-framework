@@ -5,7 +5,7 @@
 // - accounts[1]: proposer (must be authorized signer, must be member)
 
 use nssa_core::account::AccountWithMetadata;
-use nssa_core::program::{AccountPostState, ChainedCall, InstructionData, PdaSeed, ProgramId};
+use nssa_core::program::{AccountPostState, ChainedCall, InstructionData, ProgramId};
 use multisig_core::MultisigState;
 
 pub fn handle(
@@ -13,7 +13,7 @@ pub fn handle(
     target_program_id: &ProgramId,
     target_instruction_data: &InstructionData,
     target_account_count: u8,
-    pda_seeds: &[PdaSeed],
+    pda_seeds: &[[u8; 32]],
 ) -> (Vec<AccountPostState>, Vec<ChainedCall>) {
     assert!(accounts.len() >= 2, "Propose requires multisig_state + proposer accounts");
 
