@@ -70,7 +70,7 @@ async fn deploy_program(client: &SequencerClient) -> nssa::ProgramId {
     let bytecode = std::fs::read(&std::env::var("MULTISIG_PROGRAM")
         .unwrap_or_else(|_| "target/riscv32im-risc0-zkvm-elf/docker/multisig.bin".to_string()))
         .expect("Cannot read program binary");
-    let deploy_msg = program_deployment_transaction::message::Message::new(bytecode);
+    let deploy_msg = nssa::program_deployment_transaction::Message::new(bytecode);
     let deploy_tx = ProgramDeploymentTransaction::new(deploy_msg);
     let response = client.send_tx_program(deploy_tx).await
         .expect("Failed to deploy program");
