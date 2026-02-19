@@ -20,9 +20,18 @@ pub fn process(
             members,
         } => create_multisig::handle(accounts, create_key, *threshold, members),
 
-        Instruction::Propose { action } => {
-            propose::handle(accounts, action)
-        }
+        Instruction::Propose {
+            target_program_id,
+            target_instruction_data,
+            target_account_count,
+            pda_seeds,
+        } => propose::handle(
+            accounts,
+            target_program_id,
+            target_instruction_data,
+            *target_account_count,
+            pda_seeds,
+        ),
 
         Instruction::Approve { proposal_index } => {
             approve::handle(accounts, *proposal_index)

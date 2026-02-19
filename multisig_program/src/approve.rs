@@ -19,7 +19,6 @@ pub fn handle(
 
     assert!(approver_account.is_authorized, "Approver must sign the transaction");
 
-    // Deserialize state
     let state_data: Vec<u8> = multisig_account.account.data.clone().into();
     let mut state: MultisigState = borsh::from_slice(&state_data)
         .expect("Failed to deserialize multisig state");
@@ -27,7 +26,6 @@ pub fn handle(
     let approver_id = *approver_account.account_id.value();
     assert!(state.is_member(&approver_id), "Approver is not a multisig member");
 
-    // Find and approve the proposal
     let proposal = state.get_proposal_mut(proposal_index)
         .expect("Proposal not found");
 
@@ -36,12 +34,10 @@ pub fn handle(
     let is_new = proposal.approve(approver_id);
     assert!(is_new, "Member has already approved this proposal");
 
-    // Serialize updated state
     let mut multisig_post = multisig_account.account.clone();
     let state_bytes = borsh::to_vec(&state).unwrap();
     multisig_post.data = state_bytes.try_into().unwrap();
 
-    // Must return post states for ALL input accounts
     let approver_post = approver_account.account.clone();
 
     (vec![AccountPostState::new(multisig_post), AccountPostState::new(approver_post)], vec![])
@@ -51,7 +47,7 @@ pub fn handle(
 mod tests {
     use super::*;
     use nssa_core::account::{Account, AccountId};
-    use multisig_core::ProposalAction;
+    use nssa_core::program::ProgramId;
 
     fn make_account(id: &[u8; 32], data: Vec<u8>, authorized: bool) -> AccountWithMetadata {
         let mut account = Account::default();
@@ -63,14 +59,16 @@ mod tests {
         }
     }
 
+    /// Create a state with a dummy proposal (targets a fake program)
     fn make_state_with_proposal(threshold: u8, members: Vec<[u8; 32]>, proposer: [u8; 32]) -> Vec<u8> {
         let mut state = MultisigState::new([0u8; 32], threshold, members);
+        let fake_program_id: ProgramId = bytemuck::cast([42u8; 32]);
         state.create_proposal(
-            ProposalAction::Transfer {
-                recipient: AccountId::new([99u8; 32]),
-                amount: 100,
-            },
             proposer,
+            fake_program_id,
+            vec![0u32],  // dummy instruction data
+            1,           // 1 target account
+            vec![],      // no PDA seeds
         );
         borsh::to_vec(&state).unwrap()
     }
@@ -89,7 +87,7 @@ mod tests {
 
         let state: MultisigState = borsh::from_slice(&Vec::from(post_states[0].account().data.clone())).unwrap();
         let proposal = state.get_proposal(1).unwrap();
-        assert_eq!(proposal.approved.len(), 2); // proposer + approver
+        assert_eq!(proposal.approved.len(), 2);
         assert!(proposal.approved.contains(&[1u8; 32]));
         assert!(proposal.approved.contains(&[2u8; 32]));
     }
@@ -102,7 +100,7 @@ mod tests {
 
         let accounts = vec![
             make_account(&[10u8; 32], state_data, false),
-            make_account(&[1u8; 32], vec![], true), // proposer already approved
+            make_account(&[1u8; 32], vec![], true),
         ];
 
         handle(&accounts, 1);
@@ -119,6 +117,6 @@ mod tests {
             make_account(&[2u8; 32], vec![], true),
         ];
 
-        handle(&accounts, 99); // wrong index
+        handle(&accounts, 99);
     }
 }

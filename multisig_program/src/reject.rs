@@ -26,7 +26,6 @@ pub fn handle(
     let rejector_id = *rejector_account.account_id.value();
     assert!(state.is_member(&rejector_id), "Rejector is not a multisig member");
 
-    // Find and reject the proposal
     let threshold = state.threshold;
     let member_count = state.member_count;
 
@@ -38,17 +37,14 @@ pub fn handle(
     let is_new = proposal.reject(rejector_id);
     assert!(is_new, "Member has already rejected this proposal");
 
-    // Auto-mark as rejected if can never reach threshold
     if proposal.is_dead(threshold, member_count) {
         proposal.status = ProposalStatus::Rejected;
     }
 
-    // Serialize updated state
     let mut multisig_post = multisig_account.account.clone();
     let state_bytes = borsh::to_vec(&state).unwrap();
     multisig_post.data = state_bytes.try_into().unwrap();
 
-    // Must return post states for ALL input accounts
     let rejector_post = rejector_account.account.clone();
 
     (vec![AccountPostState::new(multisig_post), AccountPostState::new(rejector_post)], vec![])
@@ -58,7 +54,7 @@ pub fn handle(
 mod tests {
     use super::*;
     use nssa_core::account::{Account, AccountId};
-    use multisig_core::ProposalAction;
+    use nssa_core::program::ProgramId;
 
     fn make_account(id: &[u8; 32], data: Vec<u8>, authorized: bool) -> AccountWithMetadata {
         let mut account = Account::default();
@@ -72,12 +68,13 @@ mod tests {
 
     fn make_state_with_proposal(threshold: u8, members: Vec<[u8; 32]>, proposer: [u8; 32]) -> Vec<u8> {
         let mut state = MultisigState::new([0u8; 32], threshold, members);
+        let fake_program_id: ProgramId = bytemuck::cast([42u8; 32]);
         state.create_proposal(
-            ProposalAction::Transfer {
-                recipient: AccountId::new([99u8; 32]),
-                amount: 100,
-            },
             proposer,
+            fake_program_id,
+            vec![0u32],
+            1,
+            vec![],
         );
         borsh::to_vec(&state).unwrap()
     }
@@ -97,12 +94,11 @@ mod tests {
         let state: MultisigState = borsh::from_slice(&Vec::from(post_states[0].account().data.clone())).unwrap();
         let proposal = state.get_proposal(1).unwrap();
         assert_eq!(proposal.rejected.len(), 1);
-        assert_eq!(proposal.approved.len(), 1); // still has proposer's approval
+        assert_eq!(proposal.approved.len(), 1);
     }
 
     #[test]
     fn test_reject_auto_marks_dead_proposal() {
-        // 2-of-2: one reject means can never reach threshold
         let members = vec![[1u8; 32], [2u8; 32]];
         let state_data = make_state_with_proposal(2, members, [1u8; 32]);
 
