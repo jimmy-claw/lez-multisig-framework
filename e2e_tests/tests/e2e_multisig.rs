@@ -15,6 +15,7 @@ use std::time::Duration;
 use nssa::{
     AccountId, PrivateKey, ProgramDeploymentTransaction, PublicKey, PublicTransaction,
     program::Program,
+    program_deployment_transaction,
     public_transaction::{Message, WitnessSet},
 };
 use multisig_core::{Instruction, MultisigState, compute_multisig_state_pda};
@@ -66,7 +67,11 @@ async fn deploy_program(client: &SequencerClient) -> nssa::ProgramId {
     let program_id = program.id();
 
     println!("📦 Deploying multisig program...");
-    let deploy_tx = ProgramDeploymentTransaction::new(program);
+    let bytecode = std::fs::read(&std::env::var("MULTISIG_PROGRAM")
+        .unwrap_or_else(|_| "target/riscv32im-risc0-zkvm-elf/docker/multisig.bin".to_string()))
+        .expect("Cannot read program binary");
+    let deploy_msg = program_deployment_transaction::message::Message::new(bytecode);
+    let deploy_tx = ProgramDeploymentTransaction::new(deploy_msg);
     let response = client.send_tx_program(deploy_tx).await
         .expect("Failed to deploy program");
     println!("  deploy tx_hash: {}", response.tx_hash);
