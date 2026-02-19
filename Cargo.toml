@@ -6,6 +6,7 @@ members = [
     "methods",
     "methods/guest",
     "cli",
+    "e2e_tests",
 ]
 
 [workspace.dependencies]
