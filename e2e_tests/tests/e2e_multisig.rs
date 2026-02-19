@@ -4,10 +4,11 @@
 //! create a multisig, and test the propose → sign → execute flow.
 //!
 //! Prerequisites:
+//! - A running sequencer at SEQUENCER_URL (default http://127.0.0.1:3040)
 //! - Build the guest binary: `cargo risczero build --manifest-path methods/guest/Cargo.toml`
-//! - Or set `MULTISIG_PROGRAM` env var to the path of the compiled binary
+//!   Or set `MULTISIG_PROGRAM` env var to the path of the compiled binary
 //!
-//! Run with: `cargo test -p lez-multisig-e2e --test e2e_multisig`
+//! Run with: `cargo test -p lez-multisig-e2e --test e2e_multisig -- --nocapture`
 
 use std::time::Duration;
 
@@ -34,6 +35,12 @@ fn load_program() -> Program {
     Program::new(bytecode).expect("Invalid program bytecode")
 }
 
+fn sequencer_client() -> SequencerClient {
+    let url = std::env::var("SEQUENCER_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:3040".to_string());
+    SequencerClient::new(url.parse().unwrap()).expect("Failed to create sequencer client")
+}
+
 /// Helper: submit a public transaction and wait for confirmation
 async fn submit_tx(client: &SequencerClient, tx: PublicTransaction) {
     let response = client.send_tx_public(tx).await.expect("Failed to submit tx");
@@ -42,32 +49,36 @@ async fn submit_tx(client: &SequencerClient, tx: PublicTransaction) {
     tokio::time::sleep(Duration::from_secs(15)).await;
 }
 
-/// Helper: get account nonces
-async fn get_nonces(client: &SequencerClient, accounts: Vec<AccountId>) -> Vec<u128> {
+/// Helper: get nonces for accounts
+async fn get_nonces(client: &SequencerClient, accounts: &[AccountId]) -> Vec<u128> {
     let mut nonces = Vec::new();
-    for account_id in &accounts {
-        let account = client.get_account(*account_id).await.expect("Failed to get account");
+    for account_id in accounts {
+        let account = client.get_account(*account_id).await
+            .expect("Failed to get account");
         nonces.push(account.account.nonce);
     }
     nonces
 }
 
-#[tokio::test]
-async fn test_create_multisig() {
-    let sequencer_url = std::env::var("SEQUENCER_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:3040".to_string());
-    let client = SequencerClient::new(sequencer_url.parse().unwrap());
-
+/// Deploy the multisig program and return its ID
+async fn deploy_program(client: &SequencerClient) -> nssa::ProgramId {
     let program = load_program();
     let program_id = program.id();
 
-    // Deploy the program
     println!("📦 Deploying multisig program...");
     let deploy_tx = ProgramDeploymentTransaction::new(program);
-    let response = client.send_tx_program_deployment(deploy_tx).await
+    let response = client.send_tx_program(deploy_tx).await
         .expect("Failed to deploy program");
     println!("  deploy tx_hash: {}", response.tx_hash);
     tokio::time::sleep(Duration::from_secs(15)).await;
+
+    program_id
+}
+
+#[tokio::test]
+async fn test_create_multisig() {
+    let client = sequencer_client();
+    let program_id = deploy_program(&client).await;
 
     // Generate 3 member keys
     let key1 = PrivateKey::new_os_random();
@@ -126,19 +137,8 @@ async fn test_create_multisig() {
 
 #[tokio::test]
 async fn test_propose_sign_execute_transfer() {
-    let sequencer_url = std::env::var("SEQUENCER_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:3040".to_string());
-    let client = SequencerClient::new(sequencer_url.parse().unwrap());
-
-    let program = load_program();
-    let program_id = program.id();
-
-    // Deploy
-    println!("📦 Deploying multisig program...");
-    let deploy_tx = ProgramDeploymentTransaction::new(program);
-    let _ = client.send_tx_program_deployment(deploy_tx).await
-        .expect("Failed to deploy program");
-    tokio::time::sleep(Duration::from_secs(15)).await;
+    let client = sequencer_client();
+    let program_id = deploy_program(&client).await;
 
     // Generate keys
     let key1 = PrivateKey::new_os_random();
@@ -172,9 +172,6 @@ async fn test_propose_sign_execute_transfer() {
     let tx = PublicTransaction::new(message, witness_set);
     submit_tx(&client, tx).await;
 
-    // Fund the vault (the multisig_state_id IS the vault in our current design)
-    // For now we skip funding — just test the signing flow
-
     // === Propose → Sign → Execute ===
     let recipient = account_id_from_key(&PrivateKey::new_os_random());
 
@@ -187,8 +184,8 @@ async fn test_propose_sign_execute_transfer() {
     };
 
     // Signers: member1 and member2 (threshold = 2)
-    // Get their nonces
-    let nonces = get_nonces(&client, vec![member1, member2]).await;
+    let signer_ids = vec![member1, member2];
+    let nonces = get_nonces(&client, &signer_ids).await;
 
     // Build message with signers in account_ids
     // account_ids: [multisig_state_id, member1, member2]
@@ -215,8 +212,6 @@ async fn test_propose_sign_execute_transfer() {
     submit_tx(&client, tx).await;
 
     println!("✅ Propose → Sign → Execute flow completed!");
-
-    // Note: The actual transfer may fail if the vault has no balance,
-    // but the signing and authorization flow should succeed.
-    // The program will check signatures and authorization.
+    // Note: The transfer itself may fail at the program level (vault has no balance),
+    // but the signing, authorization, and sequencer submission should succeed.
 }
