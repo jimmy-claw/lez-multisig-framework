@@ -10,7 +10,7 @@ SEQ_URL="http://127.0.0.1:${SEQ_PORT}"
 echo "🧹 Cleaning up old sequencer..."
 pkill -f sequencer_runner 2>/dev/null || true
 sleep 2
-rm -rf "${LSSA_DIR}/.sequencer_db"
+rm -rf "${LSSA_DIR}/.sequencer_db" "${LSSA_DIR}/rocksdb"
 
 echo "🚀 Starting fresh sequencer..."
 cd "$LSSA_DIR"
