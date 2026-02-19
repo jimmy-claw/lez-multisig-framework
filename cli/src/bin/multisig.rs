@@ -1,12 +1,15 @@
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use nssa::{
-    AccountId, PublicTransaction,
+    AccountId, PublicKey, PublicTransaction,
     program::Program,
     public_transaction::{Message, WitnessSet},
 };
 use multisig_core::{Instruction, compute_multisig_state_pda};
 use wallet::WalletCore;
+
+mod proposal;
+use proposal::Proposal;
 
 /// LSSA Multisig CLI — M-of-N threshold governance for LEZ
 #[derive(Parser)]
@@ -23,48 +26,53 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Create a new M-of-N multisig
+    /// Create a new M-of-N multisig (submitted directly, no proposal needed)
     Create {
         /// Required signatures (M)
         #[arg(long, short = 't')]
         threshold: u8,
-        /// Member account IDs
+        /// Member account IDs (base58)
         #[arg(long, short = 'm', num_args = 1..)]
         member: Vec<String>,
     },
 
-    /// Execute a multisig transfer (requires M signer signatures)
+    /// Create a proposal for a multisig action (transfer, add/remove member, etc.)
+    Propose {
+        /// Output file for the proposal
+        #[arg(long, short = 'o', default_value = "proposal.json")]
+        output: String,
+
+        /// Signer account IDs that will sign this proposal (base58, one per --signer)
+        #[arg(long, short = 's', num_args = 1..)]
+        signer: Vec<String>,
+
+        #[command(subcommand)]
+        action: ProposeAction,
+    },
+
+    /// Sign a proposal with your local key
+    Sign {
+        /// Path to the proposal file
+        #[arg(long, short = 'f', default_value = "proposal.json")]
+        file: String,
+
+        /// Your account ID (base58)
+        #[arg(long)]
+        account: String,
+    },
+
+    /// Execute a signed proposal (submit to sequencer)
     Execute {
-        /// Recipient account ID
-        #[arg(long)]
-        to: String,
-        /// Amount to transfer
-        #[arg(long)]
-        amount: u128,
-        /// Signer account ID (your local key)
-        #[arg(long)]
-        signer: String,
+        /// Path to the signed proposal file
+        #[arg(long, short = 'f', default_value = "proposal.json")]
+        file: String,
     },
 
-    /// Add a member to the multisig (requires M signatures)
-    AddMember {
-        /// New member account ID
-        #[arg(long)]
-        member: String,
-    },
-
-    /// Remove a member from the multisig (requires M signatures)
-    RemoveMember {
-        /// Member account ID to remove
-        #[arg(long)]
-        member: String,
-    },
-
-    /// Change the multisig threshold (requires M signatures)
-    SetThreshold {
-        /// New threshold value
-        #[arg(long, short = 't')]
-        threshold: u8,
+    /// Show proposal info
+    Inspect {
+        /// Path to the proposal file
+        #[arg(long, short = 'f', default_value = "proposal.json")]
+        file: String,
     },
 
     /// Show multisig status
@@ -75,6 +83,40 @@ enum Commands {
         /// Shell to generate for
         #[arg(value_enum)]
         shell: Shell,
+    },
+}
+
+#[derive(Subcommand)]
+enum ProposeAction {
+    /// Transfer funds from the multisig
+    Transfer {
+        /// Recipient account ID
+        #[arg(long)]
+        to: String,
+        /// Amount to transfer
+        #[arg(long)]
+        amount: u128,
+    },
+
+    /// Add a new member
+    AddMember {
+        /// New member account ID
+        #[arg(long)]
+        member: String,
+    },
+
+    /// Remove a member
+    RemoveMember {
+        /// Member account ID to remove
+        #[arg(long)]
+        member: String,
+    },
+
+    /// Change the threshold
+    SetThreshold {
+        /// New threshold value
+        #[arg(long, short = 't')]
+        threshold: u8,
     },
 }
 
@@ -153,6 +195,25 @@ async fn main() {
             println!("   (On-chain state query not yet implemented — needs sequencer query API)");
             return;
         }
+        Commands::Inspect { file } => {
+            let proposal = Proposal::load(file).unwrap_or_else(|e| {
+                eprintln!("Error loading proposal '{}': {}", file, e);
+                std::process::exit(1);
+            });
+
+            println!("📋 Proposal: {}", proposal.description);
+            println!("   Signatures: {}", proposal.signature_count());
+            for (i, sig) in proposal.signatures.iter().enumerate() {
+                println!("   [{}] {}", i, sig.account_id);
+            }
+
+            // Verify signatures
+            match proposal.verify_signatures() {
+                Ok(()) => println!("   ✅ All signatures valid"),
+                Err(e) => println!("   ❌ {}", e),
+            }
+            return;
+        }
         _ => {}
     }
 
@@ -160,6 +221,7 @@ async fn main() {
     let (_, program_id) = load_program(&cli.program);
 
     match cli.command {
+        // ── Create (direct submit, no proposal needed) ──────────────────
         Commands::Create { threshold, member } => {
             let members: Vec<AccountId> = member.iter()
                 .map(|s| s.parse().expect("Invalid member ID"))
@@ -194,99 +256,161 @@ async fn main() {
             submit_and_confirm(&wallet_core, tx, "Create multisig").await;
         }
 
-        Commands::Execute { to, amount, signer } => {
-            let signer_id: AccountId = signer.parse().unwrap();
-            let to_id: AccountId = to.parse().unwrap();
+        // ── Propose (create proposal file for offline signing) ──────────
+        Commands::Propose { output, signer, action } => {
             let multisig_state_id = compute_multisig_state_pda(&program_id);
 
-            println!("💸 Executing multisig transfer");
-            println!("   Amount: {} → {}", amount, to_id);
-            println!("   Signer: {}", signer_id);
+            // Parse signer account IDs
+            let signer_ids: Vec<AccountId> = signer.iter()
+                .map(|s| s.parse().expect("Invalid signer account ID"))
+                .collect();
 
-            let nonces = wallet_core.get_accounts_nonces(vec![signer_id.clone()]).await
-                .expect("Failed to get nonces");
-            let signing_key = wallet_core.storage().user_data
-                .get_pub_account_signing_key(&signer_id)
-                .expect("Signing key not found");
+            if signer_ids.is_empty() {
+                eprintln!("Error: at least one --signer required");
+                std::process::exit(1);
+            }
 
-            let instruction = Instruction::Execute {
-                recipient: to_id.clone(),
-                amount,
+            // Build the instruction and description
+            let (instruction, description) = match &action {
+                ProposeAction::Transfer { to, amount } => {
+                    let to_id: AccountId = to.parse().expect("Invalid recipient ID");
+                    (
+                        Instruction::Execute { recipient: to_id, amount: *amount },
+                        format!("Transfer {} to {}", amount, to),
+                    )
+                }
+                ProposeAction::AddMember { member } => {
+                    let member_id: AccountId = member.parse().expect("Invalid member ID");
+                    (
+                        Instruction::AddMember { new_member: *member_id.value() },
+                        format!("Add member {}", member),
+                    )
+                }
+                ProposeAction::RemoveMember { member } => {
+                    let member_id: AccountId = member.parse().expect("Invalid member ID");
+                    (
+                        Instruction::RemoveMember { member_to_remove: *member_id.value() },
+                        format!("Remove member {}", member),
+                    )
+                }
+                ProposeAction::SetThreshold { threshold } => {
+                    (
+                        Instruction::ChangeThreshold { new_threshold: *threshold },
+                        format!("Change threshold to {}", threshold),
+                    )
+                }
             };
+
+            // Build account list:
+            // [0] = multisig state PDA
+            // [1..] = signer accounts (so they get is_authorized = true)
+            let mut account_ids = vec![multisig_state_id];
+            account_ids.extend(signer_ids.iter().cloned());
+
+            // Fetch nonces for signer accounts
+            let nonces = wallet_core
+                .get_accounts_nonces(signer_ids.clone())
+                .await
+                .expect("Failed to get nonces from sequencer");
 
             let message = Message::try_new(
                 program_id,
-                vec![multisig_state_id, to_id],
+                account_ids,
                 nonces,
                 instruction,
             ).unwrap();
-            let witness_set = WitnessSet::for_message(&message, &[signing_key]);
-            let tx = PublicTransaction::new(message, witness_set);
-            submit_and_confirm(&wallet_core, tx, "Multisig execute").await;
+
+            let proposal = Proposal::new(&message, description.clone());
+            proposal.save(&output).unwrap_or_else(|e| {
+                eprintln!("Error saving proposal: {}", e);
+                std::process::exit(1);
+            });
+
+            println!("📝 Proposal created: {}", description);
+            println!("   Saved to: {}", output);
+            println!("   Signers needed: {}", signer_ids.len());
+            for (i, s) in signer_ids.iter().enumerate() {
+                println!("   [{}] {}", i, s);
+            }
+            println!();
+            println!("   Next: each signer runs:");
+            println!("     multisig sign --file {} --account <THEIR_ACCOUNT_ID>", output);
         }
 
-        Commands::AddMember { member } => {
-            let member_id: AccountId = member.parse().unwrap();
-            let multisig_state_id = compute_multisig_state_pda(&program_id);
+        // ── Sign (add your signature to a proposal) ─────────────────────
+        Commands::Sign { file, account } => {
+            let account_id: AccountId = account.parse().expect("Invalid account ID");
 
-            println!("➕ Adding member: {}", member_id);
+            let mut proposal = Proposal::load(&file).unwrap_or_else(|e| {
+                eprintln!("Error loading proposal '{}': {}", file, e);
+                std::process::exit(1);
+            });
 
-            let instruction = Instruction::AddMember {
-                new_member: *member_id.value(),
-            };
+            // Get signing key from wallet
+            let signing_key = wallet_core
+                .storage()
+                .user_data
+                .get_pub_account_signing_key(account_id)
+                .expect("Signing key not found for this account — is it in your wallet?");
 
-            let message = Message::try_new(
-                program_id,
-                vec![multisig_state_id],
-                vec![],
-                instruction,
-            ).unwrap();
-            let witness_set = WitnessSet::for_message(&message, &[] as &[&nssa::PrivateKey]);
-            let tx = PublicTransaction::new(message, witness_set);
-            submit_and_confirm(&wallet_core, tx, "Add member").await;
+            // Sign the message
+            let message = proposal.message();
+            let witness = WitnessSet::for_message(&message, &[signing_key]);
+            let (signature, public_key) = witness
+                .into_raw_parts()
+                .into_iter()
+                .next()
+                .expect("WitnessSet should contain exactly one signature");
+
+            // Verify the public key maps to the claimed account ID
+            let derived_account_id = AccountId::from(&public_key);
+            if derived_account_id != account_id {
+                eprintln!("Error: signing key for {} produces account ID {}", account_id, derived_account_id);
+                eprintln!("  The account ID doesn't match. Wrong key?");
+                std::process::exit(1);
+            }
+
+            proposal.add_signature(&account_id, &public_key, &signature);
+            proposal.save(&file).unwrap_or_else(|e| {
+                eprintln!("Error saving proposal: {}", e);
+                std::process::exit(1);
+            });
+
+            println!("✍️  Signed proposal: {}", proposal.description);
+            println!("   Signer: {}", account_id);
+            println!("   Total signatures: {}", proposal.signature_count());
+            println!("   Saved to: {}", file);
         }
 
-        Commands::RemoveMember { member } => {
-            let member_id: AccountId = member.parse().unwrap();
-            let multisig_state_id = compute_multisig_state_pda(&program_id);
+        // ── Execute (submit a fully-signed proposal) ────────────────────
+        Commands::Execute { file } => {
+            let proposal = Proposal::load(&file).unwrap_or_else(|e| {
+                eprintln!("Error loading proposal '{}': {}", file, e);
+                std::process::exit(1);
+            });
 
-            println!("➖ Removing member: {}", member_id);
+            if proposal.signature_count() == 0 {
+                eprintln!("Error: proposal has no signatures");
+                std::process::exit(1);
+            }
 
-            let instruction = Instruction::RemoveMember {
-                member_to_remove: *member_id.value(),
-            };
+            // Verify all signatures
+            proposal.verify_signatures().unwrap_or_else(|e| {
+                eprintln!("Error: {}", e);
+                std::process::exit(1);
+            });
 
-            let message = Message::try_new(
-                program_id,
-                vec![multisig_state_id],
-                vec![],
-                instruction,
-            ).unwrap();
-            let witness_set = WitnessSet::for_message(&message, &[] as &[&nssa::PrivateKey]);
+            println!("📤 Executing proposal: {}", proposal.description);
+            println!("   Signatures: {}", proposal.signature_count());
+
+            // Reconstruct the message and witness set
+            let message = proposal.message();
+            let witness_set = proposal.witness_set();
+
             let tx = PublicTransaction::new(message, witness_set);
-            submit_and_confirm(&wallet_core, tx, "Remove member").await;
+            submit_and_confirm(&wallet_core, tx, "Multisig proposal").await;
         }
 
-        Commands::SetThreshold { threshold } => {
-            let multisig_state_id = compute_multisig_state_pda(&program_id);
-
-            println!("🔧 Setting threshold to {}", threshold);
-
-            let instruction = Instruction::ChangeThreshold {
-                new_threshold: threshold,
-            };
-
-            let message = Message::try_new(
-                program_id,
-                vec![multisig_state_id],
-                vec![],
-                instruction,
-            ).unwrap();
-            let witness_set = WitnessSet::for_message(&message, &[] as &[&nssa::PrivateKey]);
-            let tx = PublicTransaction::new(message, witness_set);
-            submit_and_confirm(&wallet_core, tx, "Set threshold").await;
-        }
-
-        Commands::Completions { .. } | Commands::Status => unreachable!(),
+        Commands::Completions { .. } | Commands::Status | Commands::Inspect { .. } => unreachable!(),
     }
 }
