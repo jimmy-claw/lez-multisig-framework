@@ -1,5 +1,5 @@
 target/
 
-# Local treasury state
-.treasury-state
-.treasury-state.tmp
+# Local multisig state
+.multisig-state
+.multisig-state.tmp
