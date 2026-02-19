@@ -14,7 +14,7 @@ use wallet::WalletCore;
 #[command(propagate_version = true)]
 struct Cli {
     /// Path to the multisig program binary
-    #[arg(long, short = 'p', env = "MULTISIG_PROGRAM", default_value = "target/riscv32im-risc0-zkvm-elf/docker/multisig")]
+    #[arg(long, short = 'p', env = "MULTISIG_PROGRAM", default_value = "target/riscv32im-risc0-zkvm-elf/docker/multisig.bin")]
     program: String,
 
     #[command(subcommand)]
