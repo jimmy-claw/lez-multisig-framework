@@ -21,8 +21,12 @@ use serde::{Deserialize, Serialize};
 /// 4. Members can also `Reject` proposals
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Instruction {
-    /// Create a new multisig with M-of-N threshold
+    /// Create a new multisig with M-of-N threshold.
+    /// `create_key` is a unique 32-byte value (e.g. random) that deterministically
+    /// derives the multisig's PDA. Inspired by Squads Protocol v4.
     CreateMultisig {
+        /// Unique key for PDA derivation — allows multiple multisigs per program
+        create_key: [u8; 32],
         /// Required signatures for execution (M)
         threshold: u8,
         /// List of member account IDs (32 bytes each, derived from public keys)
@@ -161,6 +165,8 @@ impl Proposal {
 
 #[derive(Debug, Clone, Default, BorshSerialize, BorshDeserialize)]
 pub struct MultisigState {
+    /// Unique key used to derive this multisig's PDA (Squads-style)
+    pub create_key: [u8; 32],
     /// Current threshold (M)
     pub threshold: u8,
     /// Number of members (N)
@@ -175,9 +181,10 @@ pub struct MultisigState {
 
 impl MultisigState {
     /// Create a new multisig state
-    pub fn new(threshold: u8, members: Vec<[u8; 32]>) -> Self {
+    pub fn new(create_key: [u8; 32], threshold: u8, members: Vec<[u8; 32]>) -> Self {
         let member_count = members.len() as u8;
         Self {
+            create_key,
             threshold,
             member_count,
             members,
@@ -228,21 +235,20 @@ impl MultisigState {
 // PDA derivation helpers
 // ---------------------------------------------------------------------------
 
-const MULTISIG_STATE_SEED: [u8; 32] = {
-    let mut seed = [0u8; 32];
-    let tag = b"multisig_state";
-    let mut i = 0;
-    while i < tag.len() {
-        seed[i] = tag[i];
-        i += 1;
-    }
-    seed
-};
-
-pub fn multisig_state_pda_seed() -> PdaSeed {
-    PdaSeed::new(MULTISIG_STATE_SEED)
+/// Compute PDA seed for a multisig identified by `create_key`.
+/// Seed = SHA256("multisig_state" || create_key), truncated to 32 bytes.
+/// This ensures each multisig gets a unique PDA while remaining deterministic.
+pub fn multisig_state_pda_seed(create_key: &[u8; 32]) -> PdaSeed {
+    use risc0_zkvm::sha::{Impl, Sha256};
+    let mut input = Vec::with_capacity(14 + 32);
+    input.extend_from_slice(b"multisig_state");
+    input.extend_from_slice(create_key);
+    let hash = Impl::hash_bytes(&input);
+    let bytes: [u8; 32] = hash.as_bytes().try_into().expect("SHA256 is 32 bytes");
+    PdaSeed::new(bytes)
 }
 
-pub fn compute_multisig_state_pda(program_id: &ProgramId) -> AccountId {
-    AccountId::from((program_id, &multisig_state_pda_seed()))
+/// Compute the on-chain AccountId (PDA) for a multisig given program_id and create_key.
+pub fn compute_multisig_state_pda(program_id: &ProgramId, create_key: &[u8; 32]) -> AccountId {
+    AccountId::from((program_id, &multisig_state_pda_seed(create_key)))
 }

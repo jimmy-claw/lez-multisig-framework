@@ -120,7 +120,7 @@ mod tests {
     }
 
     fn make_approved_transfer_state(threshold: u8, members: Vec<[u8; 32]>, approvers: &[[u8; 32]], amount: u128) -> Vec<u8> {
-        let mut state = MultisigState::new(threshold, members);
+        let mut state = MultisigState::new([0u8; 32], threshold, members);
         state.create_proposal(
             ProposalAction::Transfer {
                 recipient: AccountId::new([99u8; 32]),
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn test_execute_add_member() {
         let members = vec![[1u8; 32], [2u8; 32]];
-        let mut state = MultisigState::new(2, members);
+        let mut state = MultisigState::new([0u8; 32], 2, members);
         state.create_proposal(
             ProposalAction::AddMember { new_member: [3u8; 32] },
             [1u8; 32],
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn test_execute_change_threshold() {
         let members = vec![[1u8; 32], [2u8; 32], [3u8; 32]];
-        let mut state = MultisigState::new(2, members);
+        let mut state = MultisigState::new([0u8; 32], 2, members);
         state.create_proposal(
             ProposalAction::ChangeThreshold { new_threshold: 3 },
             [1u8; 32],
@@ -204,7 +204,7 @@ mod tests {
     #[should_panic(expected = "does not have enough approvals")]
     fn test_execute_insufficient_approvals() {
         let members = vec![[1u8; 32], [2u8; 32], [3u8; 32]];
-        let mut state = MultisigState::new(2, members);
+        let mut state = MultisigState::new([0u8; 32], 2, members);
         state.create_proposal(
             ProposalAction::Transfer {
                 recipient: AccountId::new([99u8; 32]),

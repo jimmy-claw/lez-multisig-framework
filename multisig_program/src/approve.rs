@@ -64,7 +64,7 @@ mod tests {
     }
 
     fn make_state_with_proposal(threshold: u8, members: Vec<[u8; 32]>, proposer: [u8; 32]) -> Vec<u8> {
-        let mut state = MultisigState::new(threshold, members);
+        let mut state = MultisigState::new([0u8; 32], threshold, members);
         state.create_proposal(
             ProposalAction::Transfer {
                 recipient: AccountId::new([99u8; 32]),

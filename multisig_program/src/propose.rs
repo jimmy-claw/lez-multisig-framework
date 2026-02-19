@@ -69,7 +69,7 @@ mod tests {
     }
 
     fn make_multisig_state(threshold: u8, members: Vec<[u8; 32]>) -> Vec<u8> {
-        let state = MultisigState::new(threshold, members);
+        let state = MultisigState::new([0u8; 32], threshold, members);
         borsh::to_vec(&state).unwrap()
     }
 

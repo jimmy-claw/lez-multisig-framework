@@ -34,10 +34,16 @@ enum Commands {
         /// Member account IDs (base58)
         #[arg(long, short = 'm', num_args = 1..)]
         member: Vec<String>,
+        /// Optional create key (base58). If omitted, a random one is generated.
+        #[arg(long)]
+        create_key: Option<String>,
     },
 
     /// Create a proposal for a multisig action
     Propose {
+        /// Multisig PDA or create_key (base58) to identify which multisig
+        #[arg(long)]
+        multisig: String,
         /// Your account ID (base58, must be a member)
         #[arg(long)]
         account: String,
@@ -48,6 +54,9 @@ enum Commands {
 
     /// Approve a proposal
     Approve {
+        /// Multisig create_key (base58)
+        #[arg(long)]
+        multisig: String,
         /// Proposal index
         #[arg(long, short = 'i')]
         index: u64,
@@ -58,6 +67,9 @@ enum Commands {
 
     /// Reject a proposal
     Reject {
+        /// Multisig create_key (base58)
+        #[arg(long)]
+        multisig: String,
         /// Proposal index
         #[arg(long, short = 'i')]
         index: u64,
@@ -68,6 +80,9 @@ enum Commands {
 
     /// Execute a fully-approved proposal
     Execute {
+        /// Multisig create_key (base58)
+        #[arg(long)]
+        multisig: String,
         /// Proposal index
         #[arg(long, short = 'i')]
         index: u64,
@@ -210,15 +225,12 @@ async fn main() {
             println!("   Program path:   {}", cli.program);
             if let Ok(bytecode) = std::fs::read(&cli.program) {
                 if let Ok(program) = Program::new(bytecode) {
-                    let program_id = program.id();
-                    let multisig_state_id = compute_multisig_state_pda(&program_id);
-                    println!("   Program ID:     {:?}", program_id);
-                    println!("   Multisig PDA:   {}", multisig_state_id);
+                    println!("   Program ID:     {:?}", program.id());
                 }
             } else {
                 println!("   Program binary: not found");
             }
-            println!("   (On-chain state query not yet implemented)");
+            println!("   Use --create-key with 'create' or --multisig with other commands");
             return;
         }
         _ => {}
@@ -226,11 +238,16 @@ async fn main() {
 
     let wallet_core = WalletCore::from_env().unwrap();
     let (_, program_id) = load_program(&cli.program);
-    let multisig_state_id = compute_multisig_state_pda(&program_id);
+
+    /// Parse a create_key from base58 string to [u8; 32]
+    fn parse_create_key(s: &str) -> [u8; 32] {
+        let id: AccountId = s.parse().expect("Invalid multisig create_key (base58)");
+        *id.value()
+    }
 
     match cli.command {
         // ── Create ──────────────────────────────────────────────────────
-        Commands::Create { threshold, member } => {
+        Commands::Create { threshold, member, create_key } => {
             let members: Vec<AccountId> = member.iter()
                 .map(|s| s.parse().expect("Invalid member ID"))
                 .collect();
@@ -240,10 +257,23 @@ async fn main() {
                 std::process::exit(1);
             }
 
+            // Generate or use provided create_key
+            let ck: [u8; 32] = if let Some(ref key_str) = create_key {
+                parse_create_key(key_str)
+            } else {
+                let random_key = nssa::PrivateKey::new_os_random();
+                let pk = nssa::PublicKey::new_from_private_key(&random_key);
+                *AccountId::from(&pk).value()
+            };
+
+            let multisig_state_id = compute_multisig_state_pda(&program_id, &ck);
+
             println!("🔐 Creating {}-of-{} multisig", threshold, members.len());
+            println!("   Create key: {}", AccountId::new(ck));
             println!("   State PDA:  {}", multisig_state_id);
 
             let instruction = Instruction::CreateMultisig {
+                create_key: ck,
                 threshold,
                 members: members.iter().map(|id| *id.value()).collect(),
             };
@@ -257,10 +287,15 @@ async fn main() {
             let witness_set = WitnessSet::for_message(&message, &[] as &[&nssa::PrivateKey]);
             let tx = PublicTransaction::new(message, witness_set);
             submit_and_confirm(&wallet_core, tx, "Create multisig").await;
+
+            println!("\n💡 Save this create key to interact with the multisig:");
+            println!("   {}", AccountId::new(ck));
         }
 
         // ── Propose ─────────────────────────────────────────────────────
-        Commands::Propose { account, action } => {
+        Commands::Propose { multisig, account, action } => {
+            let ck = parse_create_key(&multisig);
+            let multisig_state_id = compute_multisig_state_pda(&program_id, &ck);
             let account_id: AccountId = account.parse().expect("Invalid account ID");
 
             let proposal_action = match &action {
@@ -294,7 +329,9 @@ async fn main() {
         }
 
         // ── Approve ─────────────────────────────────────────────────────
-        Commands::Approve { index, account } => {
+        Commands::Approve { multisig, index, account } => {
+            let ck = parse_create_key(&multisig);
+            let multisig_state_id = compute_multisig_state_pda(&program_id, &ck);
             let account_id: AccountId = account.parse().expect("Invalid account ID");
 
             println!("👍 Approving proposal #{}...", index);
@@ -308,7 +345,9 @@ async fn main() {
         }
 
         // ── Reject ──────────────────────────────────────────────────────
-        Commands::Reject { index, account } => {
+        Commands::Reject { multisig, index, account } => {
+            let ck = parse_create_key(&multisig);
+            let multisig_state_id = compute_multisig_state_pda(&program_id, &ck);
             let account_id: AccountId = account.parse().expect("Invalid account ID");
 
             println!("👎 Rejecting proposal #{}...", index);
@@ -322,7 +361,9 @@ async fn main() {
         }
 
         // ── Execute ─────────────────────────────────────────────────────
-        Commands::Execute { index, account } => {
+        Commands::Execute { multisig, index, account } => {
+            let ck = parse_create_key(&multisig);
+            let multisig_state_id = compute_multisig_state_pda(&program_id, &ck);
             let account_id: AccountId = account.parse().expect("Invalid account ID");
 
             println!("⚡ Executing proposal #{}...", index);

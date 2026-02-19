@@ -81,7 +81,10 @@ async fn test_full_multisig_lifecycle() {
     let bytecode = load_program_bytecode();
     let program = Program::new(bytecode.clone()).expect("Invalid program");
     let program_id = program.id();
-    let multisig_state_id = compute_multisig_state_pda(&program_id);
+
+    // Unique create_key per test run — enables multiple multisigs per program
+    let create_key: [u8; 32] = *AccountId::from(&PublicKey::new_from_private_key(&PrivateKey::new_os_random())).value();
+    let multisig_state_id = compute_multisig_state_pda(&program_id, &create_key);
 
     println!("📦 Deploying multisig program...");
     let deploy_msg = nssa::program_deployment_transaction::Message::new(bytecode);
@@ -107,6 +110,7 @@ async fn test_full_multisig_lifecycle() {
     println!("\n═══ STEP 1: Create 2-of-3 multisig ═══");
     println!("  Members: {}, {}, {}", m1, m2, m3);
     let instruction = Instruction::CreateMultisig {
+        create_key,
         threshold: 2,
         members: vec![*m1.value(), *m2.value(), *m3.value()],
     };

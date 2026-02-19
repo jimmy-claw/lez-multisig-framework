@@ -15,9 +15,10 @@ pub fn process(
 ) -> (Vec<AccountPostState>, Vec<ChainedCall>) {
     match instruction {
         Instruction::CreateMultisig {
+            create_key,
             threshold,
             members,
-        } => create_multisig::handle(accounts, *threshold, members),
+        } => create_multisig::handle(accounts, create_key, *threshold, members),
 
         Instruction::Propose { action } => {
             propose::handle(accounts, action)
