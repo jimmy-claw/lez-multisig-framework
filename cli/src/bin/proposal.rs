@@ -5,7 +5,7 @@
 //! 2. `multisig sign` — each signer loads the proposal, signs it, appends their signature
 //! 3. `multisig execute` — loads the signed proposal, builds the on-chain transaction, submits
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
 use nssa::{
     AccountId, PublicKey, Signature,
     public_transaction::Message,
@@ -80,10 +80,8 @@ impl Proposal {
 
     /// Verify all collected signatures against the message.
     pub fn verify_signatures(&self) -> Result<(), String> {
-        let message_bytes = &self.message_bytes;
-        // WitnessSet signs message.to_bytes(), not the borsh-serialized message
-        let message = self.message();
-        let sign_bytes = message.to_bytes();
+        // WitnessSet signs borsh-serialized message bytes
+        let sign_bytes = &self.message_bytes;
 
         for (i, sig) in self.signatures.iter().enumerate() {
             let pk_bytes: [u8; 32] = hex::decode(&sig.public_key)
