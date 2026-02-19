@@ -4,6 +4,7 @@ set -e
 
 LSSA_DIR="${LSSA_DIR:-$HOME/lssa}"
 PROGRAM="${MULTISIG_PROGRAM:-$(pwd)/target/riscv32im-risc0-zkvm-elf/docker/multisig.bin}"
+TOKEN_PROGRAM="${TOKEN_PROGRAM:-${LSSA_DIR}/artifacts/program_methods/token.bin}"
 SEQ_PORT=3040
 SEQ_URL="http://127.0.0.1:${SEQ_PORT}"
 
@@ -27,11 +28,9 @@ if ! kill -0 $SEQ_PID 2>/dev/null; then
     exit 1
 fi
 
-echo "📦 Deploying program..."
-# The first test will deploy it
-
 echo "🧪 Running e2e tests..."
 MULTISIG_PROGRAM="$PROGRAM" \
+TOKEN_PROGRAM="$TOKEN_PROGRAM" \
 SEQUENCER_URL="$SEQ_URL" \
 cargo test -p lez-multisig-e2e --test e2e_multisig -- --nocapture --test-threads=1 2>&1 | tee ~/e2e-test.log
 
