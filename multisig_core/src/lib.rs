@@ -229,6 +229,11 @@ impl MultisigState {
     pub fn cleanup_proposals(&mut self) {
         self.proposals.retain(|p| p.status == ProposalStatus::Active);
     }
+
+    /// Remove all proposals regardless of status (e.g. after execution)
+    pub fn clear_all_proposals(&mut self) {
+        self.proposals.clear();
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -89,8 +89,8 @@ pub fn handle(
         }
     }
 
-    // Clean up executed/rejected proposals to save space
-    state.cleanup_proposals();
+    // Remove all proposals after execution
+    state.clear_all_proposals();
 
     // Serialize updated state
     let state_bytes = borsh::to_vec(&state).unwrap();
