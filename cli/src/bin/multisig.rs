@@ -119,10 +119,30 @@ async fn submit_and_confirm(
 async fn main() {
     let cli = Cli::parse();
 
-    // Handle completions early (no wallet/program needed)
-    if let Commands::Completions { shell } = &cli.command {
-        generate(*shell, &mut Cli::command(), "multisig", &mut std::io::stdout());
-        return;
+    // Handle commands that don't need wallet/program
+    match &cli.command {
+        Commands::Completions { shell } => {
+            generate(*shell, &mut Cli::command(), "multisig", &mut std::io::stdout());
+            return;
+        }
+        Commands::Status => {
+            println!("📊 Multisig Status");
+            println!("   Program path:   {}", cli.program);
+            if let Ok(bytecode) = std::fs::read(&cli.program) {
+                if let Ok(program) = Program::new(bytecode) {
+                    let program_id = program.id();
+                    let multisig_state_id = compute_multisig_state_pda(&program_id);
+                    println!("   Program ID:     {:?}", program_id);
+                    println!("   Multisig PDA:   {}", multisig_state_id);
+                }
+            } else {
+                println!("   Program binary: not found (build with `cargo risczero build`)");
+            }
+            println!();
+            println!("   (On-chain state query not yet implemented — needs sequencer query API)");
+            return;
+        }
+        _ => {}
     }
 
     let wallet_core = WalletCore::from_env().unwrap();
@@ -256,15 +276,6 @@ async fn main() {
             submit_and_confirm(&wallet_core, tx, "Set threshold").await;
         }
 
-        Commands::Completions { .. } => unreachable!(),
-
-        Commands::Status => {
-            let multisig_state_id = compute_multisig_state_pda(&program_id);
-            println!("📊 Multisig Status");
-            println!("   Program:        {:?}", program_id);
-            println!("   Multisig PDA:   {}", multisig_state_id);
-            println!();
-            println!("   (On-chain state query not yet implemented — needs sequencer query API)");
-        }
+        Commands::Completions { .. } | Commands::Status => unreachable!(),
     }
 }
