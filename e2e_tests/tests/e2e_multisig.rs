@@ -25,8 +25,9 @@ use nssa::{
 };
 use nssa_core::program::PdaSeed;
 use multisig_core::{
-    Instruction, MultisigState,
+    Instruction, MultisigState, Proposal, ProposalStatus,
     compute_multisig_state_pda, vault_pda_seed_bytes, compute_vault_pda,
+    compute_proposal_pda,
 };
 use common::sequencer_client::SequencerClient;
 use token_core::{Instruction as TokenInstruction, TokenHolding};
@@ -70,6 +71,12 @@ async fn get_multisig_state(client: &SequencerClient, state_id: AccountId) -> Mu
     let account = client.get_account(state_id).await.expect("Failed to get multisig state");
     let data: Vec<u8> = account.account.data.into();
     borsh::from_slice(&data).expect("Failed to deserialize multisig state")
+}
+
+async fn get_proposal(client: &SequencerClient, proposal_id: AccountId) -> Proposal {
+    let account = client.get_account(proposal_id).await.expect("Failed to get proposal");
+    let data: Vec<u8> = account.account.data.into();
+    borsh::from_slice(&data).expect("Failed to deserialize proposal")
 }
 
 fn deploy_program(bytecode: Vec<u8>) -> (ProgramDeploymentTransaction, nssa::ProgramId) {
@@ -209,6 +216,10 @@ async fn test_multisig_token_transfer() {
 
     let vault_seed = vault_pda_seed_bytes(&create_key);
 
+    // Compute proposal PDA
+    let proposal_id = compute_proposal_pda(&multisig_program_id, &create_key, 1);
+    println!("  Proposal PDA: {}", proposal_id);
+
     let nonce_state = get_nonce(&client, multisig_state_id).await;
     let nonce_m1 = get_nonce(&client, m1).await;
     let propose_instruction = Instruction::Propose {
@@ -220,48 +231,53 @@ async fn test_multisig_token_transfer() {
     };
     let msg = Message::try_new(
         multisig_program_id,
-        vec![multisig_state_id, m1],
-        vec![nonce_state, nonce_m1],
+        vec![multisig_state_id, m1, proposal_id], // Propose expects 3 accounts now
+        vec![nonce_state, nonce_m1, 0], // Proposal account starts with nonce 0
         propose_instruction,
     ).unwrap();
     let ws = WitnessSet::for_message(&msg, &[&key1]);
     submit_tx(&client, PublicTransaction::new(msg, ws)).await;
 
+    // Verify proposal was created
+    let proposal = get_proposal(&client, proposal_id).await;
+    assert_eq!(proposal.approved.len(), 1);
+    
     let state = get_multisig_state(&client, multisig_state_id).await;
-    assert_eq!(state.proposals.len(), 1);
-    assert_eq!(state.proposals[0].approved.len(), 1);
+    assert_eq!(state.transaction_index, 1, "transaction_index should be incremented");
     println!("  ✅ Proposal #1 created (1/2 approvals)");
 
     // ── Approve ─────────────────────────────────────────────────────────
     println!("\n═══ STEP 5: Member 2 approves ═══");
     let nonce_state = get_nonce(&client, multisig_state_id).await;
     let nonce_m2 = get_nonce(&client, m2).await;
+    let nonce_proposal = get_nonce(&client, proposal_id).await;
+    
     let msg = Message::try_new(
         multisig_program_id,
-        vec![multisig_state_id, m2],
-        vec![nonce_state, nonce_m2],
+        vec![multisig_state_id, m2, proposal_id], // Approve expects 3 accounts now
+        vec![nonce_state, nonce_m2, nonce_proposal],
         Instruction::Approve { proposal_index: 1 },
     ).unwrap();
     let ws = WitnessSet::for_message(&msg, &[&key2]);
     submit_tx(&client, PublicTransaction::new(msg, ws)).await;
 
-    let state = get_multisig_state(&client, multisig_state_id).await;
-    let proposal = state.get_proposal(1).unwrap();
-    assert_eq!(proposal.approved.len(), 2);
+    let proposal = get_proposal(&client, proposal_id).await;
+    assert_eq!(proposal.approved.len(), 2, "Should have 2 approvals");
     println!("  ✅ 2/2 approvals — ready to execute!");
 
     // ── Execute (ChainedCall to token program) ──────────────────────────
     println!("\n═══ STEP 6: Execute — transfer tokens via ChainedCall ═══");
     let nonce_state = get_nonce(&client, multisig_state_id).await;
     let nonce_m1 = get_nonce(&client, m1).await;
+    let nonce_proposal = get_nonce(&client, proposal_id).await;
     let nonce_vault = get_nonce(&client, vault_id).await;
     let nonce_recipient = get_nonce(&client, recipient_id).await;
 
-    // Execute tx includes: [multisig_state, executor, vault_holding, recipient_holding]
+    // Execute tx includes: [multisig_state, executor, proposal_pda, vault_holding, recipient_holding]
     let msg = Message::try_new(
         multisig_program_id,
-        vec![multisig_state_id, m1, vault_id, recipient_id],
-        vec![nonce_state, nonce_m1, nonce_vault, nonce_recipient],
+        vec![multisig_state_id, m1, proposal_id, vault_id, recipient_id],
+        vec![nonce_state, nonce_m1, nonce_proposal, nonce_vault, nonce_recipient],
         Instruction::Execute { proposal_index: 1 },
     ).unwrap();
     let ws = WitnessSet::for_message(&msg, &[&key1]);
@@ -269,9 +285,13 @@ async fn test_multisig_token_transfer() {
 
     // ── Verify final state ──────────────────────────────────────────────
     println!("\n═══ STEP 7: Verify results ═══");
+    
+    let proposal = get_proposal(&client, proposal_id).await;
+    assert_eq!(proposal.status, ProposalStatus::Executed, "Proposal should be executed");
+    println!("  ✅ Proposal marked as executed");
+
     let state = get_multisig_state(&client, multisig_state_id).await;
-    assert!(state.proposals.is_empty(), "proposals should be cleaned up");
-    println!("  ✅ Proposals cleaned up");
+    assert_eq!(state.transaction_index, 1, "transaction_index should remain 1");
 
     let vault_balance = get_balance(&client, vault_id).await;
     println!("  Vault balance: {:?}", vault_balance);
