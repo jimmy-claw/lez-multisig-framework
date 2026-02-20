@@ -5,6 +5,9 @@
 // directly modifies external accounts — it only stores proposals and voting
 // state, then delegates execution via NSSA ChainedCalls.
 //
+// Proposals are stored as separate PDA accounts (Squads-style), not inside
+// MultisigState. This prevents state bloat and allows independent lifecycle.
+//
 // Inspired by Squads Protocol v4 (Solana).
 
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -19,7 +22,7 @@ use serde::{Deserialize, Serialize};
 /// Instructions for the M-of-N multisig program.
 ///
 /// Flow:
-/// 1. Any member calls `Propose` with target program details — creates on-chain proposal
+/// 1. Any member calls `Propose` — creates a new proposal PDA account
 /// 2. Other members call `Approve { proposal_index }` — adds their approval
 /// 3. Once M approvals collected, anyone calls `Execute { proposal_index }`
 ///    → multisig emits a ChainedCall to the target program
@@ -37,14 +40,13 @@ pub enum Instruction {
     },
 
     /// Create a new proposal (any member can propose).
-    /// The proposal stores what ChainedCall to make when executed.
+    /// Creates a separate PDA account for the proposal.
     Propose {
         /// Target program to call when executed
         target_program_id: ProgramId,
         /// Serialized instruction data for the target program
         target_instruction_data: InstructionData,
         /// Number of target accounts that will be passed at execute time.
-        /// (Account IDs are not stored — they're passed as tx accounts at execute time.)
         target_account_count: u8,
         /// PDA seeds for authorization in the chained call
         pda_seeds: Vec<[u8; 32]>,
@@ -63,14 +65,14 @@ pub enum Instruction {
     },
 
     /// Execute a fully-approved proposal.
-    /// The transaction must include the target accounts after [multisig_state, executor].
+    /// The transaction must include the target accounts after [multisig_state, executor, proposal].
     Execute {
         proposal_index: u64,
     },
 }
 
 // ---------------------------------------------------------------------------
-// Proposal state (stored on-chain in MultisigState)
+// Proposal state (stored in its own PDA account)
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
@@ -85,14 +87,16 @@ pub enum ProposalStatus {
     Cancelled,
 }
 
-/// A proposal stored on-chain. Contains the ChainedCall parameters
-/// so that Execute can reconstruct the call.
+/// A proposal stored in its own PDA account.
+/// PDA derived from: proposal_pda_seed(create_key, proposal_index)
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct Proposal {
-    /// Unique index
+    /// Unique index (matches MultisigState.transaction_index at creation time)
     pub index: u64,
     /// Who proposed it
     pub proposer: [u8; 32],
+    /// The create_key of the parent multisig (for verification)
+    pub multisig_create_key: [u8; 32],
 
     // -- ChainedCall parameters --
     /// Target program to call
@@ -104,7 +108,6 @@ pub struct Proposal {
     /// PDA seeds for the chained call (multisig proves ownership)
     pub pda_seeds: Vec<[u8; 32]>,
     /// Which target account indices (0-based) get `is_authorized = true`
-    /// These should correspond 1:1 with pda_seeds
     pub authorized_indices: Vec<u8>,
 
     // -- Voting state --
@@ -120,6 +123,7 @@ impl Proposal {
     pub fn new(
         index: u64,
         proposer: [u8; 32],
+        multisig_create_key: [u8; 32],
         target_program_id: ProgramId,
         target_instruction_data: InstructionData,
         target_account_count: u8,
@@ -129,6 +133,7 @@ impl Proposal {
         Self {
             index,
             proposer,
+            multisig_create_key,
             target_program_id,
             target_instruction_data,
             target_account_count,
@@ -186,10 +191,8 @@ pub struct MultisigState {
     pub member_count: u8,
     /// List of member account IDs
     pub members: Vec<[u8; 32]>,
-    /// Transaction/proposal counter
+    /// Transaction/proposal counter (incremented on each Propose)
     pub transaction_index: u64,
-    /// Active and recent proposals
-    pub proposals: Vec<Proposal>,
 }
 
 impl MultisigState {
@@ -201,7 +204,6 @@ impl MultisigState {
             member_count,
             members,
             transaction_index: 0,
-            proposals: vec![],
         }
     }
 
@@ -209,42 +211,10 @@ impl MultisigState {
         self.members.contains(id)
     }
 
-    pub fn get_proposal_mut(&mut self, index: u64) -> Option<&mut Proposal> {
-        self.proposals.iter_mut().find(|p| p.index == index)
-    }
-
-    pub fn get_proposal(&self, index: u64) -> Option<&Proposal> {
-        self.proposals.iter().find(|p| p.index == index)
-    }
-
-    /// Create a new proposal, returns the proposal index
-    pub fn create_proposal(
-        &mut self,
-        proposer: [u8; 32],
-        target_program_id: ProgramId,
-        target_instruction_data: InstructionData,
-        target_account_count: u8,
-        pda_seeds: Vec<[u8; 32]>,
-        authorized_indices: Vec<u8>,
-    ) -> u64 {
+    /// Increment and return the next proposal index
+    pub fn next_proposal_index(&mut self) -> u64 {
         self.transaction_index += 1;
-        let index = self.transaction_index;
-        let proposal = Proposal::new(
-            index,
-            proposer,
-            target_program_id,
-            target_instruction_data,
-            target_account_count,
-            pda_seeds,
-            authorized_indices,
-        );
-        self.proposals.push(proposal);
-        index
-    }
-
-    /// Clean up non-active proposals
-    pub fn cleanup_proposals(&mut self) {
-        self.proposals.retain(|p| p.status == ProposalStatus::Active);
+        self.transaction_index
     }
 }
 
@@ -254,7 +224,7 @@ impl MultisigState {
 
 /// Compute PDA seed for a multisig identified by `create_key`.
 pub fn multisig_state_pda_seed(create_key: &[u8; 32]) -> PdaSeed {
-    let tag = b"multisig_state";
+    let tag = b"multisig_state__"; // 16 bytes, padded
     let mut seed = [0u8; 32];
     for i in 0..tag.len() {
         seed[i] = tag[i];
@@ -270,10 +240,35 @@ pub fn compute_multisig_state_pda(program_id: &ProgramId, create_key: &[u8; 32])
     AccountId::from((program_id, &multisig_state_pda_seed(create_key)))
 }
 
+/// Compute PDA seed for a proposal.
+/// Each proposal gets a unique PDA: seed = XOR("multisig_prop___", create_key) XOR proposal_index in last 8 bytes.
+pub fn proposal_pda_seed(create_key: &[u8; 32], proposal_index: u64) -> PdaSeed {
+    let tag = b"multisig_prop___"; // 16 bytes
+    let mut seed = [0u8; 32];
+    for i in 0..tag.len() {
+        seed[i] = tag[i];
+    }
+    // XOR create_key
+    for i in 0..32 {
+        seed[i] ^= create_key[i];
+    }
+    // Mix in proposal_index (big-endian in last 8 bytes)
+    let idx_bytes = proposal_index.to_be_bytes();
+    for i in 0..8 {
+        seed[24 + i] ^= idx_bytes[i];
+    }
+    PdaSeed::new(seed)
+}
+
+/// Compute the on-chain AccountId (PDA) for a proposal.
+pub fn compute_proposal_pda(program_id: &ProgramId, create_key: &[u8; 32], proposal_index: u64) -> AccountId {
+    AccountId::from((program_id, &proposal_pda_seed(create_key, proposal_index)))
+}
+
 /// Compute PDA seed for a multisig vault (holds assets authorized by the multisig).
-/// Uses "multisig_vault" tag XORed with create_key — different from state PDA.
+/// Uses "multisig_vault_" tag XORed with create_key — different from state PDA.
 pub fn vault_pda_seed(create_key: &[u8; 32]) -> PdaSeed {
-    let tag = b"multisig_vault_";
+    let tag = b"multisig_vault__"; // 16 bytes, padded
     let mut seed = [0u8; 32];
     for i in 0..tag.len() {
         seed[i] = tag[i];
@@ -291,7 +286,7 @@ pub fn compute_vault_pda(program_id: &ProgramId, create_key: &[u8; 32]) -> Accou
 
 /// Get the raw [u8; 32] seed bytes for a vault PDA (for storage in proposals).
 pub fn vault_pda_seed_bytes(create_key: &[u8; 32]) -> [u8; 32] {
-    let tag = b"multisig_vault_";
+    let tag = b"multisig_vault__"; // 16 bytes, padded
     let mut seed = [0u8; 32];
     for i in 0..tag.len() {
         seed[i] = tag[i];
