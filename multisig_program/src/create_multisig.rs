@@ -67,6 +67,8 @@ pub fn handle(
     multisig_account.data = state_bytes.try_into().unwrap();
     
     // Build post_states: claim multisig_state + all member accounts
+    // Claiming member accounts satisfies LSSA Rule 7: the executor (a member) must be
+    // owned by the multisig program for Execute to work.
     let mut post_states = vec![AccountPostState::new_claimed(multisig_account)];
     
     for i in 0..members.len() {
@@ -75,4 +77,95 @@ pub fn handle(
     }
     
     (post_states, vec![])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nssa_core::account::{Account, AccountId};
+
+    fn make_account(id: &[u8; 32], authorized: bool) -> AccountWithMetadata {
+        AccountWithMetadata {
+            account_id: AccountId::new(*id),
+            account: Account::default(),
+            is_authorized: authorized,
+        }
+    }
+
+    #[test]
+    fn test_create_multisig_2_of_3() {
+        let create_key = [1u8; 32];
+        let members: Vec<[u8; 32]> = vec![[10u8; 32], [11u8; 32], [12u8; 32]];
+
+        let mut accounts = vec![make_account(&[99u8; 32], false)]; // state PDA
+        for m in &members {
+            accounts.push(make_account(m, false));
+        }
+
+        let (post_states, chained) = handle(&accounts, &create_key, 2, &members);
+
+        assert!(chained.is_empty());
+        // state + 3 member accounts
+        assert_eq!(post_states.len(), 4);
+
+        // Verify multisig state was written correctly
+        let state: MultisigState = borsh::from_slice(
+            &Vec::from(post_states[0].account().data.clone())
+        ).unwrap();
+        assert_eq!(state.threshold, 2);
+        assert_eq!(state.member_count, 3);
+        assert_eq!(state.members, members);
+        assert_eq!(state.create_key, create_key);
+        assert_eq!(state.transaction_index, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Threshold must be at least 1")]
+    fn test_create_multisig_zero_threshold_fails() {
+        let create_key = [1u8; 32];
+        let members: Vec<[u8; 32]> = vec![[10u8; 32]];
+        let mut accounts = vec![make_account(&[99u8; 32], false)];
+        accounts.push(make_account(&[10u8; 32], false));
+        handle(&accounts, &create_key, 0, &members);
+    }
+
+    #[test]
+    #[should_panic(expected = "Threshold cannot exceed member count")]
+    fn test_create_multisig_threshold_exceeds_members_fails() {
+        let create_key = [1u8; 32];
+        let members: Vec<[u8; 32]> = vec![[10u8; 32], [11u8; 32]];
+        let mut accounts = vec![make_account(&[99u8; 32], false)];
+        for m in &members { accounts.push(make_account(m, false)); }
+        handle(&accounts, &create_key, 3, &members);
+    }
+
+    #[test]
+    #[should_panic(expected = "Maximum 10 members")]
+    fn test_create_multisig_too_many_members_fails() {
+        let create_key = [1u8; 32];
+        let members: Vec<[u8; 32]> = (0u8..11).map(|i| [i; 32]).collect();
+        let mut accounts = vec![make_account(&[99u8; 32], false)];
+        for m in &members { accounts.push(make_account(m, false)); }
+        handle(&accounts, &create_key, 1, &members);
+    }
+
+    #[test]
+    #[should_panic(expected = "must be uninitialized")]
+    fn test_create_multisig_already_initialized_fails() {
+        let create_key = [1u8; 32];
+        let members: Vec<[u8; 32]> = vec![[10u8; 32]];
+
+        // State account already has data
+        let mut state_account = Account::default();
+        state_account.data = vec![1u8; 10].try_into().unwrap();
+        let accounts = vec![
+            AccountWithMetadata {
+                account_id: AccountId::new([99u8; 32]),
+                account: state_account,
+                is_authorized: false,
+            },
+            make_account(&[10u8; 32], false),
+        ];
+        handle(&accounts, &create_key, 1, &members);
+    }
 }

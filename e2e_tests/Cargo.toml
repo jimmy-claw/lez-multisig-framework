@@ -9,10 +9,10 @@ path = "tests/e2e_multisig.rs"
 
 [dependencies]
 multisig_core = { path = "../multisig_core" }
-nssa = { git = "https://github.com/logos-blockchain/lssa.git" }
-nssa_core = { git = "https://github.com/logos-blockchain/lssa.git", features = ["host"] }
-common = { git = "https://github.com/logos-blockchain/lssa.git" }
-token_core = { git = "https://github.com/logos-blockchain/lssa.git" }
+nssa = { git = "https://github.com/logos-blockchain/lssa.git", branch = "main" }
+nssa_core = { git = "https://github.com/logos-blockchain/lssa.git", branch = "main", features = ["host"] }
+common = { git = "https://github.com/logos-blockchain/lssa.git", branch = "main" }
+token_core = { git = "https://github.com/logos-blockchain/lssa.git", branch = "main" }
 risc0-zkvm = "3.0"
 borsh = "1.5"
 tokio = { version = "1", features = ["full"] }
