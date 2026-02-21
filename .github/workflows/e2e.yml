@@ -1,0 +1,116 @@
+Your branch is up to date with 'origin/jimmy/claim-members'.
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RISC0_VERSION: "3.0.5"
+  LSSA_REF: "main"
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "unit"
+      - name: Run unit tests
+        run: cargo test -p multisig_core -p multisig_program
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install risc0 toolchain
+        run: |
+          curl -L https://risczero.com/install | bash
+          echo "$HOME/.risc0/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.risc0/bin:$PATH"
+          rzup install cargo-risczero ${{ env.RISC0_VERSION }}
+          rzup install r0vm ${{ env.RISC0_VERSION }}
+          rzup install rust ${{ env.RISC0_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "e2e"
+          cache-targets: true
+
+      # Cache guest binary (expensive risc0 build)
+      - name: Cache guest binary
+        id: cache-guest
+        uses: actions/cache@v4
+        with:
+          path: target/riscv32im-risc0-zkvm-elf/docker/multisig.bin
+          key: guest-${{ hashFiles('multisig_core/src/**', 'multisig_program/src/**', 'methods/guest/**', 'Cargo.lock') }}
+
+      - name: Build guest binary
+        if: steps.cache-guest.outputs.cache-hit != 'true'
+        run: cargo risczero build --manifest-path methods/guest/Cargo.toml
+
+      # Clone LSSA (needed for sequencer + token.bin)
+      - name: Clone LSSA
+        run: git clone --depth 1 --branch ${{ env.LSSA_REF }} https://github.com/logos-blockchain/lssa.git /tmp/lssa
+
+      # Cache sequencer binary (keyed on LSSA commit)
+      - name: Get LSSA commit hash
+        id: lssa-hash
+        run: echo "hash=$(git -C /tmp/lssa rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Cache sequencer
+        id: cache-seq
+        uses: actions/cache@v4
+        with:
+          path: /tmp/lssa/target/release/sequencer_runner
+          key: sequencer-${{ steps.lssa-hash.outputs.hash }}
+
+      - name: Build sequencer
+        if: steps.cache-seq.outputs.cache-hit != 'true'
+        run: |
+          cd /tmp/lssa
+          cargo build --release --features standalone -p sequencer_runner
+
+      - name: Start sequencer
+        run: |
+          cd /tmp/lssa
+          rm -rf rocksdb
+          /tmp/lssa/target/release/sequencer_runner sequencer_runner/configs/debug > /tmp/sequencer.log 2>&1 &
+          echo "Waiting for sequencer..."
+          for i in $(seq 1 60); do
+            if curl -s http://127.0.0.1:3040 > /dev/null 2>&1; then
+              echo "Sequencer ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+          if ! curl -s http://127.0.0.1:3040 > /dev/null 2>&1; then
+            echo "Sequencer failed to start"
+            cat /tmp/sequencer.log
+            exit 1
+          fi
+
+      - name: Run e2e tests
+        env:
+          MULTISIG_PROGRAM: ${{ github.workspace }}/target/riscv32im-risc0-zkvm-elf/docker/multisig.bin
+          TOKEN_PROGRAM: /tmp/lssa/artifacts/program_methods/token.bin
+          SEQUENCER_URL: http://127.0.0.1:3040
+        run: cargo test -p lez-multisig-e2e -- --nocapture --test-threads=1
+
+      - name: Upload sequencer logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sequencer-logs
+          path: /tmp/sequencer.log

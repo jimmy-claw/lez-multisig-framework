@@ -220,7 +220,7 @@ async fn test_multisig_token_transfer() {
     };
     let msg = Message::try_new(
         multisig_program_id,
-        vec![multisig_state_id],
+        vec![multisig_state_id, m1, m2, m3],
         vec![],
         instruction,
     ).unwrap();

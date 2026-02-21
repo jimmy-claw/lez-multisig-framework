@@ -49,6 +49,10 @@ lez-multisig/
 - Docker (for reproducible guest builds)
 - Clone of [lssa](https://github.com/logos-blockchain/lssa) (for sequencer + token program binary)
 
+### Important: Member Accounts
+
+Members must use **fresh keypairs** (never-used accounts with nonce=0) for each multisig. During `CreateMultisig`, all member accounts are **claimed** by the multisig program (sets `program_owner = multisig_program_id`). This is required by NSSA validation rules — see [issue #339](https://github.com/logos-blockchain/lssa/issues/339).
+
 ### 1. Build the guest binary
 
 ```bash
@@ -145,7 +149,7 @@ All PDAs: `AccountId = SHA256(NSSA_PREFIX ‖ program_id ‖ seed)`
 
 | Instruction | Accounts | Description |
 |---|---|---|
-| `CreateMultisig` | `[state_pda]` | Initialize multisig with members + threshold |
+| `CreateMultisig` | `[state_pda, member1..N]` | Initialize multisig, claim member accounts |
 | `Propose` | `[state_pda, proposer, proposal_pda]` | Create proposal, auto-approve proposer |
 | `Approve` | `[state_pda, approver, proposal_pda]` | Add approval to proposal |
 | `Reject` | `[state_pda, rejector, proposal_pda]` | Add rejection to proposal |
