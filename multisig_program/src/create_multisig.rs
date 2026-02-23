@@ -14,7 +14,7 @@ use multisig_core::MultisigState;
 /// This means members must use fresh keypairs dedicated to this multisig.
 /// After claiming, member accounts have program_owner = multisig_program_id,
 /// which allows them to be included in subsequent instructions without
-/// triggering NSSA validation rule 7.
+/// triggering LEZ validation rule 7.
 ///
 /// Authorization: anyone can create a new multisig (create_key makes PDA unique)
 pub fn handle(
@@ -67,7 +67,7 @@ pub fn handle(
     multisig_account.data = state_bytes.try_into().unwrap();
     
     // Build post_states: claim multisig_state + all member accounts
-    // Claiming member accounts satisfies LSSA Rule 7: the executor (a member) must be
+    // Claiming member accounts satisfies LEZ Rule 7: the executor (a member) must be
     // owned by the multisig program for Execute to work.
     let mut post_states = vec![AccountPostState::new_claimed(multisig_account)];
     

@@ -12,7 +12,7 @@ use multisig_core::{
 };
 use wallet::WalletCore;
 
-/// LSSA Multisig CLI — M-of-N threshold governance for LEZ
+/// LEZ Multisig CLI — M-of-N threshold governance for LEZ
 ///
 /// Squads-style on-chain proposal flow:
 ///   propose → approve (by M members) → execute

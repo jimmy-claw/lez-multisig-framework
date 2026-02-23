@@ -3,7 +3,7 @@
 // A multisig is a governance wrapper: it collects M-of-N approvals and then
 // executes a ChainedCall to a target program. The multisig itself never
 // directly modifies external accounts — it only stores proposals and voting
-// state, then delegates execution via NSSA ChainedCalls.
+// state, then delegates execution via LEZ ChainedCalls.
 //
 // Proposals are stored as separate PDA accounts (Squads-style), not inside
 // MultisigState. This prevents state bloat and allows independent lifecycle.

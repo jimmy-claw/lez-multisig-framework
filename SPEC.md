@@ -2,7 +2,7 @@
 
 ## Overview
 
-An M-of-N multisig governance program for the NSSA runtime, inspired by [Squads Protocol v4](https://docs.squads.so/). The multisig collects approvals from members and executes actions on other programs via NSSA ChainedCalls.
+An M-of-N multisig governance program for the LEZ runtime, inspired by [Squads Protocol v4](https://docs.squads.so/). The multisig collects approvals from members and executes actions on other programs via LEZ ChainedCalls.
 
 **Key principle:** The multisig never directly modifies external state. It only manages proposals and voting, then delegates execution via `ChainedCall`.
 
@@ -56,7 +56,7 @@ struct Proposal {
 
 ## PDA Derivation
 
-All PDAs follow the NSSA standard: `AccountId = SHA256(prefix ‖ program_id ‖ seed)` where prefix is the 32-byte constant `"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00"`.
+All PDAs follow the NSSA standard: `AccountId = SHA256(prefix ‖ program_id ‖ seed)` where prefix is the 32-byte constant `"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00"` (upstream constant, not yet renamed).
 
 ### Multisig State PDA
 
@@ -244,7 +244,7 @@ Executes a fully-approved proposal by emitting a ChainedCall.
 
 ## Validation Rules
 
-The NSSA runtime enforces these rules on every transaction:
+The LEZ runtime enforces these rules on every transaction:
 
 1. Pre/post state arrays must have equal length
 2. All account IDs must be unique

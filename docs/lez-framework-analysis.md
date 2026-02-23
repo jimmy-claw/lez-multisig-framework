@@ -1,15 +1,15 @@
-# NSSA Framework Analysis for lez-multisig
+# LEZ Framework Analysis for lez-multisig
 
 **Date:** 2026-02-20  
 **Author:** Jimmy (AI assistant)  
-**Repo:** https://github.com/jimmy-claw/nssa-framework  
-**Subject:** Can lez-multisig be reimplemented using nssa-framework?
+**Repo:** https://github.com/jimmy-claw/lez-framework  
+**Subject:** Can lez-multisig be reimplemented using lez-framework?
 
 ---
 
 ## 1. What the Framework Provides
 
-### 1.1 Core Macros (`nssa-framework-macros`)
+### 1.1 Core Macros (`lez-framework-macros`)
 
 The framework's main proc-macro is `#[nssa_program]`, applied to a `mod` block containing `#[instruction]`-annotated functions. For each such module it generates:
 
@@ -35,7 +35,7 @@ Supported via `#[account(...)]` on `AccountWithMetadata` parameters:
 
 **Important:** The `generate_validation()` function in the macro currently returns an empty vec. No runtime constraint checks are generated — they are only reflected in the IDL.
 
-### 1.2 Core Types (`nssa-framework-core`)
+### 1.2 Core Types (`lez-framework-core`)
 
 | Type / Module | Purpose |
 |---|---|
@@ -46,9 +46,9 @@ Supported via `#[account(...)]` on `AccountWithMetadata` parameters:
 | `AccountConstraint` | Metadata about account constraints (used by validation module) |
 | `validate_accounts()` | Stub validation function (not yet connected to macro) |
 
-### 1.3 CLI (`nssa-framework-cli`)
+### 1.3 CLI (`lez-framework-cli`)
 
-A generic, IDL-driven CLI (`nssa-cli`) providing:
+A generic, IDL-driven CLI (`lez-cli`) providing:
 - Auto-generated subcommands from IDL instructions
 - Type-aware argument parsing (`u8`/`u64`/`u128`, `[u8; N]` as hex/UTF-8, `Vec<[u8; 32]>` as comma-separated, `program_id` as `u32,u32,...×8`)
 - risc0 serialization (`serialize_to_risc0`)
@@ -128,7 +128,7 @@ The macro would generate correct account destructuring and dispatch.
 Also 3 fixed accounts — the complex args (`InstructionData`, `Vec<[u8;32]>`) would be in the enum variant. This maps cleanly.
 
 #### IDL generation
-The framework can auto-generate IDL for the simple instructions. The existing custom CLI could potentially be replaced by `nssa-cli` once PDA computation supports dynamic seeds.
+The framework can auto-generate IDL for the simple instructions. The existing custom CLI could potentially be replaced by `lez-cli` once PDA computation supports dynamic seeds.
 
 #### `ChainedCall` support
 `NssaOutput::with_chained_calls()` directly supports ChainedCalls, which is central to the multisig's `Execute` instruction.
@@ -138,7 +138,7 @@ The framework can auto-generate IDL for the simple instructions. The existing cu
 ### 3.2 What's Missing / Blocked ❌
 
 #### BLOCKER 1: Dynamic/arg-based PDA seeds
-**GitHub Issue:** https://github.com/jimmy-claw/nssa-framework/issues/2
+**GitHub Issue:** https://github.com/jimmy-claw/lez-framework/issues/2
 
 The multisig's PDAs are derived from instruction args (`create_key`, `proposal_index`), not from constants or other accounts. The framework currently only supports:
 - `literal("string")` — constant
@@ -153,7 +153,7 @@ There is no `arg("name")` support in the macro's code generation (it's in the ID
 Additionally, the multisig uses a custom XOR-based seed mixing scheme. If the framework standardizes on SHA-256 for multi-part seeds, there would be a format incompatibility with any previously deployed multisig. A migration or a configurable combiner would be needed.
 
 #### BLOCKER 2: Variable-count account lists
-**GitHub Issue:** https://github.com/jimmy-claw/nssa-framework/issues/3
+**GitHub Issue:** https://github.com/jimmy-claw/lez-framework/issues/3
 
 Two instructions require runtime-variable account counts:
 
@@ -169,14 +169,14 @@ This is a compile-time fixed count. There is no mechanism to express "N fixed ac
 **Workaround:** Write a `main()` manually for these instructions, mixing framework-style handlers with manual dispatch — which is essentially what lez-multisig already does.
 
 #### Issue 3: No runtime signer validation generated
-**GitHub Issue:** https://github.com/jimmy-claw/nssa-framework/issues/4
+**GitHub Issue:** https://github.com/jimmy-claw/lez-framework/issues/4
 
 The `#[account(signer)]` constraint is recorded in the IDL but `generate_validation()` returns an empty vec — no runtime checks are injected. The multisig handlers manually check `account.is_authorized`. This is a correctness gap: a future program that relies on the framework for authorization safety would have a security hole.
 
 **Impact:** Not a blocker for migration (manual checks still work) but reduces the value proposition of the framework.
 
 #### Issue 4: Conflict with existing `Instruction` enum in `multisig_core`
-**GitHub Issue:** https://github.com/jimmy-claw/nssa-framework/issues/5
+**GitHub Issue:** https://github.com/jimmy-claw/lez-framework/issues/5
 
 The framework always generates its own `Instruction` enum from `#[instruction]` function signatures. The multisig already has a hand-crafted `Instruction` type in `multisig_core` that is shared with the CLI and test suite.
 
@@ -244,23 +244,23 @@ The framework is well-designed and clearly headed in the right direction. Once b
 
 | # | Title | Label |
 |---|---|---|
-| [#2](https://github.com/jimmy-claw/nssa-framework/issues/2) | Support dynamic/arg-based PDA seeds | blocker, enhancement |
-| [#3](https://github.com/jimmy-claw/nssa-framework/issues/3) | Variable-count accounts: support dynamic account lists | blocker, enhancement |
-| [#4](https://github.com/jimmy-claw/nssa-framework/issues/4) | Expose `is_authorized` (signer) flag in generated dispatch | good first issue |
-| [#5](https://github.com/jimmy-claw/nssa-framework/issues/5) | Custom Instruction enum: allow programs to use their own hand-crafted Instruction type | enhancement |
+| [#2](https://github.com/jimmy-claw/lez-framework/issues/2) | Support dynamic/arg-based PDA seeds | blocker, enhancement |
+| [#3](https://github.com/jimmy-claw/lez-framework/issues/3) | Variable-count accounts: support dynamic account lists | blocker, enhancement |
+| [#4](https://github.com/jimmy-claw/lez-framework/issues/4) | Expose `is_authorized` (signer) flag in generated dispatch | good first issue |
+| [#5](https://github.com/jimmy-claw/lez-framework/issues/5) | Custom Instruction enum: allow programs to use their own hand-crafted Instruction type | enhancement |
 
 ---
 
 ## Appendix: Framework Crate Dependency Map
 
 ```
-nssa-framework (umbrella)
-├── nssa-framework-macros   (proc macros: #[nssa_program], generate_idl!)
-└── nssa-framework-core     (IDL types, NssaError, NssaOutput, validation)
+lez-framework (umbrella)
+├── lez-framework-macros   (proc macros: #[nssa_program], generate_idl!)
+└── lez-framework-core     (IDL types, NssaError, NssaOutput, validation)
     └── nssa_core           (from logos-blockchain/lssa)
 
-nssa-framework-cli          (generic IDL-driven CLI)
-├── nssa-framework-core
+lez-framework-cli          (generic IDL-driven CLI)
+├── lez-framework-core
 ├── nssa_core
 ├── nssa                    (from lssa)
 └── wallet                  (from lssa)
