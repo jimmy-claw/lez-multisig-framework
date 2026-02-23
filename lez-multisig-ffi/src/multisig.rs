@@ -40,7 +40,7 @@ fn parse_program_id_hex(s: &str) -> Result<nssa::ProgramId, String> {
     let bytes = hex::decode(s).map_err(|e| format!("invalid hex in program_id: {}", e))?;
     let mut pid = [0u32; 8];
     for (i, chunk) in bytes.chunks(4).enumerate() {
-        pid[i] = u32::from_be_bytes(chunk.try_into().unwrap());
+        pid[i] = u32::from_le_bytes(chunk.try_into().unwrap());
     }
     Ok(pid)
 }
