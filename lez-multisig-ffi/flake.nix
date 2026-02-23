@@ -77,7 +77,8 @@
             filter = path: type:
               (craneLib.filterCargoSources path type)
               || (lib.hasInfix "/include/" path)
-              || (lib.hasSuffix ".h" path);
+              || (lib.hasSuffix ".h" path)
+              || (lib.hasSuffix ".json" path);
           };
 
           commonArgs = {
