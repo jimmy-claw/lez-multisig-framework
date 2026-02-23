@@ -266,13 +266,22 @@ async fn create_async(v: &Value) -> String {
 
     let multisig_state_pda = compute_multisig_state_pda(&multisig_program_id, &create_key);
 
+    // Program expects: [multisig_state_pda, member_account_1, member_account_2, ...]
+    let mut account_ids = vec![multisig_state_pda];
+    for member_bytes in members.iter() {
+        let member_hex = hex::encode(member_bytes);
+        let member_id: AccountId = match member_hex.parse() {
+            Ok(id) => id,
+            Err(e) => return json!({"success": false, "error": format!("invalid member account id: {}", e)}).to_string(),
+        };
+        account_ids.push(member_id);
+    }
+
     let instruction = Instruction::CreateMultisig {
         create_key,
         threshold,
         members,
     };
-
-    let account_ids = vec![multisig_state_pda, signer_id];
 
     match submit_signed_multisig_tx(
         &wallet_core,

@@ -2563,6 +2563,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "borsh",
+ "bs58",
  "common",
  "hex",
  "multisig_core",
