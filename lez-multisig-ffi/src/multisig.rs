@@ -269,8 +269,8 @@ async fn create_async(v: &Value) -> String {
     // Program expects: [multisig_state_pda, member_account_1, member_account_2, ...]
     let mut account_ids = vec![multisig_state_pda];
     for member_bytes in members.iter() {
-        let member_hex = hex::encode(member_bytes);
-        let member_id: AccountId = match member_hex.parse() {
+        let member_b58 = bs58::encode(member_bytes).into_string();
+        let member_id: AccountId = match member_b58.parse() {
             Ok(id) => id,
             Err(e) => return json!({"success": false, "error": format!("invalid member account id: {}", e)}).to_string(),
         };
