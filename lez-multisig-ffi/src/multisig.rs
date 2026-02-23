@@ -250,13 +250,18 @@ async fn create_async(v: &Value) -> String {
         Err(e) => return json!({"success": false, "error": e}).to_string(),
     };
 
-    let account_bytes = match parse_hex32(account_hex, "account") {
-        Ok(b) => b,
-        Err(e) => return json!({"success": false, "error": e}).to_string(),
-    };
-    let signer_id: AccountId = match hex::encode(account_bytes).parse() {
+    let signer_id: AccountId = match account_hex.parse() {
         Ok(id) => id,
-        Err(e) => return json!({"success": false, "error": format!("invalid account id: {}", e)}).to_string(),
+        Err(_) => {
+            // Try as hex -> bytes -> base58
+            match parse_hex32(account_hex, "account") {
+                Ok(b) => match bs58::encode(b).into_string().parse() {
+                    Ok(id) => id,
+                    Err(e) => return json!({"success": false, "error": format!("invalid account id: {}", e)}).to_string(),
+                },
+                Err(e) => return json!({"success": false, "error": e}).to_string(),
+            }
+        }
     };
 
     let multisig_state_pda = compute_multisig_state_pda(&multisig_program_id, &create_key);
@@ -399,13 +404,18 @@ async fn propose_async(v: &Value) -> String {
         Err(e) => return json!({"success": false, "error": e}).to_string(),
     };
 
-    let account_bytes = match parse_hex32(account_hex, "account") {
-        Ok(b) => b,
-        Err(e) => return json!({"success": false, "error": e}).to_string(),
-    };
-    let signer_id: AccountId = match hex::encode(account_bytes).parse() {
+    let signer_id: AccountId = match account_hex.parse() {
         Ok(id) => id,
-        Err(e) => return json!({"success": false, "error": format!("invalid account id: {}", e)}).to_string(),
+        Err(_) => {
+            // Try as hex -> bytes -> base58
+            match parse_hex32(account_hex, "account") {
+                Ok(b) => match bs58::encode(b).into_string().parse() {
+                    Ok(id) => id,
+                    Err(e) => return json!({"success": false, "error": format!("invalid account id: {}", e)}).to_string(),
+                },
+                Err(e) => return json!({"success": false, "error": e}).to_string(),
+            }
+        }
     };
 
     let multisig_state_pda = compute_multisig_state_pda(&multisig_program_id, &create_key);
@@ -528,13 +538,18 @@ async fn vote_async(v: &Value, is_approve: bool) -> String {
         Err(e) => return json!({"success": false, "error": e}).to_string(),
     };
 
-    let account_bytes = match parse_hex32(account_hex, "account") {
-        Ok(b) => b,
-        Err(e) => return json!({"success": false, "error": e}).to_string(),
-    };
-    let signer_id: AccountId = match hex::encode(account_bytes).parse() {
+    let signer_id: AccountId = match account_hex.parse() {
         Ok(id) => id,
-        Err(e) => return json!({"success": false, "error": format!("invalid account id: {}", e)}).to_string(),
+        Err(_) => {
+            // Try as hex -> bytes -> base58
+            match parse_hex32(account_hex, "account") {
+                Ok(b) => match bs58::encode(b).into_string().parse() {
+                    Ok(id) => id,
+                    Err(e) => return json!({"success": false, "error": format!("invalid account id: {}", e)}).to_string(),
+                },
+                Err(e) => return json!({"success": false, "error": e}).to_string(),
+            }
+        }
     };
 
     let multisig_state_pda = compute_multisig_state_pda(&multisig_program_id, &create_key);
@@ -631,13 +646,18 @@ async fn execute_async(v: &Value) -> String {
         Err(e) => return json!({"success": false, "error": e}).to_string(),
     };
 
-    let account_bytes = match parse_hex32(account_hex, "account") {
-        Ok(b) => b,
-        Err(e) => return json!({"success": false, "error": e}).to_string(),
-    };
-    let signer_id: AccountId = match hex::encode(account_bytes).parse() {
+    let signer_id: AccountId = match account_hex.parse() {
         Ok(id) => id,
-        Err(e) => return json!({"success": false, "error": format!("invalid account id: {}", e)}).to_string(),
+        Err(_) => {
+            // Try as hex -> bytes -> base58
+            match parse_hex32(account_hex, "account") {
+                Ok(b) => match bs58::encode(b).into_string().parse() {
+                    Ok(id) => id,
+                    Err(e) => return json!({"success": false, "error": format!("invalid account id: {}", e)}).to_string(),
+                },
+                Err(e) => return json!({"success": false, "error": e}).to_string(),
+            }
+        }
     };
 
     let multisig_state_pda = compute_multisig_state_pda(&multisig_program_id, &create_key);
