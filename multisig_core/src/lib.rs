@@ -75,6 +75,19 @@ pub enum Instruction {
 // Proposal state (stored in its own PDA account)
 // ---------------------------------------------------------------------------
 
+/// Configuration change action embedded in a proposal.
+/// When a proposal has a `config_action`, execute modifies MultisigState
+/// directly instead of emitting a ChainedCall.
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub enum ConfigAction {
+    /// Add a new member to the multisig
+    AddMember { new_member: [u8; 32] },
+    /// Remove an existing member from the multisig
+    RemoveMember { member: [u8; 32] },
+    /// Change the approval threshold
+    ChangeThreshold { new_threshold: u8 },
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum ProposalStatus {
     /// Proposal is active and accepting approvals
@@ -117,6 +130,8 @@ pub struct Proposal {
     pub rejected: Vec<[u8; 32]>,
     /// Current status
     pub status: ProposalStatus,
+    /// Optional config change action (if set, execute modifies MultisigState instead of ChainedCall)
+    pub config_action: Option<ConfigAction>,
 }
 
 impl Proposal {
@@ -142,6 +157,7 @@ impl Proposal {
             approved: vec![proposer],
             rejected: vec![],
             status: ProposalStatus::Active,
+            config_action: None,
         }
     }
 
