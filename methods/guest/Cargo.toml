@@ -7,15 +7,9 @@ edition = "2024"
 name = "multisig"
 path = "src/bin/multisig.rs"
 
-[[bin]]
-name = "generate_idl"
-path = "src/bin/generate_idl.rs"
-
 [dependencies]
 multisig_core = { path = "../../multisig_core" }
 multisig_program = { path = "../../multisig_program" }
 nssa_core.workspace = true
-lez-framework = { git = "https://github.com/jimmy-claw/lez-framework.git", branch = "main" }
 risc0-zkvm.workspace = true
 borsh.workspace = true
-serde_json = "1.0"
