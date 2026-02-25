@@ -353,7 +353,7 @@ fn multisig_program_execute_impl(args: &str) -> Result<String, String> {
     let proposal = parse_account_id(v["proposal"].as_str().ok_or("missing proposal")?)?;
     let target_accounts = parse_account_id(v["target_accounts"].as_str().ok_or("missing target_accounts")?)?;
 
-    let mut account_ids: Vec<AccountId> = vec![
+    let account_ids: Vec<AccountId> = vec![
         multisig_state,
         executor,
         proposal,
