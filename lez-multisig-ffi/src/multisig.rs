@@ -112,14 +112,11 @@ fn multisig_program_create_multisig_impl(args: &str) -> Result<String, String> {
     let multisig_state = compute_pda(&[
         &create_key as &[u8],
     ]);
-    let member_accounts = compute_pda(&[&create_key as &[u8], b"members"]);
 
     let signer = parse_account_id(v["account"].as_str().ok_or("missing account")?)?;
-    let mut account_ids: Vec<AccountId> = vec![
-        multisig_state,
-        member_accounts,
-        signer,
-    ];
+    let mut account_ids: Vec<AccountId> = vec![multisig_state];
+    account_ids.extend(members.iter().cloned());
+    account_ids.push(signer);
     let signer_ids: Vec<AccountId> = vec![signer];
 
     let instruction = ProgramInstruction::CreateMultisig {
