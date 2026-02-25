@@ -19,13 +19,13 @@
 - **F2.1**: Any member can propose a transaction — creates a Proposal PDA account
 - **F2.2**: M distinct members must each approve in their own separate on-chain transactions
 - **F2.3**: Once M approvals are collected, any member can execute the proposal in a single transaction
-- **F2.4**: Execution delegates via NSSA `ChainedCall` to the target program — the multisig never modifies external state directly
+- **F2.4**: Execution delegates via LEZ `ChainedCall` to the target program — the multisig never modifies external state directly
 - **F2.5**: Support native token (λ) transfers via ChainedCall to token program
 
-### F3. Member Management *(not yet implemented — post-PoC)*
-- **F3.1**: Add member (requires M current signatures)
-- **F3.2**: Remove member (requires M current signatures)
-- **F3.3**: Change threshold (requires M current signatures, must satisfy 1 ≤ M ≤ N)
+### F3. Member Management ✅
+- **F3.1**: Add member (requires M current signatures) ✅
+- **F3.2**: Remove member (requires M current signatures, threshold guard: rejects if N-1 < M) ✅
+- **F3.3**: Change threshold (requires M current signatures, must satisfy 1 ≤ M ≤ N) ✅
 
 ---
 
@@ -51,11 +51,14 @@ lez-wallet multisig reject --multisig <id> --proposal <index>
 # Execute once threshold is met
 lez-wallet multisig execute --multisig <id> --proposal <index>
 
-# Add member (post-PoC)
+# Propose adding a member (creates config change proposal)
 lez-wallet multisig add-member --multisig <id> --member <new_pk>
 
-# Remove member (post-PoC)
+# Propose removing a member
 lez-wallet multisig remove-member --multisig <id> --member <pk>
+
+# Propose changing threshold
+lez-wallet multisig change-threshold --multisig <id> --threshold <new_M>
 ```
 
 ---
@@ -63,7 +66,7 @@ lez-wallet multisig remove-member --multisig <id> --member <pk>
 ## Reliability (R)
 
 - **R1**: No funds move without M valid approvals from distinct members
-- **R2**: Nonce-based replay protection (handled by NSSA runtime)
+- **R2**: Nonce-based replay protection (handled by LEZ runtime)
 - **R3**: Clear error messages for insufficient approvals, invalid members, wrong proposal state
 - **R4**: Proposals are immutable once executed or rejected — status cannot be reversed
 
@@ -107,13 +110,12 @@ This ensures the multisig program has minimal surface area and cannot directly m
 
 ### Member Account Claiming
 
-Due to NSSA runtime validation rules, member accounts must be **fresh keypairs** dedicated to each multisig. During `CreateMultisig`, all member accounts are claimed by the multisig program. See [LSSA issue #339](https://github.com/logos-blockchain/lssa/issues/339) for context.
+Due to LEZ runtime validation rules, member accounts must be **fresh keypairs** dedicated to each multisig. During `CreateMultisig`, all member accounts are claimed by the multisig program. See [LEZ runtime issue #339](https://github.com/logos-blockchain/lssa/issues/339) for context.
 
 ---
 
 ## Known Limitations (PoC Scope)
 
-- Member management (F3) not yet implemented
 - CLI needs update for proposal PDA flow
 - No `CloseProposal` to reclaim executed/rejected proposal storage
 - No time-lock between threshold reached and execution

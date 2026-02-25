@@ -16,7 +16,7 @@ CreateMultisig → Propose → Approve (×M) → Execute → ChainedCall to targ
 4. **Execute** — once M approvals collected, emits a `ChainedCall` to the target program
 5. **Reject** — members can reject; if rejections ≥ (N - M + 1), the proposal is dead
 
-**Key design:** The multisig never executes actions directly. It collects votes and delegates execution via NSSA `ChainedCall`. For example, a token transfer goes: multisig approves → `ChainedCall` to token program → token program moves funds.
+**Key design:** The multisig never executes actions directly. It collects votes and delegates execution via LEZ `ChainedCall`. For example, a token transfer goes: multisig approves → `ChainedCall` to token program → token program moves funds.
 
 ## Project Structure
 
@@ -51,7 +51,7 @@ lez-multisig/
 
 ### Important: Member Accounts
 
-Members must use **fresh keypairs** (never-used accounts with nonce=0) for each multisig. During `CreateMultisig`, all member accounts are **claimed** by the multisig program (sets `program_owner = multisig_program_id`). This is required by NSSA validation rules — see [issue #339](https://github.com/logos-blockchain/lssa/issues/339).
+Members must use **fresh keypairs** (never-used accounts with nonce=0) for each multisig. During `CreateMultisig`, all member accounts are **claimed** by the multisig program (sets `program_owner = multisig_program_id`). This is required by LEZ validation rules — see [issue #339](https://github.com/logos-blockchain/lssa/issues/339).
 
 ### 1. Build the guest binary
 
@@ -143,7 +143,7 @@ See [SPEC.md](SPEC.md) for full details. Summary:
 | Proposal | `"multisig_prop___" XOR create_key XOR index` | Single proposal: action + votes |
 | Vault | `"multisig_vault__" XOR create_key` | Holds assets controlled by multisig |
 
-All PDAs: `AccountId = SHA256(NSSA_PREFIX ‖ program_id ‖ seed)`
+All PDAs: `AccountId = SHA256(LEZ_PREFIX ‖ program_id ‖ seed)`
 
 ### Instructions
 
@@ -166,5 +166,5 @@ All PDAs: `AccountId = SHA256(NSSA_PREFIX ‖ program_id ‖ seed)`
 
 - [Technical Specification (SPEC.md)](SPEC.md)
 - [FURPS Requirements](docs/FURPS.md)
-- [LSSA Repository](https://github.com/logos-blockchain/lssa)
+- [LEZ Repository (LSSA)](https://github.com/logos-blockchain/lssa)
 - [Squads Protocol v4](https://squads.so/) — design inspiration

@@ -1,1 +1,3 @@
-#!/bin/bash\ncd "$(dirname "$0")"\ncargo test -p lez-multisig-e2e -- --nocapture
+#!/bin/bash
+cd "$(dirname "$0")/.."
+cargo test -p lez-multisig-e2e -- --nocapture

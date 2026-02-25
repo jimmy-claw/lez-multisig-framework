@@ -11,7 +11,7 @@
 
 use nssa_core::account::AccountWithMetadata;
 use nssa_core::program::{AccountPostState, ChainedCall, PdaSeed};
-use multisig_core::{MultisigState, Proposal, ProposalStatus};
+use multisig_core::{ConfigAction, MultisigState, Proposal, ProposalStatus};
 
 pub fn handle(
     accounts: &[AccountWithMetadata],
@@ -28,7 +28,7 @@ pub fn handle(
 
     // Read multisig state
     let state_data: Vec<u8> = multisig_account.account.data.clone().into();
-    let state: MultisigState = borsh::from_slice(&state_data)
+    let mut state: MultisigState = borsh::from_slice(&state_data)
         .expect("Failed to deserialize multisig state");
 
     let executor_id = *executor_account.account_id.value();
@@ -48,65 +48,119 @@ pub fn handle(
         proposal.approved.len()
     );
 
-    assert_eq!(
-        target_accounts.len(),
-        proposal.target_account_count as usize,
-        "Expected {} target accounts, got {}",
-        proposal.target_account_count,
-        target_accounts.len()
-    );
-
-    // Extract ChainedCall parameters from proposal
-    let target_program_id = proposal.target_program_id.clone();
-    let target_instruction_data = proposal.target_instruction_data.clone();
-    let pda_seeds: Vec<PdaSeed> = proposal.pda_seeds.iter().map(|s| PdaSeed::new(*s)).collect();
-    let authorized_indices = proposal.authorized_indices.clone();
-
     // Mark as executed
     proposal.status = ProposalStatus::Executed;
 
-    // Write back proposal
-    let proposal_bytes = borsh::to_vec(&proposal).unwrap();
-    let mut proposal_post = proposal_account.account.clone();
-    proposal_post.data = proposal_bytes.try_into().unwrap();
+    // Handle config change vs transfer proposal
+    if let Some(config_action) = &proposal.config_action {
+        // Config change: modify MultisigState directly, no ChainedCall
+        assert_eq!(
+            target_accounts.len(), 0,
+            "Config change proposals should not have target accounts"
+        );
 
-    // Build target account pre_states with authorization based on proposal
-    let chained_pre_states: Vec<AccountWithMetadata> = target_accounts
-        .iter()
-        .enumerate()
-        .map(|(i, acc)| {
-            let mut acc = acc.clone();
-            if authorized_indices.contains(&(i as u8)) {
-                acc.is_authorized = true;
+        match config_action {
+            ConfigAction::AddMember { new_member } => {
+                assert!(!state.is_member(new_member), "Account is already a member");
+                assert!(state.member_count < 10, "Maximum 10 members");
+                state.members.push(*new_member);
+                state.member_count += 1;
             }
-            acc
-        })
-        .collect();
+            ConfigAction::RemoveMember { member } => {
+                assert!(state.is_member(member), "Account is not a member");
+                assert!(
+                    state.member_count - 1 >= state.threshold,
+                    "Cannot remove member: would make member count ({}) less than threshold ({})",
+                    state.member_count - 1,
+                    state.threshold
+                );
+                state.members.retain(|m| m != member);
+                state.member_count -= 1;
+            }
+            ConfigAction::ChangeThreshold { new_threshold } => {
+                assert!(*new_threshold >= 1, "Threshold must be at least 1");
+                assert!(
+                    *new_threshold <= state.member_count,
+                    "Threshold ({}) cannot exceed member count ({})",
+                    new_threshold,
+                    state.member_count
+                );
+                state.threshold = *new_threshold;
+            }
+        }
 
-    let chained_call = ChainedCall {
-        program_id: target_program_id,
-        instruction_data: target_instruction_data,
-        pre_states: chained_pre_states,
-        pda_seeds,
-    };
+        // Write back updated state
+        let state_bytes = borsh::to_vec(&state).unwrap();
+        let mut multisig_post = multisig_account.account.clone();
+        multisig_post.data = state_bytes.try_into().unwrap();
 
-    // Multisig state unchanged
-    let multisig_post = multisig_account.account.clone();
-    let executor_post = executor_account.account.clone();
+        let proposal_bytes = borsh::to_vec(&proposal).unwrap();
+        let mut proposal_post = proposal_account.account.clone();
+        proposal_post.data = proposal_bytes.try_into().unwrap();
 
-    // Post states for: multisig, executor, proposal, then all target accounts passed through
-    let mut post_states = vec![
-        AccountPostState::new(multisig_post),
-        AccountPostState::new(executor_post),
-        AccountPostState::new(proposal_post),
-    ];
+        let executor_post = executor_account.account.clone();
 
-    // Target accounts must also have post_states (unchanged, they'll be modified by ChainedCall)
-    for target in target_accounts {
-        post_states.push(AccountPostState::new(target.account.clone()));
+        (
+            vec![
+                AccountPostState::new(multisig_post),
+                AccountPostState::new(executor_post),
+                AccountPostState::new(proposal_post),
+            ],
+            vec![],
+        )
+    } else {
+        // Transfer proposal: emit ChainedCall
+        assert_eq!(
+            target_accounts.len(),
+            proposal.target_account_count as usize,
+            "Expected {} target accounts, got {}",
+            proposal.target_account_count,
+            target_accounts.len()
+        );
+
+        let target_program_id = proposal.target_program_id.clone();
+        let target_instruction_data = proposal.target_instruction_data.clone();
+        let pda_seeds: Vec<PdaSeed> = proposal.pda_seeds.iter().map(|s| PdaSeed::new(*s)).collect();
+        let authorized_indices = proposal.authorized_indices.clone();
+
+        let proposal_bytes = borsh::to_vec(&proposal).unwrap();
+        let mut proposal_post = proposal_account.account.clone();
+        proposal_post.data = proposal_bytes.try_into().unwrap();
+
+        let chained_pre_states: Vec<AccountWithMetadata> = target_accounts
+            .iter()
+            .enumerate()
+            .map(|(i, acc)| {
+                let mut acc = acc.clone();
+                if authorized_indices.contains(&(i as u8)) {
+                    acc.is_authorized = true;
+                }
+                acc
+            })
+            .collect();
+
+        let chained_call = ChainedCall {
+            program_id: target_program_id,
+            instruction_data: target_instruction_data,
+            pre_states: chained_pre_states,
+            pda_seeds,
+        };
+
+        let multisig_post = multisig_account.account.clone();
+        let executor_post = executor_account.account.clone();
+
+        let mut post_states = vec![
+            AccountPostState::new(multisig_post),
+            AccountPostState::new(executor_post),
+            AccountPostState::new(proposal_post),
+        ];
+
+        for target in target_accounts {
+            post_states.push(AccountPostState::new(target.account.clone()));
+        }
+
+        (post_states, vec![chained_call])
     }
-
-    (post_states, vec![chained_call])
 }
 
 #[cfg(test)]
@@ -226,6 +280,133 @@ mod tests {
             make_account(&[99u8; 32], vec![], true), // NOT a member
             make_account(&[20u8; 32], proposal_data, false),
             make_account(&[30u8; 32], vec![], false),
+        ];
+
+        handle(&accounts, 1);
+    }
+
+    // -- Config action tests --
+
+    fn make_config_proposal(approvals: Vec<[u8; 32]>, action: ConfigAction) -> Vec<u8> {
+        let mut proposal = Proposal::new_config(
+            1,
+            approvals[0],
+            [0u8; 32],
+            action,
+        );
+        for approver in &approvals[1..] {
+            proposal.approve(*approver);
+        }
+        borsh::to_vec(&proposal).unwrap()
+    }
+
+    #[test]
+    fn test_execute_add_member() {
+        let members = vec![[1u8; 32], [2u8; 32], [3u8; 32]];
+        let state_data = make_state(2, members);
+        let proposal_data = make_config_proposal(
+            vec![[1u8; 32], [2u8; 32]],
+            ConfigAction::AddMember { new_member: [4u8; 32] },
+        );
+
+        let accounts = vec![
+            make_account(&[10u8; 32], state_data, false),
+            make_account(&[1u8; 32], vec![], true),
+            make_account(&[20u8; 32], proposal_data, false),
+        ];
+
+        let (post_states, chained) = handle(&accounts, 1);
+
+        assert!(chained.is_empty());
+        let state: MultisigState = borsh::from_slice(
+            &Vec::from(post_states[0].account().data.clone())
+        ).unwrap();
+        assert_eq!(state.member_count, 4);
+        assert!(state.members.contains(&[4u8; 32]));
+    }
+
+    #[test]
+    fn test_execute_remove_member() {
+        let members = vec![[1u8; 32], [2u8; 32], [3u8; 32]];
+        let state_data = make_state(2, members);
+        let proposal_data = make_config_proposal(
+            vec![[1u8; 32], [2u8; 32]],
+            ConfigAction::RemoveMember { member: [3u8; 32] },
+        );
+
+        let accounts = vec![
+            make_account(&[10u8; 32], state_data, false),
+            make_account(&[1u8; 32], vec![], true),
+            make_account(&[20u8; 32], proposal_data, false),
+        ];
+
+        let (post_states, chained) = handle(&accounts, 1);
+
+        assert!(chained.is_empty());
+        let state: MultisigState = borsh::from_slice(
+            &Vec::from(post_states[0].account().data.clone())
+        ).unwrap();
+        assert_eq!(state.member_count, 2);
+        assert!(!state.members.contains(&[3u8; 32]));
+    }
+
+    #[test]
+    #[should_panic(expected = "Cannot remove member")]
+    fn test_execute_remove_member_would_break_threshold() {
+        let members = vec![[1u8; 32], [2u8; 32]];
+        let state_data = make_state(2, members);
+        let proposal_data = make_config_proposal(
+            vec![[1u8; 32], [2u8; 32]],
+            ConfigAction::RemoveMember { member: [2u8; 32] },
+        );
+
+        let accounts = vec![
+            make_account(&[10u8; 32], state_data, false),
+            make_account(&[1u8; 32], vec![], true),
+            make_account(&[20u8; 32], proposal_data, false),
+        ];
+
+        handle(&accounts, 1);
+    }
+
+    #[test]
+    fn test_execute_change_threshold() {
+        let members = vec![[1u8; 32], [2u8; 32], [3u8; 32]];
+        let state_data = make_state(2, members);
+        let proposal_data = make_config_proposal(
+            vec![[1u8; 32], [2u8; 32]],
+            ConfigAction::ChangeThreshold { new_threshold: 3 },
+        );
+
+        let accounts = vec![
+            make_account(&[10u8; 32], state_data, false),
+            make_account(&[1u8; 32], vec![], true),
+            make_account(&[20u8; 32], proposal_data, false),
+        ];
+
+        let (post_states, chained) = handle(&accounts, 1);
+
+        assert!(chained.is_empty());
+        let state: MultisigState = borsh::from_slice(
+            &Vec::from(post_states[0].account().data.clone())
+        ).unwrap();
+        assert_eq!(state.threshold, 3);
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot exceed member count")]
+    fn test_execute_change_threshold_too_high() {
+        let members = vec![[1u8; 32], [2u8; 32], [3u8; 32]];
+        let state_data = make_state(2, members);
+        let proposal_data = make_config_proposal(
+            vec![[1u8; 32], [2u8; 32]],
+            ConfigAction::ChangeThreshold { new_threshold: 5 },
+        );
+
+        let accounts = vec![
+            make_account(&[10u8; 32], state_data, false),
+            make_account(&[1u8; 32], vec![], true),
+            make_account(&[20u8; 32], proposal_data, false),
         ];
 
         handle(&accounts, 1);

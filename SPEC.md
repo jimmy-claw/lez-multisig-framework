@@ -2,7 +2,7 @@
 
 ## Overview
 
-An M-of-N multisig governance program for the NSSA runtime, inspired by [Squads Protocol v4](https://docs.squads.so/). The multisig collects approvals from members and executes actions on other programs via NSSA ChainedCalls.
+An M-of-N multisig governance program for the LEZ runtime, inspired by [Squads Protocol v4](https://docs.squads.so/). The multisig collects approvals from members and executes actions on other programs via LEZ ChainedCalls.
 
 **Key principle:** The multisig never directly modifies external state. It only manages proposals and voting, then delegates execution via `ChainedCall`.
 
@@ -56,7 +56,7 @@ struct Proposal {
 
 ## PDA Derivation
 
-All PDAs follow the NSSA standard: `AccountId = SHA256(prefix ‖ program_id ‖ seed)` where prefix is the 32-byte constant `"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00"`.
+All PDAs follow the NSSA standard: `AccountId = SHA256(prefix ‖ program_id ‖ seed)` where prefix is the 32-byte constant `"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00"` (upstream constant, not yet renamed).
 
 ### Multisig State PDA
 
@@ -244,7 +244,7 @@ Executes a fully-approved proposal by emitting a ChainedCall.
 
 ## Validation Rules
 
-The NSSA runtime enforces these rules on every transaction:
+The LEZ runtime enforces these rules on every transaction:
 
 1. Pre/post state arrays must have equal length
 2. All account IDs must be unique
@@ -256,10 +256,73 @@ The NSSA runtime enforces these rules on every transaction:
 
 ---
 
+---
+
+## Config Change Proposals (Member Management)
+
+Config change proposals modify the MultisigState directly on execute, instead of emitting a ChainedCall. They follow the same propose → approve → execute flow as transfer proposals.
+
+### ProposalAction / ConfigAction
+
+```rust
+enum ConfigAction {
+    AddMember { new_member: [u8; 32] },
+    RemoveMember { member: [u8; 32] },
+    ChangeThreshold { new_threshold: u8 },
+}
+```
+
+Proposals store an optional `config_action: Option<ConfigAction>`. When present, the execute handler applies the config change to MultisigState instead of emitting a ChainedCall.
+
+### ProposeAddMember
+
+Proposes adding a new member to the multisig.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `new_member` | `[u8; 32]` | AccountId of the new member |
+
+**Accounts:** Same as Propose: `[multisig_state, proposer, proposal_pda]`
+
+**Validation:** New member must not already be a member. Max 10 members.
+
+**On Execute:** Adds member to `MultisigState.members`, increments `member_count`.
+
+### ProposeRemoveMember
+
+Proposes removing a member from the multisig.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `member` | `[u8; 32]` | AccountId of the member to remove |
+
+**Accounts:** Same as Propose.
+
+**Validation at propose time:** Member must exist.
+
+**Validation at execute time (threshold guard):** Rejects if `member_count - 1 < threshold` (U1 safety).
+
+**On Execute:** Removes member from `MultisigState.members`, decrements `member_count`.
+
+### ProposeChangeThreshold
+
+Proposes changing the approval threshold.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `new_threshold` | `u8` | New required approvals (1 ≤ M ≤ N) |
+
+**Accounts:** Same as Propose.
+
+**Validation:** `new_threshold >= 1` at propose time. `new_threshold <= member_count` at execute time.
+
+**On Execute:** Updates `MultisigState.threshold`.
+
+---
+
 ## Future Considerations
 
 - **Account cleanup**: Executed/rejected proposals remain on-chain. Consider a `CloseProposal` instruction to reclaim storage.
-- **Config changes**: `AddMember`, `RemoveMember`, `ChangeThreshold` instructions (not yet implemented).
 - **Time-lock**: Optional delay between reaching threshold and execution.
 - **Multiple vaults**: Different vault PDAs per asset type.
 - **GitHub Actions CI**: Automated testing on PR push.

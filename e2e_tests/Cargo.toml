@@ -7,6 +7,10 @@ edition = "2024"
 name = "e2e_multisig"
 path = "tests/e2e_multisig.rs"
 
+[[test]]
+name = "e2e_member_management"
+path = "tests/e2e_member_management.rs"
+
 [dependencies]
 multisig_core = { path = "../multisig_core" }
 nssa = { git = "https://github.com/logos-blockchain/lssa.git", branch = "main" }

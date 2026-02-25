@@ -3,7 +3,7 @@
 // A multisig is a governance wrapper: it collects M-of-N approvals and then
 // executes a ChainedCall to a target program. The multisig itself never
 // directly modifies external accounts — it only stores proposals and voting
-// state, then delegates execution via NSSA ChainedCalls.
+// state, then delegates execution via LEZ ChainedCalls.
 //
 // Proposals are stored as separate PDA accounts (Squads-style), not inside
 // MultisigState. This prevents state bloat and allows independent lifecycle.
@@ -68,6 +68,23 @@ pub enum Instruction {
     /// The transaction must include the target accounts after [multisig_state, executor, proposal].
     Execute {
         proposal_index: u64,
+    },
+
+    /// Propose adding a new member to the multisig (requires M approvals to execute).
+    ProposeAddMember {
+        new_member: [u8; 32],
+    },
+
+    /// Propose removing a member from the multisig (requires M approvals to execute).
+    /// Will be rejected on execute if removing would make N < M.
+    ProposeRemoveMember {
+        member: [u8; 32],
+    },
+
+    /// Propose changing the approval threshold (requires M approvals to execute).
+    /// Must satisfy 1 ≤ new_threshold ≤ N (checked on execute).
+    ProposeChangeThreshold {
+        new_threshold: u8,
     },
 }
 
@@ -158,6 +175,29 @@ impl Proposal {
             rejected: vec![],
             status: ProposalStatus::Active,
             config_action: None,
+        }
+    }
+
+    /// Create a new config change proposal (no ChainedCall target)
+    pub fn new_config(
+        index: u64,
+        proposer: [u8; 32],
+        multisig_create_key: [u8; 32],
+        action: ConfigAction,
+    ) -> Self {
+        Self {
+            index,
+            proposer,
+            multisig_create_key,
+            target_program_id: [0u32; 8],
+            target_instruction_data: vec![],
+            target_account_count: 0,
+            pda_seeds: vec![],
+            authorized_indices: vec![],
+            approved: vec![proposer],
+            rejected: vec![],
+            status: ProposalStatus::Active,
+            config_action: Some(action),
         }
     }
 
