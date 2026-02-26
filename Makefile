@@ -140,3 +140,39 @@ status: ## Show saved state
 clean: ## Remove saved state
 	rm -f $(STATE_FILE) $(STATE_FILE).tmp
 	@echo "✅ State cleaned"
+
+# ── E2E Tests ─────────────────────────────────────────────────────────────────
+
+.PHONY: test-e2e
+
+test-e2e: ## Run full E2E tests (requires sequencer running + lssa artifacts)
+	@test -n "$(LSSA_DIR)" || (echo "ERROR: Set LSSA_DIR=<path to lssa repo>"; exit 1)
+	@echo "🧪 Running E2E tests..."
+	RISC0_SKIP_BUILD=1 SEQUENCER_URL=http://127.0.0.1:3040 	  MULTISIG_PROGRAM=$(PROGRAMS_DIR)/multisig.bin 	  TOKEN_PROGRAM=$(TOKEN_BIN) 	  cargo test -p lez-multisig-e2e --test e2e_multisig -- --nocapture
+	@echo "✅ E2E tests passed"
+
+# ── FFI .so Build ─────────────────────────────────────────────────────────────
+
+.PHONY: build-ffi
+
+build-ffi: generate ## Build the FFI .so (liblez_multisig_ffi.so) for use in Qt module
+	@echo "🔨 Building FFI shared library..."
+	source ~/.cargo/env && RISC0_SKIP_BUILD=1 cargo build --release -p lez-multisig-ffi
+	@echo "✅ FFI .so built: target/release/liblez_multisig_ffi.so"
+	@ls -lh target/release/liblez_multisig_ffi.so
+
+# ── Headless Demo ─────────────────────────────────────────────────────────────
+
+.PHONY: demo
+
+LOGOSCORE ?= $(HOME)/logoscore-test/logoscore
+MULTISIG_MODULE_DIR ?= $(HOME)/logos-lez-multisig-module/result/lib
+REGISTRY_MODULE_DIR ?= $(HOME)/logos-lez-registry-module/build
+
+demo: ## Run headless Logos Core demo (loads both modules via logoscore)
+	@test -f "$(LOGOSCORE)" || (echo "ERROR: logoscore not found at $(LOGOSCORE)"; exit 1)
+	@echo "🚀 Loading multisig module via Logos Core..."
+	timeout 8 $(LOGOSCORE) --modules-dir $(MULTISIG_MODULE_DIR) 	  --load-modules lez_multisig_module 	  --call "lez_multisig_module.loadMultisigs()" || true
+	@echo ""
+	@echo "📋 Loading registry module via Logos Core..."
+	timeout 8 $(LOGOSCORE) --modules-dir $(REGISTRY_MODULE_DIR) 	  --load-modules liblez_registry_module 	  --call "liblez_registry_module.listPrograms()" || true
