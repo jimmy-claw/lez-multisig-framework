@@ -10,6 +10,30 @@ mod multisig;
 // Re-export generated PDA compute helpers for use by tests and other crates.
 pub use multisig::{compute_multisig_state_pda, compute_proposal_pda};
 
+// Vault PDA helpers — derived from program_id + create_key
+// Seeds: SHA256(pad("multisig_vault___") || create_key)
+pub fn vault_pda_seed_bytes(create_key: &[u8; 32]) -> [u8; 32] {
+    use sha2::{Sha256, Digest};
+    let mut hasher = Sha256::new();
+    let mut padded = [0u8; 32];
+    let src: &[u8] = b"multisig_vault___";
+    padded[..src.len()].copy_from_slice(src);
+    hasher.update(&padded);
+    hasher.update(create_key);
+    hasher.finalize().into()
+}
+
+pub fn compute_vault_pda(
+    program_id: &nssa_core::program::ProgramId,
+    create_key: &[u8; 32],
+) -> nssa_core::account::AccountId {
+    use nssa_core::program::PdaSeed;
+    use nssa_core::account::AccountId;
+    let seed = vault_pda_seed_bytes(create_key);
+    let pda_seed = PdaSeed::new(seed);
+    AccountId::from((program_id, &pda_seed))
+}
+
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
