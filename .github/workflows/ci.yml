@@ -48,9 +48,13 @@ jobs:
           echo "✅ FFI client generated"
 
       - name: Run unit tests
+        env:
+          RISC0_SKIP_BUILD: "1"
         run: cargo test -p multisig_core -p multisig_program
 
       - name: cargo check (all crates)
+        env:
+          RISC0_SKIP_BUILD: "1"
         run: cargo check --workspace --exclude multisig-guest
 
       - name: Upload generated artifacts
