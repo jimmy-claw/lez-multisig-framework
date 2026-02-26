@@ -61,27 +61,25 @@ All PDAs follow the NSSA standard: `AccountId = SHA256(prefix ‖ program_id ‖
 ### Multisig State PDA
 
 ```
-tag  = "multisig_state__"            (16 bytes, padded to 32 with 0x00)
-seed = tag XOR create_key            (32 bytes)
+seed = SHA256("multisig_state__" || create_key)   // 32 bytes
 PDA  = NSSA_PDA(program_id, seed)
 ```
 
 ### Proposal PDA
 
 ```
-tag  = "multisig_prop___"            (16 bytes, padded to 32 with 0x00)
-seed = tag XOR create_key            (32 bytes)
-seed[24..32] ^= proposal_index      (big-endian u64, XOR'd into last 8 bytes)
+seed = SHA256("multisig_prop___" || create_key || proposal_index_le_bytes)
 PDA  = NSSA_PDA(program_id, seed)
 ```
 
 ### Vault PDA
 
 ```
-tag  = "multisig_vault__"            (16 bytes, padded to 32 with 0x00)
-seed = tag XOR create_key            (32 bytes)
+seed = SHA256("multisig_vault__" || create_key)   // 32 bytes
 PDA  = NSSA_PDA(program_id, seed)
 ```
+
+> ⚠️ Note: The compute_*_pda helpers in multisig_core/src/lib.rs currently use a legacy XOR formula. See issue #3.
 
 ### Properties
 
