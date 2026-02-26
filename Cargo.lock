@@ -1012,15 +1012,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clap_complete"
-version = "4.5.66"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c757a3b7e39161a4e56f9365141ada2a6c915a8622c408ab6bb4b5d047371031"
-dependencies = [
- "clap",
-]
-
-[[package]]
 name = "clap_derive"
 version = "4.5.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2544,12 +2535,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
 
 [[package]]
+name = "lez-cli"
+version = "0.1.0"
+source = "git+https://github.com/jimmy-claw/lez-framework.git#1e146970d2bba861a32fd3a8b4e13b1e6ff4114d"
+dependencies = [
+ "base58",
+ "borsh",
+ "lez-framework-core 0.1.0 (git+https://github.com/jimmy-claw/lez-framework.git)",
+ "nssa",
+ "nssa_core",
+ "risc0-zkvm",
+ "serde",
+ "serde_json",
+ "tokio",
+ "wallet",
+]
+
+[[package]]
 name = "lez-framework"
 version = "0.1.0"
 source = "git+https://github.com/jimmy-claw/lez-framework.git?branch=jimmy%2Ffix-idl-instruction-type#8fba02b5df0976349745d0d5fb8bc1972d79f0d8"
 dependencies = [
  "borsh",
- "lez-framework-core",
+ "lez-framework-core 0.1.0 (git+https://github.com/jimmy-claw/lez-framework.git?branch=jimmy%2Ffix-idl-instruction-type)",
  "lez-framework-macros",
  "nssa_core",
 ]
@@ -2558,6 +2566,19 @@ dependencies = [
 name = "lez-framework-core"
 version = "0.1.0"
 source = "git+https://github.com/jimmy-claw/lez-framework.git?branch=jimmy%2Ffix-idl-instruction-type#8fba02b5df0976349745d0d5fb8bc1972d79f0d8"
+dependencies = [
+ "borsh",
+ "nssa_core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "lez-framework-core"
+version = "0.1.0"
+source = "git+https://github.com/jimmy-claw/lez-framework.git#1e146970d2bba861a32fd3a8b4e13b1e6ff4114d"
 dependencies = [
  "borsh",
  "nssa_core",
@@ -3311,17 +3332,8 @@ dependencies = [
 name = "multisig-cli"
 version = "0.1.0"
 dependencies = [
- "borsh",
- "clap",
- "clap_complete",
- "hex",
- "multisig_core",
- "nssa",
- "nssa_core",
- "risc0-zkvm",
- "serde",
+ "lez-cli",
  "tokio",
- "wallet",
 ]
 
 [[package]]

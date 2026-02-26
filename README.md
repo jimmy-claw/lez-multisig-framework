@@ -32,7 +32,11 @@ lez-multisig/
 │       ├── reject.rs
 │       └── execute.rs
 ├── methods/                 — risc0 zkVM guest build config
-│   └── guest/src/bin/multisig.rs
+│   └── guest/src/bin/
+│       ├── multisig.rs      — zkVM guest entry point
+│       └── generate_idl.rs  — IDL generation from program source
+├── cli/                     — thin CLI wrapper around lez-cli
+│   └── src/bin/multisig.rs
 ├── e2e_tests/               — integration tests against live sequencer
 │   └── tests/e2e_multisig.rs
 ├── SPEC.md                  — full technical specification
@@ -156,26 +160,38 @@ All PDAs: `AccountId = SHA256(LEZ_PREFIX ‖ program_id ‖ seed)`
 
 ## CLI
 
-This project uses [`lez-cli`](https://github.com/jimmy-claw/lez-framework/?tab=readme-ov-file#the-cli-wrapper), the built-in CLI wrapper from the LEZ framework. No separate CLI crate is needed — `lez-cli` auto-generates subcommands from the multisig IDL.
+The `cli/` crate is a thin wrapper around [`lez-cli`](https://github.com/jimmy-claw/lez-framework/?tab=readme-ov-file#the-cli-wrapper), which auto-generates subcommands from the multisig IDL.
+
+### Generate IDL (if needed)
+
+The IDL describes the program's instruction set. Regenerate it from source when the instruction types change:
+
+```bash
+cargo run --bin generate_idl > multisig_idl.json
+```
+
+The IDL generator lives at `methods/guest/src/bin/generate_idl.rs` and uses the `lez_framework::generate_idl!` macro to introspect `multisig_program/src/lib.rs`.
+
+### Use the CLI
 
 ```bash
 # View available multisig commands
-lez-cli --idl multisig_idl.json --help
+cargo run --bin multisig -- --idl multisig_idl.json --help
 
 # Create a multisig (dry-run)
-lez-cli --idl multisig_idl.json --dry-run -p multisig.bin \
+cargo run --bin multisig -- --idl multisig_idl.json --dry-run -p multisig.bin \
   create-multisig --threshold 2 --members '[<member1>, <member2>, <member3>]'
 
 # Propose a transfer
-lez-cli --idl multisig_idl.json -p multisig.bin \
+cargo run --bin multisig -- --idl multisig_idl.json -p multisig.bin \
   propose --multisig-pda <pda> --action '{"Transfer": {"to": "<addr>", "amount": 200}}'
 
 # Approve a proposal
-lez-cli --idl multisig_idl.json -p multisig.bin \
+cargo run --bin multisig -- --idl multisig_idl.json -p multisig.bin \
   approve --multisig-pda <pda> --proposal-index 1
 
 # Execute an approved proposal
-lez-cli --idl multisig_idl.json -p multisig.bin \
+cargo run --bin multisig -- --idl multisig_idl.json -p multisig.bin \
   execute --multisig-pda <pda> --proposal-index 1
 ```
 

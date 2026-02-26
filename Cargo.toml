@@ -7,6 +7,7 @@ members = [
     "methods/guest",
     "e2e_tests",
     "lez-multisig-ffi",
+    "cli",
 ]
 
 [workspace.dependencies]

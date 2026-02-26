@@ -1,0 +1,12 @@
+[package]
+name = "multisig-cli"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "multisig"
+path = "src/bin/multisig.rs"
+
+[dependencies]
+lez-cli = { git = "https://github.com/jimmy-claw/lez-framework.git" }
+tokio = { version = "1", features = ["full"] }
