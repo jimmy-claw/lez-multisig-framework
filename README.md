@@ -35,7 +35,6 @@ lez-multisig/
 │   └── guest/src/bin/multisig.rs
 ├── e2e_tests/               — integration tests against live sequencer
 │   └── tests/e2e_multisig.rs
-├── cli/                     — CLI (⚠️ needs update for new proposal PDA flow)
 ├── SPEC.md                  — full technical specification
 └── docs/FURPS.md            — requirements specification
 ```
@@ -155,10 +154,33 @@ All PDAs: `AccountId = SHA256(LEZ_PREFIX ‖ program_id ‖ seed)`
 | `Reject` | `[state_pda, rejector, proposal_pda]` | Add rejection to proposal |
 | `Execute` | `[state_pda, executor, proposal_pda, ...targets]` | Execute approved proposal via ChainedCall |
 
+## CLI
+
+This project uses [`lez-cli`](https://github.com/jimmy-claw/lez-framework/?tab=readme-ov-file#the-cli-wrapper), the built-in CLI wrapper from the LEZ framework. No separate CLI crate is needed — `lez-cli` auto-generates subcommands from the multisig IDL.
+
+```bash
+# View available multisig commands
+lez-cli --idl multisig_idl.json --help
+
+# Create a multisig (dry-run)
+lez-cli --idl multisig_idl.json --dry-run -p multisig.bin \
+  create-multisig --threshold 2 --members '[<member1>, <member2>, <member3>]'
+
+# Propose a transfer
+lez-cli --idl multisig_idl.json -p multisig.bin \
+  propose --multisig-pda <pda> --action '{"Transfer": {"to": "<addr>", "amount": 200}}'
+
+# Approve a proposal
+lez-cli --idl multisig_idl.json -p multisig.bin \
+  approve --multisig-pda <pda> --proposal-index 1
+
+# Execute an approved proposal
+lez-cli --idl multisig_idl.json -p multisig.bin \
+  execute --multisig-pda <pda> --proposal-index 1
+```
+
 ## Known Issues
 
-- [ ] CLI needs update for proposal PDA flow ([current CLI uses old 2-account layout](cli/src/bin/multisig.rs))
-- [ ] CLI requires `logos-blockchain-circuits` transitive dependency ([#1](https://github.com/jimmy-claw/lez-multisig/issues/1))
 - [ ] No `CloseProposal` instruction yet (executed/rejected proposals stay on-chain)
 - [ ] Config change instructions (`AddMember`, `RemoveMember`, `ChangeThreshold`) not yet implemented in program
 

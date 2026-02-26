@@ -5,7 +5,6 @@ members = [
     "multisig_program",
     "methods",
     "methods/guest",
-    "cli",
     "e2e_tests",
     "lez-multisig-ffi",
 ]
