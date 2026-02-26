@@ -18,5 +18,5 @@ multisig_program = { path = "../../multisig_program" }
 nssa_core.workspace = true
 risc0-zkvm.workspace = true
 borsh.workspace = true
-lez-framework = { git = "https://github.com/jimmy-claw/lez-framework.git", branch = "jimmy/fix-idl-instruction-type" }
+lez-framework = { git = "https://github.com/jimmy-claw/lez-framework.git", branch = "main" }
 serde_json = "1"
