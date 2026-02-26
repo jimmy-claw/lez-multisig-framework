@@ -15,10 +15,8 @@ use nssa::{
     program::Program,
     public_transaction::{Message, WitnessSet},
 };
-use multisig_core::{
-    Instruction, MultisigState, Proposal, ProposalStatus,
-    compute_multisig_state_pda, compute_proposal_pda,
-};
+use multisig_core::{Instruction, MultisigState, Proposal, ProposalStatus};
+use lez_multisig_ffi::{compute_multisig_state_pda, compute_proposal_pda};
 use common::sequencer_client::SequencerClient;
 
 const BLOCK_WAIT_SECS: u64 = 15;
@@ -146,7 +144,7 @@ async fn propose_approve_execute_config(
             program_id,
             vec![multisig_state_id, approver_id, proposal_pda],
             vec![nonce],
-            Instruction::Approve { proposal_index },
+            Instruction::Approve { create_key: *create_key, proposal_index },
         ).unwrap();
         let ws = WitnessSet::for_message(&msg, &[approver_key]);
         submit_tx(client, PublicTransaction::new(msg, ws)).await;
@@ -160,7 +158,7 @@ async fn propose_approve_execute_config(
         program_id,
         vec![multisig_state_id, executor_id, proposal_pda],
         vec![nonce],
-        Instruction::Execute { proposal_index },
+        Instruction::Execute { create_key: *create_key, proposal_index },
     ).unwrap();
     let ws = WitnessSet::for_message(&msg, &[proposer_key]);
     submit_tx(client, PublicTransaction::new(msg, ws)).await;
@@ -233,7 +231,7 @@ async fn test_member_management() {
 
     let state = propose_approve_execute_config(
         &client, program_id, &create_key, multisig_state_id,
-        Instruction::ProposeAddMember { new_member: *m4.value() },
+        Instruction::ProposeAddMember { new_member: *m4.value(), create_key, proposal_index: 1 },
         &key1, &[&key2], // proposer=m1, approver=m2
         1,
     ).await;
@@ -246,7 +244,7 @@ async fn test_member_management() {
     println!("\n═══ STEP 3: Change threshold to 3 ═══");
     let state = propose_approve_execute_config(
         &client, program_id, &create_key, multisig_state_id,
-        Instruction::ProposeChangeThreshold { new_threshold: 3 },
+        Instruction::ProposeChangeThreshold { new_threshold: 3, create_key, proposal_index: 2 },
         &key1, &[&key2], // still 2-of-4 required for this proposal
         2,
     ).await;
@@ -258,7 +256,7 @@ async fn test_member_management() {
     println!("\n═══ STEP 4: Remove member 4 ═══");
     let state = propose_approve_execute_config(
         &client, program_id, &create_key, multisig_state_id,
-        Instruction::ProposeRemoveMember { member: *m4.value() },
+        Instruction::ProposeRemoveMember { member: *m4.value(), create_key, proposal_index: 3 },
         &key1, &[&key2, &key3], // need 3 approvals: m1 + m2 + m3
         3,
     ).await;
@@ -279,7 +277,7 @@ async fn test_member_management() {
         program_id,
         vec![multisig_state_id, m1, proposal_pda],
         vec![nonce],
-        Instruction::ProposeRemoveMember { member: *m3.value() },
+        Instruction::ProposeRemoveMember { member: *m3.value(), create_key, proposal_index: 4 },
     ).unwrap();
     let ws = WitnessSet::for_message(&msg, &[&key1]);
     submit_tx(&client, PublicTransaction::new(msg, ws)).await;
@@ -292,7 +290,7 @@ async fn test_member_management() {
             program_id,
             vec![multisig_state_id, id, proposal_pda],
             vec![nonce],
-            Instruction::Approve { proposal_index: 4 },
+            Instruction::Approve { create_key, proposal_index: 4 },
         ).unwrap();
         let ws = WitnessSet::for_message(&msg, &[key]);
         submit_tx(&client, PublicTransaction::new(msg, ws)).await;
@@ -305,7 +303,7 @@ async fn test_member_management() {
         program_id,
         vec![multisig_state_id, m1, proposal_pda],
         vec![nonce],
-        Instruction::Execute { proposal_index: 4 },
+        Instruction::Execute { create_key, proposal_index: 4 },
     ).unwrap();
     let ws = WitnessSet::for_message(&msg, &[&key1]);
     let failed = submit_tx_expect_failure(&client, PublicTransaction::new(msg, ws)).await;

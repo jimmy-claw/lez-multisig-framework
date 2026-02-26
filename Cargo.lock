@@ -2537,11 +2537,11 @@ checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
 [[package]]
 name = "lez-cli"
 version = "0.1.0"
-source = "git+https://github.com/jimmy-claw/lez-framework.git#1e146970d2bba861a32fd3a8b4e13b1e6ff4114d"
+source = "git+https://github.com/jimmy-claw/lez-framework.git?branch=main#d82b485920aee63b823cb559502e294aa6c432fb"
 dependencies = [
  "base58",
  "borsh",
- "lez-framework-core 0.1.0 (git+https://github.com/jimmy-claw/lez-framework.git)",
+ "lez-framework-core",
  "nssa",
  "nssa_core",
  "risc0-zkvm",
@@ -2554,10 +2554,10 @@ dependencies = [
 [[package]]
 name = "lez-framework"
 version = "0.1.0"
-source = "git+https://github.com/jimmy-claw/lez-framework.git?branch=jimmy%2Ffix-idl-instruction-type#8fba02b5df0976349745d0d5fb8bc1972d79f0d8"
+source = "git+https://github.com/jimmy-claw/lez-framework.git?branch=main#d82b485920aee63b823cb559502e294aa6c432fb"
 dependencies = [
  "borsh",
- "lez-framework-core 0.1.0 (git+https://github.com/jimmy-claw/lez-framework.git?branch=jimmy%2Ffix-idl-instruction-type)",
+ "lez-framework-core",
  "lez-framework-macros",
  "nssa_core",
 ]
@@ -2565,20 +2565,7 @@ dependencies = [
 [[package]]
 name = "lez-framework-core"
 version = "0.1.0"
-source = "git+https://github.com/jimmy-claw/lez-framework.git?branch=jimmy%2Ffix-idl-instruction-type#8fba02b5df0976349745d0d5fb8bc1972d79f0d8"
-dependencies = [
- "borsh",
- "nssa_core",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "lez-framework-core"
-version = "0.1.0"
-source = "git+https://github.com/jimmy-claw/lez-framework.git#1e146970d2bba861a32fd3a8b4e13b1e6ff4114d"
+source = "git+https://github.com/jimmy-claw/lez-framework.git?branch=main#d82b485920aee63b823cb559502e294aa6c432fb"
 dependencies = [
  "borsh",
  "nssa_core",
@@ -2591,7 +2578,7 @@ dependencies = [
 [[package]]
 name = "lez-framework-macros"
 version = "0.1.0"
-source = "git+https://github.com/jimmy-claw/lez-framework.git?branch=jimmy%2Ffix-idl-instruction-type#8fba02b5df0976349745d0d5fb8bc1972d79f0d8"
+source = "git+https://github.com/jimmy-claw/lez-framework.git?branch=main#d82b485920aee63b823cb559502e294aa6c432fb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2605,6 +2592,7 @@ version = "0.1.0"
 dependencies = [
  "borsh",
  "common",
+ "lez-multisig-ffi",
  "multisig_core",
  "nssa",
  "nssa_core",
@@ -2631,6 +2619,15 @@ dependencies = [
  "sha2",
  "tokio",
  "wallet",
+]
+
+[[package]]
+name = "lez-multisig-idl-gen"
+version = "0.1.0"
+dependencies = [
+ "lez-framework",
+ "multisig_program",
+ "serde_json",
 ]
 
 [[package]]

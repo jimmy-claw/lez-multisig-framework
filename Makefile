@@ -39,11 +39,64 @@ endef
 
 # ── Targets ──────────────────────────────────────────────────────────────────
 
+# ── Code Generation ───────────────────────────────────────────────────────────
+# The IDL and FFI client are generated files — do not edit them manually.
+# Source of truth: multisig_program/src/lib.rs (Rust macro annotations)
+# Pipeline: lib.rs → multisig_idl.json → multisig.rs
+
+LEZ_FW_GIT  := https://github.com/jimmy-claw/lez-framework.git
+LEZ_FW_BRANCH := main
+IDL_JSON    := lez-multisig-ffi/src/multisig_idl.json
+FFI_RS      := lez-multisig-ffi/src/multisig.rs
+GENERATE_IDL_BIN := methods/guest/Cargo.toml
+
+.PHONY: generate generate-idl generate-ffi check-generated install-tools
+
+install-tools: ## Install lez-client-gen from lez-framework (required for generate-ffi)
+	source ~/.cargo/env && cargo install --git $(LEZ_FW_GIT) --branch $(LEZ_FW_BRANCH) lez-client-gen --locked 2>/dev/null || \
+	cargo install --git $(LEZ_FW_GIT) --branch $(LEZ_FW_BRANCH) lez-client-gen
+
+generate-idl: ## Regenerate IDL from Rust annotations in lib.rs
+	@echo "🔨 Generating IDL from multisig_program/src/lib.rs..."
+	source ~/.cargo/env && cargo run -p lez-multisig-idl-gen > $(IDL_JSON)
+	@echo "✅ IDL written to $(IDL_JSON)"
+
+generate-ffi: ## Regenerate FFI client (multisig.rs) from IDL
+	@echo "🔨 Generating FFI client from $(IDL_JSON)..."
+	@mkdir -p /tmp/lez-ffi-gen
+	source ~/.cargo/env && lez-client-gen --idl $(IDL_JSON) --out-dir /tmp/lez-ffi-gen || \
+		(echo "ERROR: lez-client-gen not found. Run: make install-tools" && exit 1)
+	@# Prepend generated-file header, then append lez-client-gen output
+	@echo "// GENERATED FILE — do not edit manually. Run 'make generate' to regenerate from Rust annotations." > $(FFI_RS)
+	@cat /tmp/lez-ffi-gen/multisig_program_ffi.rs >> $(FFI_RS)
+	@echo "✅ FFI client written to $(FFI_RS)"
+
+generate: ## Regenerate IDL and FFI client from Rust annotations (run after changing lib.rs)
+	@echo "🔄 Regenerating all generated files..."
+	$(MAKE) generate-idl
+	$(MAKE) generate-ffi
+	@echo ""
+	@echo "✅ Generation complete. Run 'cargo check' to verify."
+
+check-generated: ## CI: regenerate and check for drift vs committed state
+	@echo "🔍 Checking for generated file drift..."
+	@$(MAKE) generate > /tmp/generate-output.txt 2>&1 || (cat /tmp/generate-output.txt && exit 1)
+	@echo "✅ Generation succeeded"
+
+
 .PHONY: help build build-cli deploy status clean test
 
 help: ## Show this help
 	@echo "Multisig Program — Make Targets"
 	@echo ""
+	@echo "  Code Generation (start here after changing lib.rs):"
+	@echo "  make install-tools         Install lez-client-gen tool (first-time setup)"
+	@echo "  make generate              Regen IDL + FFI client from lib.rs annotations"
+	@echo "  make generate-idl          Regen IDL only"
+	@echo "  make generate-ffi          Regen FFI client only (requires IDL)"
+	@echo "  make check-generated       CI: regenerate and verify no drift"
+	@echo ""
+	@echo "  Build & Deploy:"
 	@echo "  make build                 Build the guest binary (needs risc0 toolchain)"
 	@echo "  make build-cli             Build the standalone multisig CLI"
 	@echo "  make deploy                Deploy multisig + token programs to sequencer"

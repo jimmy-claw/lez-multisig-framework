@@ -1,0 +1,13 @@
+[package]
+name = "lez-multisig-idl-gen"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "generate_idl"
+path = "src/main.rs"
+
+[dependencies]
+multisig_program = { path = "../multisig_program" }
+lez-framework = { git = "https://github.com/jimmy-claw/lez-framework.git", branch = "main" }
+serde_json = "1"
