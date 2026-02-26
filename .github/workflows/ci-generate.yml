@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RISC0_VERSION: "3.0.5"
 
 jobs:
   generate-and-check:
@@ -17,6 +18,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install risc0 toolchain
+        run: |
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt: installing rzup..."
+            if curl -L --retry 3 --retry-delay 5 https://risczero.com/install | bash; then
+              break
+            fi
+            echo "rzup install script failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "$HOME/.risc0/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.risc0/bin:$PATH"
+          rzup install cargo-risczero ${{ env.RISC0_VERSION }}
+          rzup install r0vm ${{ env.RISC0_VERSION }}
+          rzup install rust
 
       - uses: Swatinem/rust-cache@v2
         with:
