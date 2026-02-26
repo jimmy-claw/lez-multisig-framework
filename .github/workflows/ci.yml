@@ -1,4 +1,4 @@
-name: Check & Generate
+name: CI
 
 on:
   push:
@@ -8,34 +8,17 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+
 jobs:
-  generate-and-check:
-    name: Generate IDL + FFI, cargo check
+  check:
+    name: Generate + Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install risc0 toolchain
-        run: |
-          for attempt in 1 2 3; do
-            echo "Attempt $attempt: installing rzup..."
-            if curl -L --retry 3 --retry-delay 5 https://risczero.com/install | bash; then
-              break
-            fi
-            echo "rzup install script failed, retrying in 10s..."
-            sleep 10
-          done
-          echo "$HOME/.risc0/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.risc0/bin:$PATH"
-          rzup install cargo-risczero ${{ env.RISC0_VERSION }}
-          rzup install r0vm ${{ env.RISC0_VERSION }}
-          rzup install rust
-
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "generate"
+          prefix-key: "ci"
 
       - name: Install logos-blockchain-circuits
         run: |
@@ -53,21 +36,19 @@ jobs:
 
       - name: Generate IDL from Rust annotations
         run: |
-          cargo run --manifest-path methods/guest/Cargo.toml --bin generate_idl \
-            > lez-multisig-ffi/src/multisig_idl.json
-          echo "✅ IDL generated"
-          cat lez-multisig-ffi/src/multisig_idl.json | python3 -m json.tool --no-ensure-ascii > /dev/null \
-            && echo "✅ IDL is valid JSON"
+          cargo run -p lez-multisig-idl-gen > lez-multisig-ffi/src/multisig_idl.json
+          echo "IDL generated:" && python3 -m json.tool lez-multisig-ffi/src/multisig_idl.json > /dev/null && echo "✅ valid JSON"
 
       - name: Generate FFI client from IDL
         run: |
           mkdir -p /tmp/lez-ffi-gen
-          lez-client-gen \
-            --idl lez-multisig-ffi/src/multisig_idl.json \
-            --out-dir /tmp/lez-ffi-gen
-          cp /tmp/lez-ffi-gen/multisig_program_ffi.rs lez-multisig-ffi/src/multisig.rs
+          lez-client-gen --idl lez-multisig-ffi/src/multisig_idl.json --out-dir /tmp/lez-ffi-gen
+          echo '// GENERATED FILE — do not edit manually. Run make generate to regenerate.' > lez-multisig-ffi/src/multisig.rs
+          cat /tmp/lez-ffi-gen/multisig_program_ffi.rs >> lez-multisig-ffi/src/multisig.rs
           echo "✅ FFI client generated"
-          head -3 lez-multisig-ffi/src/multisig.rs
+
+      - name: Run unit tests
+        run: cargo test -p multisig_core -p multisig_program
 
       - name: cargo check (all crates)
         run: cargo check --workspace --exclude multisig-guest

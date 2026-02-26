@@ -1,10 +1,9 @@
 name: E2E Tests
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main, jimmy/nssa-framework-migration]
+    branches: [main]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -29,30 +28,6 @@ jobs:
           curl -sSL https://raw.githubusercontent.com/logos-blockchain/logos-blockchain/main/scripts/setup-logos-blockchain-circuits.sh | bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install risc0 toolchain (for generate_idl)
-        run: |
-          for attempt in 1 2 3; do
-            echo "Attempt $attempt: installing rzup..."
-            if curl -L --retry 3 --retry-delay 5 https://risczero.com/install | bash; then
-              break
-            fi
-            sleep 10
-          done
-          echo "$HOME/.risc0/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.risc0/bin:$PATH"
-          rzup install cargo-risczero ${{ env.RISC0_VERSION }}
-          rzup install r0vm ${{ env.RISC0_VERSION }}
-          rzup install rust
-
-      - name: Install lez-client-gen
-        run: |
-          cargo install             --git https://github.com/jimmy-claw/lez-framework.git             --branch main             lez-client-gen             --locked
-
-      - name: Generate IDL + FFI client
-        run: |
-          make generate LSSA_DIR=../lssa
-          echo "✅ IDL + FFI generated"
 
       - name: Build FFI crate
         run: cargo build -p lez-multisig-ffi
