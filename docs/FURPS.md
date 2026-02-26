@@ -1,6 +1,6 @@
 # Multisig PoC — FURPS Specification
 
-> **Status:** Draft — 2026-02-16 (updated 2026-02-21)
+> **Status:** v0.1 Complete — 2026-02-26
 > **Scope:** Public mode only, basic M-of-N threshold
 > **Target:** LEZ Testnet
 
@@ -31,34 +31,29 @@
 
 ## Usability (U)
 
-### U1. CLI Commands *(partially implemented — needs update for proposal PDA flow)*
+### U1. CLI Commands
 ```
+# Generate IDL (required before first use)
+cargo run --bin generate_idl > multisig_idl.json
+
 # Create 2-of-3 multisig
-lez-wallet multisig create --threshold 2 --member <pk1> --member <pk2> --member <pk3>
+cargo run --bin multisig -- --idl multisig_idl.json create-multisig --threshold 2 --member <pk1> --member <pk2> --member <pk3>
 
 # View multisig info
-lez-wallet multisig info --account <multisig_id>
+cargo run --bin multisig -- --idl multisig_idl.json info --account <multisig_id>
 
-# Propose transfer (creates proposal PDA on-chain)
-lez-wallet multisig propose --multisig <id> --to <recipient> --amount 100
+# Propose transfer
+cargo run --bin multisig -- --idl multisig_idl.json propose --multisig <id> --to <recipient> --amount 100
 
-# Approve proposal (each member in their own tx)
-lez-wallet multisig approve --multisig <id> --proposal <index>
+# Approve / Reject / Execute
+cargo run --bin multisig -- --idl multisig_idl.json approve --multisig <id> --proposal <index>
+cargo run --bin multisig -- --idl multisig_idl.json reject  --multisig <id> --proposal <index>
+cargo run --bin multisig -- --idl multisig_idl.json execute --multisig <id> --proposal <index>
 
-# Reject proposal
-lez-wallet multisig reject --multisig <id> --proposal <index>
-
-# Execute once threshold is met
-lez-wallet multisig execute --multisig <id> --proposal <index>
-
-# Propose adding a member (creates config change proposal)
-lez-wallet multisig add-member --multisig <id> --member <new_pk>
-
-# Propose removing a member
-lez-wallet multisig remove-member --multisig <id> --member <pk>
-
-# Propose changing threshold
-lez-wallet multisig change-threshold --multisig <id> --threshold <new_M>
+# Member management
+cargo run --bin multisig -- --idl multisig_idl.json propose-add-member --multisig <id> --member <new_pk>
+cargo run --bin multisig -- --idl multisig_idl.json propose-remove-member --multisig <id> --member <pk>
+cargo run --bin multisig -- --idl multisig_idl.json propose-change-threshold --multisig <id> --threshold <new_M>
 ```
 
 ---
@@ -116,6 +111,5 @@ Due to LEZ runtime validation rules, member accounts must be **fresh keypairs** 
 
 ## Known Limitations (PoC Scope)
 
-- CLI needs update for proposal PDA flow
 - No `CloseProposal` to reclaim executed/rejected proposal storage
 - No time-lock between threshold reached and execution
