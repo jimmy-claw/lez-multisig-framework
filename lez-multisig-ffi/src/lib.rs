@@ -160,7 +160,7 @@ mod multisig_queries {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async move {
             let wallet = load_wallet(&v)?;
-            let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+            let program_id = parse_program_id_hex(v["multisig_program_id"].as_str().ok_or("missing multisig_program_id")?)?;
             let ms_id = parse_account(v["multisig_state"].as_str().ok_or("missing multisig_state")?)?;
             let state: MultisigState = match fetch_borsh(&wallet, ms_id).await? {
                 Some(s) => s,
@@ -193,7 +193,7 @@ mod multisig_queries {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async move {
             let wallet = load_wallet(&v)?;
-            let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+            let program_id = parse_program_id_hex(v["multisig_program_id"].as_str().ok_or("missing multisig_program_id")?)?;
             let create_key_hex = v["create_key"].as_str().ok_or("missing create_key")?;
             let create_key_bytes = hex::decode(create_key_hex.trim_start_matches("0x"))
                 .map_err(|e| format!("create_key hex: {}", e))?;
