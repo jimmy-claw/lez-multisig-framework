@@ -8,7 +8,7 @@
 mod multisig;
 
 // Re-export generated PDA compute helpers for use by tests and other crates.
-pub use multisig::{compute_multisig_state_pda, compute_proposal_pda, compute_vault_pda, vault_pda_seed_bytes};
+pub use multisig::{compute_multisig_state_pda, compute_proposal_pda};
 
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;

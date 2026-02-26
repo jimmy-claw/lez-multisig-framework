@@ -41,6 +41,7 @@ pub enum Instruction {
 
     /// Create a new proposal (any member can propose).
     /// Creates a separate PDA account for the proposal.
+    /// proposal PDA is derived from (create_key, proposal_index).
     Propose {
         /// Target program to call when executed
         target_program_id: ProgramId,
@@ -52,39 +53,61 @@ pub enum Instruction {
         pda_seeds: Vec<[u8; 32]>,
         /// Which target account indices (0-based) get `is_authorized = true`
         authorized_indices: Vec<u8>,
+        /// Unique key of the parent multisig (for proposal PDA derivation)
+        create_key: [u8; 32],
+        /// Index of this proposal (used for PDA derivation)
+        proposal_index: u64,
     },
 
     /// Approve an existing proposal (any member, one approval per member)
     Approve {
         proposal_index: u64,
+        /// Unique key of the parent multisig (for proposal PDA derivation)
+        create_key: [u8; 32],
     },
 
     /// Reject a proposal
     Reject {
         proposal_index: u64,
+        /// Unique key of the parent multisig (for proposal PDA derivation)
+        create_key: [u8; 32],
     },
 
     /// Execute a fully-approved proposal.
     /// The transaction must include the target accounts after [multisig_state, executor, proposal].
     Execute {
         proposal_index: u64,
+        /// Unique key of the parent multisig (for proposal PDA derivation)
+        create_key: [u8; 32],
     },
 
     /// Propose adding a new member to the multisig (requires M approvals to execute).
     ProposeAddMember {
         new_member: [u8; 32],
+        /// Unique key of the parent multisig (for proposal PDA derivation)
+        create_key: [u8; 32],
+        /// Index of this proposal (used for PDA derivation)
+        proposal_index: u64,
     },
 
     /// Propose removing a member from the multisig (requires M approvals to execute).
     /// Will be rejected on execute if removing would make N < M.
     ProposeRemoveMember {
         member: [u8; 32],
+        /// Unique key of the parent multisig (for proposal PDA derivation)
+        create_key: [u8; 32],
+        /// Index of this proposal (used for PDA derivation)
+        proposal_index: u64,
     },
 
     /// Propose changing the approval threshold (requires M approvals to execute).
     /// Must satisfy 1 ≤ new_threshold ≤ N (checked on execute).
     ProposeChangeThreshold {
         new_threshold: u8,
+        /// Unique key of the parent multisig (for proposal PDA derivation)
+        create_key: [u8; 32],
+        /// Index of this proposal (used for PDA derivation)
+        proposal_index: u64,
     },
 }
 

@@ -36,19 +36,22 @@ mod multisig_program {
 
     /// Propose a new transaction.
     /// proposer must be a member signer. proposal is initialized as a new PDA.
+    /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn propose(
         #[account(mut)]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         proposer: AccountWithMetadata,
-        #[account(init)]
+        #[account(init, pda = [literal("multisig_prop___"), arg("create_key"), arg("proposal_index")])]
         proposal: AccountWithMetadata,
         target_program_id: ProgramId,
         target_instruction_data: InstructionData,
         target_account_count: u8,
         pda_seeds: Vec<[u8; 32]>,
         authorized_indices: Vec<u8>,
+        create_key: [u8; 32],
+        proposal_index: u64,
     ) -> LezResult {
         let accounts = vec![multisig_state, proposer, proposal];
         let (post_states, chained_calls) = crate::propose::handle(
@@ -64,15 +67,17 @@ mod multisig_program {
 
     /// Approve an existing proposal.
     /// approver must be a member signer.
+    /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn approve(
         #[account(mut)]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         approver: AccountWithMetadata,
-        #[account(mut)]
+        #[account(mut, pda = [literal("multisig_prop___"), arg("create_key"), arg("proposal_index")])]
         proposal: AccountWithMetadata,
         proposal_index: u64,
+        create_key: [u8; 32],
     ) -> LezResult {
         let accounts = vec![multisig_state, approver, proposal];
         let (post_states, chained_calls) =
@@ -82,15 +87,17 @@ mod multisig_program {
 
     /// Reject an existing proposal.
     /// rejector must be a member signer.
+    /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn reject(
         #[account(mut)]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         rejector: AccountWithMetadata,
-        #[account(mut)]
+        #[account(mut, pda = [literal("multisig_prop___"), arg("create_key"), arg("proposal_index")])]
         proposal: AccountWithMetadata,
         proposal_index: u64,
+        create_key: [u8; 32],
     ) -> LezResult {
         let accounts = vec![multisig_state, rejector, proposal];
         let (post_states, chained_calls) =
@@ -100,16 +107,18 @@ mod multisig_program {
 
     /// Execute a fully-approved proposal.
     /// executor must be a member signer. target_accounts are the rest accounts.
+    /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn execute(
         #[account(mut)]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         executor: AccountWithMetadata,
-        #[account(mut)]
+        #[account(mut, pda = [literal("multisig_prop___"), arg("create_key"), arg("proposal_index")])]
         proposal: AccountWithMetadata,
         target_accounts: Vec<AccountWithMetadata>,
         proposal_index: u64,
+        create_key: [u8; 32],
     ) -> LezResult {
         let mut accounts = vec![multisig_state, executor, proposal];
         accounts.extend(target_accounts);
@@ -120,15 +129,18 @@ mod multisig_program {
 
     /// Propose adding a new member.
     /// proposer must be a member signer. proposal is initialized.
+    /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn propose_add_member(
         #[account(mut)]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         proposer: AccountWithMetadata,
-        #[account(init)]
+        #[account(init, pda = [literal("multisig_prop___"), arg("create_key"), arg("proposal_index")])]
         proposal: AccountWithMetadata,
         new_member: [u8; 32],
+        create_key: [u8; 32],
+        proposal_index: u64,
     ) -> LezResult {
         let accounts = vec![multisig_state, proposer, proposal];
         let (post_states, chained_calls) = crate::propose_config::handle(
@@ -140,15 +152,18 @@ mod multisig_program {
 
     /// Propose removing a member.
     /// proposer must be a member signer. proposal is initialized.
+    /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn propose_remove_member(
         #[account(mut)]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         proposer: AccountWithMetadata,
-        #[account(init)]
+        #[account(init, pda = [literal("multisig_prop___"), arg("create_key"), arg("proposal_index")])]
         proposal: AccountWithMetadata,
         member: [u8; 32],
+        create_key: [u8; 32],
+        proposal_index: u64,
     ) -> LezResult {
         let accounts = vec![multisig_state, proposer, proposal];
         let (post_states, chained_calls) = crate::propose_config::handle(
@@ -160,15 +175,18 @@ mod multisig_program {
 
     /// Propose changing the threshold.
     /// proposer must be a member signer. proposal is initialized.
+    /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn propose_change_threshold(
         #[account(mut)]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         proposer: AccountWithMetadata,
-        #[account(init)]
+        #[account(init, pda = [literal("multisig_prop___"), arg("create_key"), arg("proposal_index")])]
         proposal: AccountWithMetadata,
         new_threshold: u8,
+        create_key: [u8; 32],
+        proposal_index: u64,
     ) -> LezResult {
         let accounts = vec![multisig_state, proposer, proposal];
         let (post_states, chained_calls) = crate::propose_config::handle(
@@ -190,16 +208,16 @@ pub fn process(
     match instruction {
         Instruction::CreateMultisig { create_key, threshold, members } =>
             create_multisig::handle(accounts, create_key, *threshold, members),
-        Instruction::Propose { target_program_id, target_instruction_data, target_account_count, pda_seeds, authorized_indices } =>
+        Instruction::Propose { target_program_id, target_instruction_data, target_account_count, pda_seeds, authorized_indices, .. } =>
             propose::handle(accounts, target_program_id, target_instruction_data, *target_account_count, pda_seeds, authorized_indices),
-        Instruction::Approve { proposal_index } => approve::handle(accounts, *proposal_index),
-        Instruction::Reject { proposal_index } => reject::handle(accounts, *proposal_index),
-        Instruction::Execute { proposal_index } => execute::handle(accounts, *proposal_index),
-        Instruction::ProposeAddMember { new_member } =>
+        Instruction::Approve { proposal_index, .. } => approve::handle(accounts, *proposal_index),
+        Instruction::Reject { proposal_index, .. } => reject::handle(accounts, *proposal_index),
+        Instruction::Execute { proposal_index, .. } => execute::handle(accounts, *proposal_index),
+        Instruction::ProposeAddMember { new_member, .. } =>
             propose_config::handle(accounts, ConfigAction::AddMember { new_member: *new_member }),
-        Instruction::ProposeRemoveMember { member } =>
+        Instruction::ProposeRemoveMember { member, .. } =>
             propose_config::handle(accounts, ConfigAction::RemoveMember { member: *member }),
-        Instruction::ProposeChangeThreshold { new_threshold } =>
+        Instruction::ProposeChangeThreshold { new_threshold, .. } =>
             propose_config::handle(accounts, ConfigAction::ChangeThreshold { new_threshold: *new_threshold }),
     }
 }

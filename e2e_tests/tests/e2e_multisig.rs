@@ -283,6 +283,8 @@ async fn test_multisig_token_transfer() {
         target_account_count: 2,  // vault_holding + recipient_holding
         pda_seeds: vec![vault_seed],
         authorized_indices: vec![0], // vault (index 0) gets is_authorized=true
+        create_key,
+        proposal_index: 1,
     };
     let msg = Message::try_new(
         multisig_program_id,
@@ -311,7 +313,7 @@ async fn test_multisig_token_transfer() {
         multisig_program_id,
         vec![multisig_state_id, m2, proposal_id], // Approve expects 3 accounts now
         vec![nonce_m2], // Only signer nonces
-        Instruction::Approve { proposal_index: 1 },
+        Instruction::Approve { create_key, proposal_index: 1 },
     ).unwrap();
     let ws = WitnessSet::for_message(&msg, &[&key2]);
     submit_tx(&client, PublicTransaction::new(msg, ws)).await;
@@ -333,7 +335,7 @@ async fn test_multisig_token_transfer() {
         multisig_program_id,
         vec![multisig_state_id, m1, proposal_id, vault_id, recipient_id],
         vec![nonce_m1], // Only signer nonces
-        Instruction::Execute { proposal_index: 1 },
+        Instruction::Execute { create_key, proposal_index: 1 },
     ).unwrap();
     let ws = WitnessSet::for_message(&msg, &[&key1]);
     submit_tx(&client, PublicTransaction::new(msg, ws)).await;
