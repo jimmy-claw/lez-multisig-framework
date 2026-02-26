@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "idl-gen",
     "multisig_core",
     "multisig_program",
     "methods",

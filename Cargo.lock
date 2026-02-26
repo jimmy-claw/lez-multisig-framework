@@ -2622,6 +2622,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lez-multisig-idl-gen"
+version = "0.1.0"
+dependencies = [
+ "lez-framework",
+ "multisig_program",
+ "serde_json",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.182"
 source = "registry+https://github.com/rust-lang/crates.io-index"

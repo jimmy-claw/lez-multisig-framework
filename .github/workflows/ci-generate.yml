@@ -8,8 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RISC0_VERSION: "3.0.5"
-
 jobs:
   generate-and-check:
     name: Generate IDL + FFI, cargo check

@@ -58,7 +58,7 @@ install-tools: ## Install lez-client-gen from lez-framework (required for genera
 
 generate-idl: ## Regenerate IDL from Rust annotations in lib.rs
 	@echo "🔨 Generating IDL from multisig_program/src/lib.rs..."
-	source ~/.cargo/env && cargo run --manifest-path $(GENERATE_IDL_BIN) --bin generate_idl > $(IDL_JSON)
+	source ~/.cargo/env && cargo run -p lez-multisig-idl-gen > $(IDL_JSON)
 	@echo "✅ IDL written to $(IDL_JSON)"
 
 generate-ffi: ## Regenerate FFI client (multisig.rs) from IDL
