@@ -21,5 +21,7 @@ risc0-zkvm = "3.0"
 borsh = "1.5"
 tokio = { version = "1", features = ["full"] }
 
+lez-multisig-ffi = { path = "../lez-multisig-ffi" }
+
 [lib]
 path = "src/lib.rs"

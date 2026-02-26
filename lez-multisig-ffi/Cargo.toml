@@ -5,7 +5,7 @@ edition = "2021"
 description = "C FFI wrapper for lez-multisig — enables Logos Core Qt plugin integration"
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 multisig_core = { path = "../multisig_core" }

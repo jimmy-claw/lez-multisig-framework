@@ -11,6 +11,10 @@
           "pda": {
             "seeds": [
               {
+                "kind": "const",
+                "value": "multisig_state__"
+              },
+              {
                 "kind": "arg",
                 "path": "create_key"
               }
@@ -18,6 +22,25 @@
           },
           "signer": false,
           "writable": true
+        },
+        {
+          "name": "vault_state",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "multisig_vault__"
+              },
+              {
+                "kind": "arg",
+                "path": "create_key"
+              }
+            ]
+          },
+          "rest": false
         },
         {
           "init": false,

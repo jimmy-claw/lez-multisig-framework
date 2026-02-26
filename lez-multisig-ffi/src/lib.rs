@@ -7,6 +7,9 @@
 
 mod multisig;
 
+// Re-export generated PDA compute helpers for use by tests and other crates.
+pub use multisig::{compute_multisig_state_pda, compute_proposal_pda, compute_vault_pda, vault_pda_seed_bytes};
+
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
@@ -85,7 +88,8 @@ pub extern "C" fn lez_multisig_get_state(args_json: *const c_char) -> *mut c_cha
 mod multisig_queries {
     use wallet::WalletCore;
     use serde_json::{Value, json};
-    use multisig_core::{MultisigState, Proposal, compute_proposal_pda, compute_multisig_state_pda};
+    use multisig_core::{MultisigState, Proposal};
+    use crate::multisig::{compute_proposal_pda, compute_multisig_state_pda};
     use nssa_core::account::AccountId;
 
     fn load_wallet(v: &Value) -> Result<WalletCore, String> {

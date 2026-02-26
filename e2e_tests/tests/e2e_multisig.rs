@@ -24,10 +24,9 @@ use nssa::{
     public_transaction::{Message, WitnessSet},
 };
 use nssa_core::program::PdaSeed;
-use multisig_core::{
-    Instruction, MultisigState, Proposal, ProposalStatus,
-    compute_multisig_state_pda, vault_pda_seed_bytes, compute_vault_pda,
-    compute_proposal_pda,
+use multisig_core::{Instruction, MultisigState, Proposal, ProposalStatus};
+use lez_multisig_ffi::{
+    compute_multisig_state_pda, compute_proposal_pda, compute_vault_pda, vault_pda_seed_bytes,
 };
 use common::sequencer_client::SequencerClient;
 use token_core::{Instruction as TokenInstruction, TokenHolding};

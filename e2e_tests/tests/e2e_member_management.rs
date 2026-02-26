@@ -15,10 +15,8 @@ use nssa::{
     program::Program,
     public_transaction::{Message, WitnessSet},
 };
-use multisig_core::{
-    Instruction, MultisigState, Proposal, ProposalStatus,
-    compute_multisig_state_pda, compute_proposal_pda,
-};
+use multisig_core::{Instruction, MultisigState, Proposal, ProposalStatus};
+use lez_multisig_ffi::{compute_multisig_state_pda, compute_proposal_pda};
 use common::sequencer_client::SequencerClient;
 
 const BLOCK_WAIT_SECS: u64 = 15;
