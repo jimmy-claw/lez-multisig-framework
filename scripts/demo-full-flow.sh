@@ -465,42 +465,21 @@ echo "  Marquee LEZ feature: a multisig governing another program via ChainedCal
 echo "  Flow: create token → fund vault → propose transfer (token-idl.json) → execute"
 echo ""
 
-# Compute vault PDA and seed bytes from CREATE_KEY + MULTISIG_PROGRAM_ID
-_vault_py() {
-python3 - "$1" << 'PYEOF'
-import hashlib, sys
+# Compute vault PDA using lez-cli pda command (no binary needed)
+MULTISIG_VAULT_PDA=$("$MULTISIG_CLI" --idl "$IDL" --program-id "$MULTISIG_PROGRAM_ID" pda vault --create-key "$CREATE_KEY")
+ok "Multisig vault PDA : $MULTISIG_VAULT_PDA"
 
-mode = sys.argv[1]  # "pda" or "seed"
-import os
-ck_str = os.environ.get("CREATE_KEY", "")
-pid_hex = os.environ.get("MULTISIG_PROGRAM_ID", "")
-
-ck = ck_str.encode()[:32].ljust(32, b'\x00')
-tag = b"multisig_vault__"
+# Vault seed still needed for propose --pda-seeds arg
+# seed = "multisig_vault__" XOR create_key (zero-padded to 32 bytes)
+MULTISIG_VAULT_SEED=$(python3 -c "
+import os, sys
+ck = os.environ['CREATE_KEY'].encode()[:32].ljust(32, b'\x00')
+tag = b'multisig_vault__'
 seed = bytearray(32)
 for i in range(len(tag)): seed[i] = tag[i]
 for i in range(32): seed[i] ^= ck[i]
-
-if mode == "seed":
-    print(seed.hex())
-    sys.exit(0)
-
-pid = bytes.fromhex(pid_hex)
-pda = hashlib.sha256(pid + bytes(seed)).digest()
-ALPHA = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-n = int.from_bytes(pda, "big")
-r = []
-while n: n, rem = divmod(n, 58); r.append(ALPHA[rem:rem+1])
-for b in pda:
-    if b == 0: r.append(b"1")
-    else: break
-print(b"".join(reversed(r)).decode())
-PYEOF
-}
-
-MULTISIG_VAULT_PDA=$(_vault_py pda)
-MULTISIG_VAULT_SEED=$(_vault_py seed)
-ok "Multisig vault PDA : $MULTISIG_VAULT_PDA"
+print(seed.hex())
+")
 ok "Vault seed (hex)   : $MULTISIG_VAULT_SEED"
 echo ""
 
