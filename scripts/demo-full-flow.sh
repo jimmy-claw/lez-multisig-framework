@@ -479,6 +479,50 @@ ok "M3 has joined. Final multisig: SIGNER, M2, M3 — threshold 1"
 
 echo ""
 
+# ── Step 9.5: Raise threshold to 2-of-3 ─────────────────────────────────
+
+pause
+banner "Step 9.5 — Raise Threshold to 2-of-3  (real multisig governance)"
+
+echo "  Multisig now has 3 members. Time to make it a real 2-of-3."
+echo "  SIGNER proposes the change — but since threshold is still 1, executes immediately."
+echo ""
+
+read PROP_THRESH _PT_HEX <<< $(new_account "prop-thresh-$SUFFIX")
+ok "Threshold proposal account: $PROP_THRESH"
+echo ""
+
+run "multisig propose-change-threshold --new-threshold 2 ..."
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  propose-change-threshold \
+    --new-threshold           2 \
+    --multisig-state-account  "$MULTISIG_STATE" \
+    --proposer-account        "$M1_ACCOUNT" \
+    --proposal-account        "$PROP_THRESH" \
+    --create-key              "$CREATE_KEY" \
+    --proposal-index          2 2>&1 \
+  && ok "Threshold change proposed (proposal #2)" \
+  || err "propose-change-threshold failed"
+
+echo ""
+run "multisig execute --proposal-index 2 ..."
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  execute \
+    --proposal-index         2 \
+    --multisig-state-account "$MULTISIG_STATE" \
+    --executor-account       "$M1_ACCOUNT" \
+    --proposal-account       "$PROP_THRESH" \
+    --create-key             "$CREATE_KEY" \
+2>&1 \
+  && ok "Threshold raised to 2-of-3! Now two members must approve." \
+  || err "execute threshold change failed"
+
+echo ""
+
 # ── Step 10: Token Governance via Multisig (ChainedCall) ──────────────────
 
 pause
@@ -598,10 +642,29 @@ read PROP_TOKEN _PT_HEX <<< $(new_account "prop-token")
 
 sleep 10
 
+# 10d.5: M2 approves (threshold=2, need one more vote)
+echo ""
+echo "  10d.5. M2 approves the token transfer proposal..."
+run "multisig approve --proposal-index 3 --approver M2"
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  approve \
+    --proposal-index         3 \
+    --multisig-state-account "$MULTISIG_STATE" \
+    --approver-account       "$M2_ACCOUNT" \
+    --proposal-account       "$PROP_TOKEN" \
+    --create-key             "$CREATE_KEY" \
+2>&1 \
+  && ok "M2 approved — threshold met (2-of-3)!" \
+  || err "M2 approve failed"
+
+echo ""
+
 # 10e: Execute — ChainedCall fires, token program transfers tokens
 echo ""
-echo "  10e. Executing (threshold=1 already met by proposer)..."
-run "multisig execute --proposal-index 1 --target-accounts vault recipient"
+echo "  10e. Executing (threshold=2 met: SIGNER + M2)..."
+run "multisig execute --proposal-index 3 --target-accounts vault recipient"
 
 "$MULTISIG_CLI" \
   --idl     "$IDL" \
@@ -650,7 +713,8 @@ echo -e "  ${GREEN}✅${RESET}  Step 5  — Created multisig (SIGNER as initial 
 echo -e "  ${GREEN}✅${RESET}  Step 6  — Proposed adding M2 (SIGNER auto-approved)"
 echo -e "  ${GREEN}✅${RESET}  Step 7  — Executed → M2 joined the multisig"
 echo -e "  ${GREEN}✅${RESET}  Step 8  — Proposed adding M3 (SIGNER auto-approved)"
-echo -e "  ${GREEN}✅${RESET}  Step 9  — Executed → M3 joined the multisig"
+echo -e "  ${GREEN}✅${RESET}  Step 9  — Executed → M3 joined the multisig
+  ${GREEN}✅${RESET}  Step 9.5 — Raised threshold to 2-of-3"
 echo -e "  ${GREEN}✅${RESET}  Final   — Registry confirmed multisig is discoverable"
 echo ""
 echo -e "  What this proves:"
