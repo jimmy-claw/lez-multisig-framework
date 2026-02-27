@@ -178,7 +178,19 @@ run "wallet deploy-program multisig.bin"
 
 echo ""
 echo "  Waiting for programs to land in a block..."
-sleep 30
+echo -n "  Polling sequencer"
+for i in $(seq 1 40); do
+  sleep 3
+  echo -n "."
+  RESP=$(curl -s --max-time 2 -X POST http://127.0.0.1:3040/ \
+    -H 'Content-Type: application/json' \
+    -d "{\"jsonrpc\":\"2.0\",\"method\":\"get_account\",\"params\":{\"account_id\":\"$REGISTRY_PROGRAM_ID\"},\"id\":1}" 2>/dev/null)
+  if echo "$RESP" | grep -q '"data"'; then
+    echo " ready!"
+    break
+  fi
+done
+echo ""
 
 # Grab program IDs for use in later steps
 TOKEN_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$TOKEN_BIN" \
