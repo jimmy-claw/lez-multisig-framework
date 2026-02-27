@@ -395,10 +395,11 @@ run "multisig execute --proposal-index 1 --executor SIGNER ..."
   --idl     "$IDL" \
   --program "$MULTISIG_BIN" \
   execute \
-    --proposal-index         1 \
+    --proposal-index         0 \
     --multisig-state-account "$MULTISIG_STATE" \
     --executor-account       "$M1_ACCOUNT" \
     --proposal-account       "$PROP1" \
+    --create-key             "$CREATE_KEY" \
 2>&1
 
 echo ""
@@ -453,10 +454,11 @@ run "multisig execute --proposal-index 2 --executor SIGNER ..."
   --idl     "$IDL" \
   --program "$MULTISIG_BIN" \
   execute \
-    --proposal-index          2 \
+    --proposal-index          1 \
     --multisig-state-account  "$MULTISIG_STATE" \
     --executor-account        "$M1_ACCOUNT" \
     --proposal-account        "$PROP2" \
+    --create-key              "$CREATE_KEY" \
 2>&1
 
 echo ""
@@ -569,7 +571,9 @@ read PROP_TOKEN _PT_HEX <<< $(new_account "prop-token")
     --target-instruction-data "$TARGET_INSTRUCTION_DATA" \
     --target-account-count    2 \
     --pda-seeds               "$MULTISIG_VAULT_SEED" \
-    --authorized-indices      0 2>&1 \
+    --authorized-indices      0 \
+    --create-key              "$CREATE_KEY" \
+    --proposal-index          2 2>&1 \
   && ok "Proposal created — 200 LEZToken transfer stored as ChainedCall" \
   || err "Propose failed"
 
@@ -584,10 +588,12 @@ run "multisig execute --proposal-index 1 --target-accounts vault recipient"
   --idl     "$IDL" \
   --program "$MULTISIG_BIN" \
   execute \
-    --proposal-index         1 \
+    --proposal-index         2 \
     --multisig-state-account "$MULTISIG_STATE" \
     --executor-account       "$M1_ACCOUNT" \
-    --proposal-account       "$PROP_TOKEN" 2>&1 \
+    --proposal-account       "$PROP_TOKEN" \
+    --create-key             "$CREATE_KEY" \
+    2>&1 \
   && ok "ChainedCall executed — 200 LEZToken transferred vault → recipient!" \
   || err "Execute failed"
 
