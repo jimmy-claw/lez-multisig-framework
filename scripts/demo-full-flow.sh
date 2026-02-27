@@ -179,7 +179,7 @@ banner "Step 1 — Deploy Programs"
 
 echo "  Deploying token program..."
 run "wallet deploy-program token.bin"
-"$WALLET" deploy-program "$TOKEN_BIN" 2>&1 \
+echo "demo-pass-$(date +%s)" | "$WALLET" deploy-program "$TOKEN_BIN" 2>&1 \
   && ok "Token program deployed" \
   || info "Already deployed — skipping"
 
