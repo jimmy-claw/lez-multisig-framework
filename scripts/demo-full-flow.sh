@@ -175,7 +175,7 @@ run "wallet deploy-program multisig.bin"
 
 echo ""
 echo "  Waiting for programs to land in a block..."
-sleep 15
+sleep 30
 
 # Grab program IDs for use in later steps
 TOKEN_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$TOKEN_BIN" \
