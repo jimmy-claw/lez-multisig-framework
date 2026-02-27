@@ -117,7 +117,7 @@ rm -f "${NSSA_WALLET_HOME_DIR}/storage.json"
 ok "Chain state wiped"
 
 # Restart sequencer fresh
-nohup bash -c "cd ${LSSA_DIR} && ./target/release/sequencer_runner ./sequencer_runner/configs/debug/ > /tmp/seq.log 2>&1" &
+nohup bash -c "cd ${LSSA_DIR} && RUST_LOG=info ./target/release/sequencer_runner ./sequencer_runner/configs/debug/ > /tmp/seq.log 2>&1" &
 SEQ_PID=$!
 echo -e "  ${DIM}Sequencer PID: ${SEQ_PID}${RESET}"
 
