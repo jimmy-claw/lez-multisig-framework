@@ -4,7 +4,7 @@ POST /api/codex/v1/data  → stores content, returns fake CID
 GET  /api/codex/v1/data/<cid>/network/stream → returns stored content
 """
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import hashlib, json, cgi, io, os
+import hashlib, json, io, os
 
 store = {}
 
@@ -14,15 +14,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == '/api/codex/v1/data':
             length = int(self.headers.get('Content-Length', 0))
-            ct = self.headers.get('Content-Type','')
-            if 'multipart' in ct:
-                fs = cgi.FieldStorage(fp=self.rfile, headers=self.headers,
-                                      environ={'REQUEST_METHOD':'POST'})
-                for k in fs.keys():
-                    data = fs[k].file.read()
-                    break
-            else:
-                data = self.rfile.read(length)
+            data = self.rfile.read(length)
             cid = 'bafy' + hashlib.sha256(data).hexdigest()[:40]
             store[cid] = data
             self.send_response(200)
