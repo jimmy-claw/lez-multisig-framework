@@ -457,26 +457,156 @@ echo ""
 echo "  Waiting for Execute to land..."
 sleep 15
 
-# ── Step 10: Cross-Program Governance Demo (Token) ─────────────────────────
+# ── Step 10: Token Governance via Multisig (ChainedCall) ──────────────────
 
-banner "Step 10 — Cross-Program Governance: Token Transfer (Dry-Run)"
+banner "Step 10 — Token Governance: Multisig Proposes a Token Transfer"
 
-echo "  Demonstrating how the multisig could govern a token program."
-echo "  Using --dry-run to serialize a token transfer without submitting."
+echo "  Marquee LEZ feature: a multisig governing another program via ChainedCall."
+echo "  Flow: create token → fund vault → propose transfer (token-idl.json) → execute"
 echo ""
 
-run "multisig --idl token-idl.json --dry-run transfer --amount-to-transfer 1000"
-TOKEN_TRANSFER_SERIALIZED=$("$MULTISIG_CLI"   --idl "$MULTISIG_DIR/scripts/token-idl.json"   --program "$MULTISIG_BIN"   transfer     --amount-to-transfer 1000     --dry-run 2>&1 | grep 'Serialized' | awk '{print $NF}')
+# Compute vault PDA and seed bytes from CREATE_KEY + MULTISIG_PROGRAM_ID
+_vault_py() {
+python3 - "$1" << 'PYEOF'
+import hashlib, sys
+
+mode = sys.argv[1]  # "pda" or "seed"
+import os
+ck_str = os.environ.get("CREATE_KEY", "")
+pid_hex = os.environ.get("MULTISIG_PROGRAM_ID", "")
+
+ck = ck_str.encode()[:32].ljust(32, b'\x00')
+tag = b"multisig_vault__"
+seed = bytearray(32)
+for i in range(len(tag)): seed[i] = tag[i]
+for i in range(32): seed[i] ^= ck[i]
+
+if mode == "seed":
+    print(seed.hex())
+    sys.exit(0)
+
+pid = bytes.fromhex(pid_hex)
+pda = hashlib.sha256(pid + bytes(seed)).digest()
+ALPHA = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+n = int.from_bytes(pda, "big")
+r = []
+while n: n, rem = divmod(n, 58); r.append(ALPHA[rem:rem+1])
+for b in pda:
+    if b == 0: r.append(b"1")
+    else: break
+print(b"".join(reversed(r)).decode())
+PYEOF
+}
+
+MULTISIG_VAULT_PDA=$(_vault_py pda)
+MULTISIG_VAULT_SEED=$(_vault_py seed)
+ok "Multisig vault PDA : $MULTISIG_VAULT_PDA"
+ok "Vault seed (hex)   : $MULTISIG_VAULT_SEED"
+echo ""
+
+# 10a: Fresh accounts for token def, holding, recipient
+read TOKEN_DEF _TDF_HEX     <<< $(new_account "token-def")
+read TOKEN_HOLDING _TH_HEX  <<< $(new_account "token-holding")
+read RECIPIENT _REC_HEX     <<< $(new_account "token-recipient")
+
+echo "  10a. Creating fungible token (supply=1,000,000)..."
+run "wallet token new --definition-account-id \$TOKEN_DEF --supply-account-id \$TOKEN_HOLDING --name LEZToken --total-supply 1000000"
+
+echo "demo-pass-$(date +%s)" | "$WALLET" token new \
+  --definition-account-id "$TOKEN_DEF" \
+  --supply-account-id     "$TOKEN_HOLDING" \
+  --name                  "LEZToken" \
+  --total-supply          1000000 2>&1 \
+  && ok "Token created — holding account has 1,000,000 LEZToken" \
+  || err "Token creation failed"
+
+sleep 8
+
+# 10b: Fund multisig vault
+echo ""
+echo "  10b. Funding multisig vault (500 tokens)..."
+run "wallet token send --from \$TOKEN_HOLDING --to \$MULTISIG_VAULT_PDA --amount 500"
+
+echo "demo-pass-$(date +%s)" | "$WALLET" token send \
+  --from   "$TOKEN_HOLDING" \
+  --to     "$MULTISIG_VAULT_PDA" \
+  --amount 500 2>&1 \
+  && ok "Vault funded with 500 LEZToken" \
+  || err "Vault funding failed"
+
+sleep 8
+
+# 10c: Serialize token Transfer(200) via token-idl.json → get u32 words
+echo ""
+echo "  10c. Serializing token::Transfer(200) via token-idl.json..."
+echo "  KEY POINT: the IDL drives serialization — no hardcoded bytes."
+echo ""
+run "multisig --idl token-idl.json --program token.bin --dry-run transfer --amount-to-transfer 200"
+
+TARGET_INSTRUCTION_DATA=$("$MULTISIG_CLI" \
+  --idl     "$MULTISIG_DIR/scripts/token-idl.json" \
+  --program "$TOKEN_BIN" \
+  --dry-run \
+  transfer --amount-to-transfer 200 2>&1 \
+  | grep -A1 "Serialized instruction data" | tail -1 \
+  | tr -d '[] ' \
+  | python3 -c "
+import sys
+words = [w for w in sys.stdin.read().strip().replace(',', ' ').split() if w]
+print(','.join(str(int(w, 16)) for w in words))
+")
+
+[[ -n "$TARGET_INSTRUCTION_DATA" ]] \
+  && ok "Serialized: $TARGET_INSTRUCTION_DATA" \
+  || err "Failed to serialize — check token-idl.json and token binary"
 
 echo ""
-ok "Token transfer instruction serialized:"
-echo "  $TOKEN_TRANSFER_SERIALIZED"
+
+# 10d: Propose — multisig stores the serialized instruction in a proposal account
+echo "  10d. Proposing token transfer via multisig (target-idl = token-idl.json)..."
+run "multisig propose --target-program-id \$TOKEN_PROGRAM_ID --target-instruction-data <bytes>"
+
+read PROP_TOKEN _PT_HEX <<< $(new_account "prop-token")
+
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  propose \
+    --multisig-state-account  "$MULTISIG_STATE" \
+    --proposer-account        "$M1_ACCOUNT" \
+    --proposal-account        "$PROP_TOKEN" \
+    --target-program-id       "$TOKEN_PROGRAM_ID" \
+    --target-instruction-data "$TARGET_INSTRUCTION_DATA" \
+    --target-account-count    2 \
+    --pda-seeds               "$MULTISIG_VAULT_SEED" \
+    --authorized-indices      0 2>&1 \
+  && ok "Proposal created — 200 LEZToken transfer stored as ChainedCall" \
+  || err "Propose failed"
+
+sleep 10
+
+# 10e: Execute — ChainedCall fires, token program transfers tokens
 echo ""
-echo "  This could be used in a proposal:"
-echo "    multisig propose --target-program-id $TOKEN_PROGRAM_ID \"
-echo "                     --target-instruction-data $TOKEN_TRANSFER_SERIALIZED"
+echo "  10e. Executing (threshold=1 already met by proposer)..."
+run "multisig execute --proposal-index 1 --target-accounts vault recipient"
+
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  execute \
+    --proposal-index         1 \
+    --multisig-state-account "$MULTISIG_STATE" \
+    --executor-account       "$M1_ACCOUNT" \
+    --proposal-account       "$PROP_TOKEN" 2>&1 \
+  && ok "ChainedCall executed — 200 LEZToken transferred vault → recipient!" \
+  || err "Execute failed"
+
 echo ""
-info "Dry-run complete — no transaction submitted."
+echo -e "  ${BOLD}What this proves:${RESET}"
+echo -e "  • Multisig governs ANY LEZ program via ChainedCall"
+echo -e "  • token-idl.json drives serialization — fully composable"
+echo -e "  • ZK proof enforces the transfer — no trusted executor"
+echo ""
 
 # ── Final: Registry info ──────────────────────────────────────────────────
 

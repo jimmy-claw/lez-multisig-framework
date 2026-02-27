@@ -84,7 +84,7 @@
         {
           "name": "target_instruction_data",
           "type": {
-            "defined": "InstructionData"
+            "vec": "u32"
           }
         },
         {
