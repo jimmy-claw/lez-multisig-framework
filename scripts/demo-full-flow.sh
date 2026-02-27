@@ -351,12 +351,14 @@ CREATE_OUT=$("$MULTISIG_CLI" \
     --create-key              "$CREATE_KEY" \
     --threshold               1 \
     --members                 "$M1_HEX" \
-    --member-accounts-account "$M1_ACCOUNT" 2>&1)
+    --member-accounts-account "$M1_ACCOUNT" 2>&1) || true
 
 echo "$CREATE_OUT"
 
 # Capture multisig state PDA from the submission output
 MULTISIG_STATE=$(echo "$CREATE_OUT" | grep 'PDA multisig_state' | awk '{print $NF}')
+[[ -n "$MULTISIG_STATE" ]] || err "Failed to create multisig — no state PDA in output"
+export MULTISIG_STATE
 ok "Multisig created!"
 ok "State PDA: $MULTISIG_STATE"
 
