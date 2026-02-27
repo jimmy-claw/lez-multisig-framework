@@ -204,6 +204,12 @@ ok "Multisig ID: $MULTISIG_PROGRAM_ID"
 
 sleep 1
 
+# Create signer account (needed for registry + multisig steps)
+SUFFIX=$(date +%s | tail -c 5)
+run "new_account signer-..."
+read SIGNER SIGNER_HEX_PK <<< $(new_account "signer-$SUFFIX")
+ok "Signer: $SIGNER"
+
 # ── Step 2: Register Programs in Registry ────────────────────────────────
 
 banner "Step 2 — Register Programs in the On-Chain Registry"
@@ -264,9 +270,6 @@ echo ""
 
 SUFFIX=$(date +%s | tail -c 5)
 
-run "new_account signer-..."
-read SIGNER SIGNER_HEX_PK <<< $(new_account "signer-$SUFFIX")
-echo "  Signer: $SIGNER ($SIGNER_HEX_PK)"
 
 run "new_account m1-..."
 read M1_ACCOUNT M1_HEX <<< $(new_account "m1-$SUFFIX")
