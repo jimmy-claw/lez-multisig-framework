@@ -178,14 +178,25 @@ run "wallet deploy-program multisig.bin"
 
 echo ""
 echo "  Waiting for programs to land in a block..."
-echo -n "  Polling sequencer"
+echo -n "  Polling sequencer for registry program"
+REGISTRY_B58=$(python3 -c "
+h='$REGISTRY_PROGRAM_ID'
+b=bytes.fromhex(h)
+a='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+n=int.from_bytes(b,'big')
+r=''
+while n:
+    n,rem=divmod(n,58)
+    r=a[rem]+r
+print(r)
+" 2>/dev/null)
 for i in $(seq 1 40); do
   sleep 3
   echo -n "."
   RESP=$(curl -s --max-time 2 -X POST http://127.0.0.1:3040/ \
     -H 'Content-Type: application/json' \
-    -d "{\"jsonrpc\":\"2.0\",\"method\":\"get_account\",\"params\":{\"account_id\":\"$REGISTRY_PROGRAM_ID\"},\"id\":1}" 2>/dev/null)
-  if echo "$RESP" | grep -q '"data"'; then
+    -d "{\"jsonrpc\":\"2.0\",\"method\":\"get_account\",\"params\":{\"account_id\":\"$REGISTRY_B58\"},\"id\":1}" 2>/dev/null)
+  if echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if 'result' in d else 1)" 2>/dev/null; then
     echo " ready!"
     break
   fi
