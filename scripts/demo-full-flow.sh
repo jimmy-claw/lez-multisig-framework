@@ -79,7 +79,13 @@ new_account() {
   local b58
   b58=$(echo "$raw" | grep 'account_id' | awk '{print $6}' | sed 's|Public/||')
   local hex
-  hex=$(python3 -c "import base58,sys; print(base58.b58decode('$b58').hex())")
+  hex=$(python3 -c "
+ALPHA = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+s = '$b58'
+n = 0
+for c in s: n = n * 58 + ALPHA.index(c)
+print(n.to_bytes(32, 'big').hex())
+")
   echo "$b58 $hex"
 }
 
