@@ -3,3 +3,4 @@ target/
 # Local multisig state
 .multisig-state
 .multisig-state.tmp
+demo-wallet/
