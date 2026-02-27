@@ -8,5 +8,5 @@ name = "multisig"
 path = "src/bin/multisig.rs"
 
 [dependencies]
-lez-cli = { git = "https://github.com/jimmy-claw/lez-framework.git", branch = "main" }
+lez-cli = { git = "https://github.com/jimmy-claw/lez-framework.git", rev = "0d2ee3e" }
 tokio = { version = "1", features = ["full"] }

@@ -90,6 +90,20 @@
           },
           "signer": false,
           "writable": true
+        },
+        {
+          "init": false,
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "multisig_vault__"
+              }
+            ]
+          },
+          "signer": false,
+          "writable": false
         }
       ],
       "args": [
@@ -100,7 +114,7 @@
         {
           "name": "target_instruction_data",
           "type": {
-            "defined": "InstructionData"
+            "vec": "u32"
           }
         },
         {

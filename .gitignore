@@ -3,7 +3,4 @@ target/
 # Local multisig state
 .multisig-state
 .multisig-state.tmp
-
-# Generated files — regenerate with: make generate
-lez-multisig-ffi/src/multisig_idl.json
-lez-multisig-ffi/src/multisig.rs
+demo-wallet/
