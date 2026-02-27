@@ -3385,6 +3385,7 @@ dependencies = [
  "borsh",
  "nssa_core",
  "serde",
+ "sha2",
 ]
 
 [[package]]
