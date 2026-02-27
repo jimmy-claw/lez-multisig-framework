@@ -370,7 +370,9 @@ run "multisig propose-add-member --new-member M2 --proposer SIGNER ..."
     --new-member              "$M2" \
     --multisig-state-account  "$MULTISIG_STATE" \
     --proposer-account        "$M1_ACCOUNT" \
-    --proposal-account        "$PROP1" 2>&1
+    --proposal-account        "$PROP1" \
+    --create-key              "$CREATE_KEY" \
+    --proposal-index          0 2>&1
 
 echo ""
 ok "Proposal #1 created!"
@@ -428,7 +430,8 @@ run "multisig propose-add-member --new-member M3 --proposer SIGNER ..."
     --multisig-state-account  "$MULTISIG_STATE" \
     --proposer-account        "$M1_ACCOUNT" \
     --proposal-account        "$PROP2" \
-2>&1
+    --create-key              "$CREATE_KEY" \
+    --proposal-index          1 2>&1
 
 echo ""
 ok "Proposal #2 created!"
