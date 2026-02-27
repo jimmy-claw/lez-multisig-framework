@@ -538,8 +538,8 @@ echo "  10a. Creating fungible token (supply=1,000,000)..."
 run "wallet token new --definition-account-id \$TOKEN_DEF --supply-account-id \$TOKEN_HOLDING --name LEZToken --total-supply 1000000"
 
 echo "demo-pass-$(date +%s)" | "$WALLET" token new \
-  --definition-account-id "$TOKEN_DEF" \
-  --supply-account-id     "$TOKEN_HOLDING" \
+  --definition-account-id "Public/$TOKEN_DEF" \
+  --supply-account-id     "Public/$TOKEN_HOLDING" \
   --name                  "LEZToken" \
   --total-supply          1000000 2>&1 \
   && ok "Token created — holding account has 1,000,000 LEZToken" \
@@ -553,8 +553,8 @@ echo "  10b. Funding multisig vault (500 tokens)..."
 run "wallet token send --from \$TOKEN_HOLDING --to \$MULTISIG_VAULT_PDA --amount 500"
 
 echo "demo-pass-$(date +%s)" | "$WALLET" token send \
-  --from   "$TOKEN_HOLDING" \
-  --to     "$MULTISIG_VAULT_PDA" \
+  --from   "Public/$TOKEN_HOLDING" \
+  --to     "Public/$MULTISIG_VAULT_PDA" \
   --amount 500 2>&1 \
   && ok "Vault funded with 500 LEZToken" \
   || err "Vault funding failed"
