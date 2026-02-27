@@ -636,7 +636,7 @@ read PROP_TOKEN _PT_HEX <<< $(new_account "prop-token")
     --pda-seeds               "$MULTISIG_VAULT_SEED" \
     --authorized-indices      0 \
     --create-key              "$CREATE_KEY" \
-    --proposal-index          2 2>&1 \
+    --proposal-index          3 2>&1 \
   && ok "Proposal created — 200 LEZToken transfer stored as ChainedCall" \
   || err "Propose failed"
 
@@ -670,7 +670,7 @@ run "multisig execute --proposal-index 3 --target-accounts vault recipient"
   --idl     "$IDL" \
   --program "$MULTISIG_BIN" \
   execute \
-    --proposal-index         2 \
+    --proposal-index         3 \
     --multisig-state-account "$MULTISIG_STATE" \
     --executor-account       "$M1_ACCOUNT" \
     --proposal-account       "$PROP_TOKEN" \
