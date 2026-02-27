@@ -49,12 +49,8 @@ SEQUENCER_URL="${SEQUENCER_URL:-http://127.0.0.1:3040}"
 DEMO_WALLET_DIR="$MULTISIG_DIR/demo-wallet"
 export NSSA_WALLET_HOME_DIR="${NSSA_WALLET_HOME_DIR:-$DEMO_WALLET_DIR}"
 
-# Bootstrap demo wallet config from lssa if not already present
-if [[ ! -f "$NSSA_WALLET_HOME_DIR/wallet_config.json" ]]; then
-  mkdir -p "$NSSA_WALLET_HOME_DIR"
-  cp "$LSSA_DIR/wallet/configs/debug/wallet_config.json" "$NSSA_WALLET_HOME_DIR/wallet_config.json"
-  info "Demo wallet bootstrapped from lssa config at $NSSA_WALLET_HOME_DIR"
-fi
+# Ensure demo wallet dir exists (wallet CLI creates fresh accounts as needed)
+mkdir -p "$NSSA_WALLET_HOME_DIR"
 export REGISTRY_PROGRAM_ID="7d2b376bbe5c82c00c65068da8a57cff4a81c5207b3f5e0a1b3991120555e4d4"
 STORAGE_URL="http://127.0.0.1:8080"
 MOCK_CODEX_PY="$MULTISIG_DIR/scripts/mock-codex.py"
