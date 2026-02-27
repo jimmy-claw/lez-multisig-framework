@@ -675,6 +675,8 @@ run "multisig execute --proposal-index 3 --target-accounts vault recipient"
     --executor-account       "$M1_ACCOUNT" \
     --proposal-account       "$PROP_TOKEN" \
     --create-key             "$CREATE_KEY" \
+    --target-accounts-account "$MULTISIG_VAULT_PDA" \
+    --target-accounts-account "$RECIPIENT" \
     2>&1 \
   && ok "ChainedCall executed — 200 LEZToken transferred vault → recipient!" \
   || err "Execute failed"
