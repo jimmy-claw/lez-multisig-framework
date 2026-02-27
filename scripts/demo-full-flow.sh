@@ -552,7 +552,7 @@ DRY_RUN_OUT=$("$MULTISIG_CLI" \
   --dry-run \
   transfer \
     --amount-to-transfer        200 \
-    --sender-holding-account    "$TOKEN_HOLDING" \
+    --sender-holding-account    "$MULTISIG_VAULT_PDA" \
     --recipient-holding-account "$RECIPIENT" \
   2>&1) || true
 
