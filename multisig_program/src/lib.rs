@@ -45,7 +45,7 @@ mod multisig_program {
         #[account(init)]
         proposal: AccountWithMetadata,
         target_program_id: ProgramId,
-        target_instruction_data: InstructionData,
+        target_instruction_data: Vec<u32>,
         target_account_count: u8,
         pda_seeds: Vec<[u8; 32]>,
         authorized_indices: Vec<u8>,

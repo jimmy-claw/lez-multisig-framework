@@ -45,7 +45,7 @@ pub enum Instruction {
         /// Target program to call when executed
         target_program_id: ProgramId,
         /// Serialized instruction data for the target program
-        target_instruction_data: InstructionData,
+        target_instruction_data: Vec<u32>,
         /// Number of target accounts that will be passed at execute time.
         target_account_count: u8,
         /// PDA seeds for authorization in the chained call
@@ -132,7 +132,7 @@ pub struct Proposal {
     /// Target program to call
     pub target_program_id: ProgramId,
     /// Serialized instruction data for target program
-    pub target_instruction_data: InstructionData,
+    pub target_instruction_data: Vec<u32>,
     /// Expected number of target accounts at execute time
     pub target_account_count: u8,
     /// PDA seeds for the chained call (multisig proves ownership)
@@ -157,7 +157,7 @@ impl Proposal {
         proposer: [u8; 32],
         multisig_create_key: [u8; 32],
         target_program_id: ProgramId,
-        target_instruction_data: InstructionData,
+        target_instruction_data: Vec<u32>,
         target_account_count: u8,
         pda_seeds: Vec<[u8; 32]>,
         authorized_indices: Vec<u8>,
