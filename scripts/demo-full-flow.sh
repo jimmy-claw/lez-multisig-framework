@@ -474,39 +474,20 @@ echo ""
 
 # Compute vault PDA + seed (vault not yet in IDL — TODO: annotate in Rust source)
 # Future: "$MULTISIG_CLI" --idl "$IDL" --program-id "$MULTISIG_PROGRAM_ID" pda vault --create-key "$CREATE_KEY"
-# Vault PDA = SHA-256(program_id || SHA-256("multisig_vault__" || create_key))
-# Matches multisig_core::vault_pda_seed() after the XOR→SHA-256 migration
-_compute_vault() {
-python3 - "$1" << 'PYEOF'
-import hashlib, sys, os
-mode = sys.argv[1]
-ck_raw = os.environ["CREATE_KEY"].encode()
-pid_hex = os.environ["MULTISIG_PROGRAM_ID"]
-
-# vault seed = SHA-256(pad32("multisig_vault__") || create_key_bytes)
-# Matches multisig_core::vault_pda_seed() and lez-cli pda.rs hash_seeds()
-tag = b"multisig_vault__"
-tag_padded = tag + b"\x00" * (32 - len(tag))
-seed = hashlib.sha256(tag_padded + ck_raw).digest()
-
-if mode == "seed":
-    print(seed.hex()); sys.exit(0)
-
-# PDA = SHA-256(program_id_bytes || seed)
-pid = bytes.fromhex(pid_hex)
-pda = hashlib.sha256(pid + seed).digest()
-A = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-n = int.from_bytes(pda, "big"); r = []
-while n: n, rem = divmod(n, 58); r.append(A[rem:rem+1])
-for b in pda:
-    if b == 0: r.append(b"1")
-    else: break
-print(b"".join(reversed(r)).decode())
-PYEOF
-}
-MULTISIG_VAULT_PDA=$(_compute_vault pda)
-MULTISIG_VAULT_SEED=$(_compute_vault seed)
+# Vault PDA via lez-cli raw pda command (no IDL needed)
+MULTISIG_VAULT_PDA=$("$MULTISIG_CLI" pda --program-id "$MULTISIG_PROGRAM_ID" "multisig_vault__" "$CREATE_KEY")
 ok "Multisig vault PDA : $MULTISIG_VAULT_PDA"
+
+# Vault seed bytes still needed for --pda-seeds arg in propose
+# seed = SHA-256(pad32("multisig_vault__") || create_key_bytes)
+MULTISIG_VAULT_SEED=$(python3 -c "
+import hashlib, os
+ck = os.environ['CREATE_KEY'].encode()
+tag = b'multisig_vault__'
+tag_padded = tag + b'\x00' * (32 - len(tag))
+seed = hashlib.sha256(tag_padded + ck.ljust(32, b'\x00')).digest()
+print(seed.hex())
+")
 ok "Vault seed (hex)   : $MULTISIG_VAULT_SEED"
 echo ""
 
