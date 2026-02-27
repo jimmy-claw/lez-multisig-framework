@@ -390,7 +390,7 @@ run "multisig execute --proposal-index 1 --executor SIGNER ..."
     --multisig-state-account "$MULTISIG_STATE" \
     --executor-account       "$M1_ACCOUNT" \
     --proposal-account       "$PROP1" \
-    --target-accounts-account "$M2_ACCOUNT" 2>&1
+2>&1
 
 echo ""
 ok "Proposal #1 executed!"
@@ -421,7 +421,7 @@ run "multisig propose-add-member --new-member M3 --proposer SIGNER ..."
     --multisig-state-account  "$MULTISIG_STATE" \
     --proposer-account        "$M1_ACCOUNT" \
     --proposal-account        "$PROP2" \
-    --target-accounts-account "$M3_ACCOUNT" 2>&1
+2>&1
 
 echo ""
 ok "Proposal #2 created!"
@@ -447,7 +447,7 @@ run "multisig execute --proposal-index 2 --executor SIGNER ..."
     --multisig-state-account  "$MULTISIG_STATE" \
     --executor-account        "$M1_ACCOUNT" \
     --proposal-account        "$PROP2" \
-    --target-accounts-account "$M3_ACCOUNT" 2>&1
+2>&1
 
 echo ""
 ok "Proposal #2 executed!"
