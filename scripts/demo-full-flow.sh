@@ -85,9 +85,7 @@ echo -e "${BOLD}  🔐  LEZ Multisig — Full Demo${RESET}"
 echo -e "${DIM}      Programs · Registry · Governance · Execution${RESET}"
 echo ""
 
-curl -s --max-time 5 "$SEQUENCER_URL" > /dev/null 2>&1 || curl -s --max-time 5 "$SEQUENCER_URL/" -o /dev/null -w "%{http_code}" 2>/dev/null | grep -qE "[0-9]" \
-  || err "Sequencer not reachable at $SEQUENCER_URL"
-ok "Sequencer is up at $SEQUENCER_URL"
+  info "Sequencer will be reset and restarted below..."
 
 [[ -f "$MULTISIG_BIN" ]] \
   || err "Multisig binary not found: $MULTISIG_BIN  →  run: bash $MULTISIG_DIR/scripts/build-guest.sh"
@@ -97,6 +95,34 @@ ok "Sequencer is up at $SEQUENCER_URL"
   || err "Token binary not found: $TOKEN_BIN"
 
 ok "All binaries present"
+
+# ── Reset sequencer state ─────────────────────────────────────────────────
+
+echo -e "  ${YELLOW}⚡  Resetting sequencer — wiping chain state for a clean demo...${RESET}"
+
+# Kill existing sequencer
+pkill -f sequencer_runner 2>/dev/null || true
+sleep 2
+
+# Wipe RocksDB state
+rm -rf "${LSSA_DIR}/rocksdb"
+ok "Chain state wiped"
+
+# Restart sequencer fresh
+nohup bash -c "cd ${LSSA_DIR} && ./target/release/sequencer_runner ./sequencer_runner/configs/debug/ > /tmp/seq.log 2>&1" &
+SEQ_PID=$!
+echo -e "  ${DIM}Sequencer PID: ${SEQ_PID}${RESET}"
+
+# Wait for it to be ready
+echo -n "  Waiting for sequencer"
+for i in $(seq 1 30); do
+  sleep 1
+  echo -n "."
+  curl -s --max-time 2 "${SEQUENCER_URL}" > /dev/null 2>&1 && break
+done
+echo ""
+curl -s --max-time 3 "${SEQUENCER_URL}" > /dev/null 2>&1 || err "Sequencer failed to start after reset"
+ok "Sequencer restarted and ready"
 
 # Start mock Codex storage (serves /api/codex/v1/data)
 pkill -f mock-codex.py 2>/dev/null || true
@@ -177,10 +203,11 @@ run "registry register --name lez-token --version 0.1.0 ..."
   --name             "lez-token" \
   --version          "0.1.0" \
   --description      "Fungible token program for LEZ" \
+  --idl-path         "$TOKEN_IDL" \
   --tag              governance \
   --tag              token 2>&1 \
   && ok "lez-token registered" \
-  || info "Already registered — skipping"
+  || err "Registration failed — check output above"
 
 sleep 2
 
@@ -194,10 +221,11 @@ run "registry register --name lez-multisig --version 0.1.0 ..."
   --name             "lez-multisig" \
   --version          "0.1.0" \
   --description      "M-of-N on-chain governance for LEZ" \
+  --idl-path         "$MULTISIG_IDL" \
   --tag              governance \
   --tag              multisig 2>&1 \
   && ok "lez-multisig registered" \
-  || info "Already registered — skipping"
+  || err "Registration failed — check output above"
 
 sleep 15
 
