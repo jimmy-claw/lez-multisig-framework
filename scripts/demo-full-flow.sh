@@ -321,6 +321,7 @@ sleep 1
 banner "Step 5 — CreateMultisig  (threshold=1, initial member: SIGNER)"
 
 CREATE_KEY="demo-$SUFFIX"
+export CREATE_KEY MULTISIG_PROGRAM_ID
 echo "  Threshold  : 1-of-1 approval required (grows as members join)"
 echo "  Create key : $CREATE_KEY"
 echo "  Initial member: SIGNER (hex pk)"
