@@ -71,12 +71,17 @@ info() { echo -e "  ${YELLOW}ℹ️   $*${RESET}"; }
 run()  { echo -e "  ${DIM}▶  $*${RESET}"; }
 err()  { echo -e "  ${RED}❌  $*${RESET}"; exit 1; }
 
-# ── Signer account (has signing key in wallet) ─────────────────────────────
-
-# The wallet's main signing account — only this account can sign transactions.
-# Hex pk derived from wallet_config.json pub_sign_key bytes.
-SIGNER="6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV"
-SIGNER_HEX_PK="54d662b664519cb8aef608ae84a63e041cc16019e4a07c34828311996f0c817a"
+# Create a new wallet account; prints "base58 hex" to stdout
+new_account() {
+  local label="$1"
+  local raw
+  raw=$("$WALLET" account new public --label "$label" 2>&1)
+  local b58
+  b58=$(echo "$raw" | grep 'account_id' | awk '{print $6}' | sed 's|Public/||')
+  local hex
+  hex=$(python3 -c "import base58,sys; print(base58.b58decode('$b58').hex())")
+  echo "$b58 $hex"
+}
 
 # ── Pre-flight ─────────────────────────────────────────────────────────────
 
@@ -297,26 +302,21 @@ echo ""
 
 SUFFIX=$(date +%s | tail -c 5)
 
-run "wallet account new public --label m1-..."
-M1_RAW=$("$WALLET" account new public --label "m1-$SUFFIX" 2>&1)
-echo "  $M1_RAW"
-M1_HEX=$(echo "$M1_RAW" | grep 'account_id' | awk '{print $6}' | sed 's|Public/||' | python3 -c "import base58,sys; print(base58.b58decode(sys.stdin.read().strip()).hex())")
-M1_ACCOUNT=$(echo "$M1_RAW" | grep 'account_id' | awk '{print $6}' | sed 's|Public/||')
-sleep 1
+run "new_account signer-..."
+read SIGNER SIGNER_HEX_PK <<< $(new_account "signer-$SUFFIX")
+echo "  Signer: $SIGNER ($SIGNER_HEX_PK)"
 
-run "wallet account new public --label m2-..."
-M2_RAW=$("$WALLET" account new public --label "m2-$SUFFIX" 2>&1)
-echo "  $M2_RAW"
-M2=$(echo "$M2_RAW" | grep 'account_id' | awk '{print $6}' | sed 's|Public/||' | python3 -c "import base58,sys; print(base58.b58decode(sys.stdin.read().strip()).hex())")
-M2_ACCOUNT=$(echo "$M2_RAW" | grep 'account_id' | awk '{print $6}' | sed 's/Public\//'/)
+run "new_account m1-..."
+read M1_ACCOUNT M1_HEX <<< $(new_account "m1-$SUFFIX")
+echo "  M1: $M1_ACCOUNT ($M1_HEX)"
 
-sleep 1
+run "new_account m2-..."
+read M2_ACCOUNT M2 <<< $(new_account "m2-$SUFFIX")
+echo "  M2: $M2_ACCOUNT ($M2)"
 
-run "wallet account new public --label m3-..."
-M3_RAW=$("$WALLET" account new public --label "m3-$SUFFIX" 2>&1)
-echo "  $M3_RAW"
-M3=$(echo "$M3_RAW" | grep 'account_id' | awk '{print $6}' | sed 's|Public/||' | python3 -c "import base58,sys; print(base58.b58decode(sys.stdin.read().strip()).hex())")
-M3_ACCOUNT=$(echo "$M3_RAW" | grep 'account_id' | awk '{print $6}' | sed 's/Public\//'/)
+run "new_account m3-..."
+read M3_ACCOUNT M3 <<< $(new_account "m3-$SUFFIX")
+echo "  M3: $M3_ACCOUNT ($M3)"
 
 echo ""
 ok "Signer (initial member): $SIGNER"
@@ -365,10 +365,8 @@ echo "  Threshold=1 → immediately ready to execute."
 echo ""
 
 # Generate a fresh account to hold the proposal state (init: true)
-run "wallet account new public --label prop1-..."
-PROP1_RAW=$("$WALLET" account new public --label "prop1-$SUFFIX" 2>&1)
-echo "  $PROP1_RAW"
-PROP1=$(echo "$PROP1_RAW" | grep 'account_id' | awk '{print $6}' | sed 's/Public\//'/)
+run "new_account prop1-..."
+read PROP1 _PROP1_HEX <<< $(new_account "prop1-$SUFFIX")
 ok "Proposal account: $PROP1"
 echo ""
 
@@ -423,10 +421,8 @@ banner "Step 8 — Propose: Add Member 3  (threshold=1, SIGNER proposes)"
 echo "  Multisig now has 2 members (SIGNER, M2). SIGNER proposes adding M3."
 echo ""
 
-run "wallet account new public --label prop2-..."
-PROP2_RAW=$("$WALLET" account new public --label "prop2-$SUFFIX" 2>&1)
-echo "  $PROP2_RAW"
-PROP2=$(echo "$PROP2_RAW" | grep 'account_id' | awk '{print $6}' | sed 's/Public\//'/)
+run "new_account prop2-..."
+read PROP2 _PROP2_HEX <<< $(new_account "prop2-$SUFFIX")
 ok "Proposal 2 account: $PROP2"
 echo ""
 
