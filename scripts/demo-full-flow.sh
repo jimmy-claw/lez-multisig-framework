@@ -72,18 +72,15 @@ SKIP_TO="${SKIP_TO:-0}"
 
 pause() {
   local step="$1"
-  [[ "$step" -lt "$SKIP_TO" ]] && return 0  # skip this step
+  if [[ "$step" -lt "$SKIP_TO" ]]; then
+    echo -e "  ${DIM}⏩  Skipping step $step (SKIP_TO=$SKIP_TO)${RESET}"
+    return 0
+  fi
   if [[ "$AUTO" != "1" ]]; then
     echo ""
     echo -e "  ${DIM}Press Enter to continue to Step $step... (or Ctrl+C to abort)${RESET}"
     read -r
   fi
-}
-
-skip_step() {
-  local step="$1"
-  [[ "$step" -lt "$SKIP_TO" ]] && return 0  # true = skip
-  return 1  # false = run
 }
 
 banner() {
@@ -124,7 +121,12 @@ echo -e "${BOLD}  🔐  LEZ Multisig — Full Demo${RESET}"
 echo -e "${DIM}      Programs · Registry · Governance · Execution${RESET}"
 echo ""
 
+if [[ "$SKIP_TO" -gt 0 ]]; then
+  info "SKIP_TO=$SKIP_TO — skipping reset and deploy steps, reusing existing chain state"
+  info "Make sure sequencer is already running and programs are deployed!"
+else
   info "Sequencer will be reset and restarted below..."
+fi
 
 [[ -f "$MULTISIG_BIN" ]] \
   || err "Multisig binary not found: $MULTISIG_BIN  →  run: bash $MULTISIG_DIR/scripts/build-guest.sh"
@@ -137,6 +139,7 @@ ok "All binaries present"
 
 # ── Reset sequencer state ─────────────────────────────────────────────────
 
+if [[ "$SKIP_TO" -eq 0 ]]; then
 echo -e "  ${YELLOW}⚡  Resetting sequencer — wiping chain state for a clean demo...${RESET}"
 
 # Kill existing sequencer
@@ -187,6 +190,7 @@ sleep 1
 curl -sf "$STORAGE_URL/" > /dev/null 2>&1 || { err "Mock Codex failed to start"; }
 ok "Mock Codex storage running at $STORAGE_URL"
 sleep 1
+fi  # end SKIP_TO == 0
 
 # ── Step 0: Show program IDs ───────────────────────────────────────────────
 
