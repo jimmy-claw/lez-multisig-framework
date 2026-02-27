@@ -1,0 +1,179 @@
+{
+  "name": "token_program",
+  "version": "0.1.0",
+  "instruction_type": "token_core::Instruction",
+  "instructions": [
+    {
+      "name": "transfer",
+      "accounts": [
+        {
+          "name": "sender_holding",
+          "writable": true,
+          "signer": true,
+          "init": false
+        },
+        {
+          "name": "recipient_holding",
+          "writable": true,
+          "signer": false,
+          "init": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_to_transfer",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "new_fungible_definition",
+      "accounts": [
+        {
+          "name": "token_definition",
+          "writable": true,
+          "signer": false,
+          "init": true
+        },
+        {
+          "name": "token_holding",
+          "writable": true,
+          "signer": false,
+          "init": true
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "total_supply",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "new_definition_with_metadata",
+      "accounts": [
+        {
+          "name": "token_definition",
+          "writable": true,
+          "signer": false,
+          "init": true
+        },
+        {
+          "name": "token_holding",
+          "writable": true,
+          "signer": false,
+          "init": true
+        },
+        {
+          "name": "token_metadata",
+          "writable": true,
+          "signer": false,
+          "init": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_definition",
+          "type": {
+            "defined": "NewTokenDefinition"
+          }
+        },
+        {
+          "name": "metadata",
+          "type": {
+            "defined": "NewTokenMetadata"
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_account",
+      "accounts": [
+        {
+          "name": "token_definition",
+          "writable": false,
+          "signer": false,
+          "init": false
+        },
+        {
+          "name": "token_holding",
+          "writable": true,
+          "signer": false,
+          "init": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "burn",
+      "accounts": [
+        {
+          "name": "token_definition",
+          "writable": true,
+          "signer": false,
+          "init": false
+        },
+        {
+          "name": "token_holding",
+          "writable": true,
+          "signer": true,
+          "init": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_to_burn",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "mint",
+      "accounts": [
+        {
+          "name": "token_definition",
+          "writable": true,
+          "signer": true,
+          "init": false
+        },
+        {
+          "name": "token_holding",
+          "writable": true,
+          "signer": false,
+          "init": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_to_mint",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "print_nft",
+      "accounts": [
+        {
+          "name": "nft_master_holding",
+          "writable": true,
+          "signer": true,
+          "init": false
+        },
+        {
+          "name": "nft_printed_copy",
+          "writable": true,
+          "signer": false,
+          "init": true
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [],
+  "types": [],
+  "errors": []
+}
