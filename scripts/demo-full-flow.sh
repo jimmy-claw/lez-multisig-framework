@@ -106,6 +106,9 @@ sleep 2
 
 # Wipe RocksDB state
 rm -rf "${LSSA_DIR}/rocksdb"
+# Reset wallet nonce cache
+cp "${NSSA_WALLET_HOME_DIR}/storage.json" "${NSSA_WALLET_HOME_DIR}/storage.json.bak" 2>/dev/null || true
+echo '{}' > "${NSSA_WALLET_HOME_DIR}/storage.json"
 ok "Chain state wiped"
 
 # Restart sequencer fresh
