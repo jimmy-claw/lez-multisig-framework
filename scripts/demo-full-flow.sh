@@ -546,18 +546,22 @@ echo "  KEY POINT: the IDL drives serialization — no hardcoded bytes."
 echo ""
 run "multisig --idl token-idl.json --program token.bin --dry-run transfer --amount-to-transfer 200"
 
-TARGET_INSTRUCTION_DATA=$("$MULTISIG_CLI" \
+DRY_RUN_OUT=$("$MULTISIG_CLI" \
   --idl     "$MULTISIG_DIR/scripts/token-idl.json" \
   --program "$TOKEN_BIN" \
   --dry-run \
-  transfer --amount-to-transfer 200 2>&1 \
+  transfer --amount-to-transfer 200 2>&1) || true
+
+echo "$DRY_RUN_OUT"
+
+TARGET_INSTRUCTION_DATA=$(echo "$DRY_RUN_OUT" \
   | grep -A1 "Serialized instruction data" | tail -1 \
   | tr -d '[] ' \
   | python3 -c "
 import sys
 words = [w for w in sys.stdin.read().strip().replace(',', ' ').split() if w]
 print(','.join(str(int(w, 16)) for w in words))
-")
+") || true
 
 [[ -n "$TARGET_INSTRUCTION_DATA" ]] \
   && ok "Serialized: $TARGET_INSTRUCTION_DATA" \
