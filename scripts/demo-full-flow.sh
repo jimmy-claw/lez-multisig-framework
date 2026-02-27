@@ -550,7 +550,11 @@ DRY_RUN_OUT=$("$MULTISIG_CLI" \
   --idl     "$MULTISIG_DIR/scripts/token-idl.json" \
   --program "$TOKEN_BIN" \
   --dry-run \
-  transfer --amount-to-transfer 200 2>&1) || true
+  transfer \
+    --amount-to-transfer        200 \
+    --sender-holding-account    "$TOKEN_HOLDING" \
+    --recipient-holding-account "$RECIPIENT" \
+  2>&1) || true
 
 echo "$DRY_RUN_OUT"
 
