@@ -177,40 +177,58 @@ run "wallet deploy-program multisig.bin"
   || info "Already deployed — skipping"
 
 echo ""
-echo "  Waiting for programs to land in a block..."
-echo -n "  Polling sequencer for registry program"
-REGISTRY_B58=$(python3 -c "
-ALPHA = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-h=''
-b=bytes.fromhex(h)
-n=int.from_bytes(b,'big')
-r=''
-while n:
-    n,rem=divmod(n,58)
-    r=ALPHA[rem]+r
-for byte in b:
-    if byte==0: r=ALPHA[0]+r
-    else: break
-print(r)
-" 2>/dev/null)
-for i in $(seq 1 40); do
-  sleep 3
-  echo -n "."
-  NONCE=$(curl -s --max-time 2 -X POST http://127.0.0.1:3040/ \
-    -H 'Content-Type: application/json' \
-    -d "{\"jsonrpc\":\"2.0\",\"method\":\"get_account\",\"params\":{\"account_id\":\"$REGISTRY_B58\"},\"id\":1}" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('account',{}).get('nonce',0))" 2>/dev/null)
-  if [ "$NONCE" != "" ] && [ "$NONCE" -gt 0 ] 2>/dev/null; then
-    echo " ready! (nonce=$NONCE)"
-    break
-  fi
-done
-echo ""
-
-# Grab program IDs for use in later steps
+# Grab program IDs for use in later steps (must be before poll)
 TOKEN_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$TOKEN_BIN" \
+  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+REGISTRY_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$REGISTRY_BIN" \
   | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
 MULTISIG_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$MULTISIG_BIN" \
   | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+export REGISTRY_PROGRAM_ID
+
+echo ""
+echo "  Waiting for programs to land in a block..."
+echo -n "  Polling sequencer for registry program"
+# Convert hex program ID to base58 for RPC
+REGISTRY_B58=$(python3 -c "
+ALPHA = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+h = '$REGISTRY_PROGRAM_ID'
+if not h: exit(1)
+b = bytes.fromhex(h)
+n = int.from_bytes(b, 'big')
+r = ''
+while n:
+    n, rem = divmod(n, 58)
+    r = ALPHA[rem] + r
+for byte in b:
+    if byte == 0: r = ALPHA[0] + r
+    else: break
+print(r)
+")
+for i in $(seq 1 40); do
+  sleep 3
+  echo -n "."
+  RESULT=$(curl -s --max-time 2 -X POST "$SEQUENCER_URL" \
+    -H 'Content-Type: application/json' \
+    -d "{\"jsonrpc\":\"2.0\",\"method\":\"get_account\",\"params\":{\"account_id\":\"$REGISTRY_B58\"},\"id\":1}" 2>/dev/null)
+  HAS_ACCOUNT=$(echo "$RESULT" | python3 -c "
+import sys,json
+try:
+    d = json.load(sys.stdin)
+    acct = d.get('result', {}).get('account', {})
+    if acct and acct.get('nonce', 0) > 0:
+        print('yes')
+    else:
+        print('no')
+except:
+    print('no')
+" 2>/dev/null)
+  if [ "$HAS_ACCOUNT" = "yes" ]; then
+    echo " ready!"
+    break
+  fi
+done
+
 
 echo ""
 ok "Token    ID: $TOKEN_PROGRAM_ID"
