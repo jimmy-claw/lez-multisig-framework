@@ -39,7 +39,7 @@ REGISTRY_CLI="$REGISTRY_DIR/target/debug/registry"
 
 IDL="$MULTISIG_DIR/lez-multisig-ffi/src/multisig_idl.json"
 MULTISIG_BIN="$MULTISIG_DIR/target/riscv32im-risc0-zkvm-elf/docker/multisig.bin"
-REGISTRY_BIN="$REGISTRY_DIR/target/riscv-guest/registry-methods/registry-guest/riscv32im-risc0-zkvm-elf/release/registry.bin"
+REGISTRY_BIN="$REGISTRY_DIR/target/riscv32im-risc0-zkvm-elf/docker/registry.bin"
 TOKEN_BIN="$LSSA_DIR/artifacts/program_methods/token.bin"
 
 SEQUENCER_URL="${SEQUENCER_URL:-http://127.0.0.1:3040}"
