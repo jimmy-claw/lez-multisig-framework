@@ -180,24 +180,27 @@ echo ""
 echo "  Waiting for programs to land in a block..."
 echo -n "  Polling sequencer for registry program"
 REGISTRY_B58=$(python3 -c "
-h='$REGISTRY_PROGRAM_ID'
+ALPHA = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+h=''
 b=bytes.fromhex(h)
-a='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 n=int.from_bytes(b,'big')
 r=''
 while n:
     n,rem=divmod(n,58)
-    r=a[rem]+r
+    r=ALPHA[rem]+r
+for byte in b:
+    if byte==0: r=ALPHA[0]+r
+    else: break
 print(r)
 " 2>/dev/null)
 for i in $(seq 1 40); do
   sleep 3
   echo -n "."
-  RESP=$(curl -s --max-time 2 -X POST http://127.0.0.1:3040/ \
+  NONCE=$(curl -s --max-time 2 -X POST http://127.0.0.1:3040/ \
     -H 'Content-Type: application/json' \
-    -d "{\"jsonrpc\":\"2.0\",\"method\":\"get_account\",\"params\":{\"account_id\":\"$REGISTRY_B58\"},\"id\":1}" 2>/dev/null)
-  if echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if 'result' in d else 1)" 2>/dev/null; then
-    echo " ready!"
+    -d "{\"jsonrpc\":\"2.0\",\"method\":\"get_account\",\"params\":{\"account_id\":\"$REGISTRY_B58\"},\"id\":1}" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('account',{}).get('nonce',0))" 2>/dev/null)
+  if [ "$NONCE" != "" ] && [ "$NONCE" -gt 0 ] 2>/dev/null; then
+    echo " ready! (nonce=$NONCE)"
     break
   fi
 done
