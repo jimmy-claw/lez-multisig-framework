@@ -120,6 +120,20 @@ rm -rf "${LSSA_DIR}/rocksdb" "${LSSA_DIR}/mempool"
 # Reset wallet nonce cache
 cp "${NSSA_WALLET_HOME_DIR}/storage.json" "${NSSA_WALLET_HOME_DIR}/storage.json.bak" 2>/dev/null || true
 rm -f "${NSSA_WALLET_HOME_DIR}/storage.json"
+
+# Speed up tx confirmation polling for demo
+if command -v python3 &>/dev/null && [ -f "${NSSA_WALLET_HOME_DIR}/wallet_config.json" ]; then
+  python3 -c "
+import json, sys
+p = '${NSSA_WALLET_HOME_DIR}/wallet_config.json'
+with open(p) as f: c = json.load(f)
+c['seq_poll_timeout_millis'] = 5000
+c['seq_tx_poll_max_blocks'] = 10
+c['seq_poll_max_retries'] = 10
+with open(p,'w') as f: json.dump(c, f, indent=4)
+print('  Wallet poll config patched for faster confirmations')
+"
+fi
 ok "Chain state wiped"
 
 # Restart sequencer fresh
