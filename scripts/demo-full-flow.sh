@@ -232,7 +232,6 @@ MULTISIG_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$MULTISIG_BIN" \
 export REGISTRY_PROGRAM_ID
 
 echo ""
-echo "  Waiting for programs to land in a block (2 blocks)..."
 sleep 10
 ok "Programs deployed"
 
@@ -288,7 +287,6 @@ run "registry register --name lez-multisig --version 0.1.0 ..."
   && ok "lez-multisig registered" \
   || err "Registration failed — check output above"
 
-sleep 15
 
 # ── Step 3: List Registry ──────────────────────────────────────────────────
 
@@ -363,8 +361,6 @@ ok "Multisig created!"
 ok "State PDA: $MULTISIG_STATE"
 
 echo ""
-echo "  Waiting for CreateMultisig to land in a block..."
-sleep 15
 
 # ── Step 6: Propose Adding Member 2 ──────────────────────────────────────
 
@@ -398,8 +394,6 @@ ok "Proposal #1 created!"
 ok "SIGNER auto-approved — 1 of 1 votes cast (threshold = 1 → ready to execute!)"
 
 echo ""
-echo "  Waiting for Propose to land in a block..."
-sleep 15
 
 # ── Step 7: Execute Proposal #1 ───────────────────────────────────────────
 
@@ -427,8 +421,6 @@ ok "Proposal #1 executed!"
 ok "M2 has joined the multisig. Members: SIGNER, M2"
 
 echo ""
-echo "  Waiting for Execute to land..."
-sleep 15
 
 # ── Step 8: Propose Adding Member 3 ──────────────────────────────────────
 
@@ -460,8 +452,6 @@ ok "Proposal #2 created!"
 ok "SIGNER auto-approved (1/1 — threshold met)"
 
 echo ""
-echo "  Waiting for Propose to land..."
-sleep 15
 
 # ── Step 9: Execute Proposal #2 ─────────────────────────────────────────
 
@@ -488,8 +478,6 @@ ok "Proposal #2 executed!"
 ok "M3 has joined. Final multisig: SIGNER, M2, M3 — threshold 1"
 
 echo ""
-echo "  Waiting for Execute to land..."
-sleep 15
 
 # ── Step 10: Token Governance via Multisig (ChainedCall) ──────────────────
 
