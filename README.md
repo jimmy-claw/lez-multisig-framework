@@ -1,8 +1,8 @@
-# LEZ Multisig — M-of-N On-Chain Proposals
+# LEZ Multisig — M-of-N On-Chain Governance
 
 An M-of-N multisig governance program for the [Logos Execution Zone (LEZ)](https://github.com/logos-blockchain/lssa). Inspired by [Squads Protocol v4](https://squads.so/) — proposals live on-chain as separate PDA accounts. Signers approve asynchronously, no offline coordination needed.
 
-📄 **[Technical Specification](SPEC.md)** — accounts, PDA derivation, instruction set, validation rules.
+📄 **[Technical Specification](SPEC.md)** · 📋 **[Demo Runbook](scripts/DEMO-RUNBOOK.md)**
 
 ## How It Works
 
@@ -11,17 +11,17 @@ CreateMultisig → Propose → Approve (×M) → Execute → ChainedCall to targ
 ```
 
 1. **Create** a multisig with N members, threshold M, and a unique `create_key`
-2. **Propose** an action — creates a proposal PDA account, auto-approves the proposer
+2. **Propose** an action — stores a serialized instruction + target program ID in a proposal PDA, auto-approves the proposer
 3. **Approve** — other members approve independently, each in their own transaction
 4. **Execute** — once M approvals collected, emits a `ChainedCall` to the target program
 5. **Reject** — members can reject; if rejections ≥ (N - M + 1), the proposal is dead
 
-**Key design:** The multisig never executes actions directly. It collects votes and delegates execution via LEZ `ChainedCall`. For example, a token transfer goes: multisig approves → `ChainedCall` to token program → token program moves funds.
+**Key design:** The multisig never executes actions directly. It delegates via LEZ `ChainedCall` — the proposal stores a serialized instruction (encoded from any program's IDL), which is delivered to the target program on execute. This makes multisig governance **composable with any LEZ program**.
 
 ## Project Structure
 
 ```
-lez-multisig/
+lez-multisig-framework/
 ├── multisig_core/           — shared types, instructions, PDA derivation
 ├── multisig_program/        — on-chain handlers (risc0 guest)
 │   └── src/
@@ -32,13 +32,13 @@ lez-multisig/
 │       ├── reject.rs
 │       └── execute.rs
 ├── methods/                 — risc0 zkVM guest build config
-│   └── guest/src/bin/
-│       ├── multisig.rs      — zkVM guest entry point
-│       └── generate_idl.rs  — IDL generation from program source
-├── cli/                     — thin CLI wrapper around lez-cli
-│   └── src/bin/multisig.rs
+├── cli/                     — thin CLI wrapper around lez-cli (IDL-driven)
+├── idl-gen/                 — IDL generator (host-side, no risc0)
+├── lez-multisig-ffi/        — FFI client + generated IDL
 ├── e2e_tests/               — integration tests against live sequencer
-│   └── tests/e2e_multisig.rs
+├── scripts/
+│   ├── demo-full-flow.sh    — full end-to-end demo script
+│   └── DEMO-RUNBOOK.md      — manual CLI runbook for live presentation
 ├── SPEC.md                  — full technical specification
 └── docs/FURPS.md            — requirements specification
 ```
@@ -50,93 +50,64 @@ lez-multisig/
 - Rust nightly (edition 2024)
 - [Risc0 toolchain](https://dev.risczero.com/api/zkvm/install): `curl -L https://risczero.com/install | bash && rzup install`
 - Docker (for reproducible guest builds)
-- Clone of [lssa](https://github.com/logos-blockchain/lssa) (for sequencer + token program binary)
+- Clone of [lssa](https://github.com/logos-blockchain/lssa) (for sequencer + wallet + token binary)
 
 ### Important: Member Accounts
 
-Members must use **fresh keypairs** (never-used accounts with nonce=0) for each multisig. During `CreateMultisig`, all member accounts are **claimed** by the multisig program (sets `program_owner = multisig_program_id`). This is required by LEZ validation rules — see [issue #339](https://github.com/logos-blockchain/lssa/issues/339).
+Members must use **fresh keypairs** (never-used accounts with nonce=0) for each multisig. During `CreateMultisig`, all member accounts are **claimed** by the multisig program (`program_owner = multisig_program_id`). This is required by LEZ validation rules.
 
 ### 1. Build the guest binary
 
 ```bash
-cd lez-multisig
-
-# Build the zkVM guest (produces the on-chain binary)
-# This requires Docker and takes ~15-20 minutes on first run
+# Build the zkVM guest — requires Docker, ~15-20 min on first run
 cargo risczero build --manifest-path methods/guest/Cargo.toml
 
-# Verify output exists
-ls -la target/riscv32im-risc0-zkvm-elf/docker/multisig.bin
+# Verify
+ls target/riscv32im-risc0-zkvm-elf/docker/multisig.bin
 ```
 
-### 2. Run unit tests
+### 2. Generate the IDL
 
 ```bash
-# Core types + program handlers (4 tests)
+# Regenerate from Rust source whenever instruction types change
+cargo run -p idl-gen
+# Output: lez-multisig-ffi/src/multisig_idl.json
+```
+
+### 3. Run unit tests
+
+```bash
 cargo test -p multisig_core -p multisig_program
 ```
 
-### 3. Run e2e tests
+### 4. Run the full demo
 
-The e2e test deploys both the multisig and token programs to a local sequencer, then runs a full flow: create token → create multisig → fund vault → propose transfer → approve → execute via ChainedCall → verify balances.
+The demo script runs a complete flow against a local sequencer: deploy → register → create multisig → propose member additions → execute → token governance via ChainedCall.
 
 ```bash
-# Terminal 1: Start the sequencer (from lssa repo)
-cd /path/to/lssa
-cargo run -p sequencer_runner --features standalone --release -- \
+# Terminal 1: start sequencer (from lssa repo)
+RUST_LOG=info cargo run --features standalone -p sequencer_runner -- \
   sequencer_runner/configs/debug
 
-# Terminal 2: Run the e2e test (from lez-multisig repo)
-cd /path/to/lez-multisig
+# Terminal 2: run demo (set LSSA_DIR and REGISTRY_DIR first)
+export LSSA_DIR=/path/to/lssa
+export REGISTRY_DIR=/path/to/lez-registry
+bash scripts/demo-full-flow.sh
+```
 
-# Set required env vars
-export MULTISIG_PROGRAM=$(pwd)/target/riscv32im-risc0-zkvm-elf/docker/multisig.bin
+See [scripts/DEMO-RUNBOOK.md](scripts/DEMO-RUNBOOK.md) for a manual step-by-step version.
+
+### 5. Run e2e tests
+
+```bash
+# Requires running sequencer + token binary
 export TOKEN_PROGRAM=/path/to/lssa/artifacts/program_methods/token.bin
-export SEQUENCER_URL=http://127.0.0.1:3040  # optional, this is the default
-
-# Run
 cargo test -p lez-multisig-e2e -- --nocapture
-```
-
-**Expected output:**
-```
-📦 Deploying programs...
-  token deployed: <hash>
-  multisig deployed: <hash>
-
-═══ STEP 1: Create fungible token ═══
-  Minter balance: Some(1000000)
-  ✅ Token created, minter has 1,000,000 tokens
-
-═══ STEP 2: Create 2-of-3 multisig ═══
-  Multisig state PDA: <address>
-  Vault PDA: <address>
-  ✅ 2-of-3 multisig created!
-
-═══ STEP 3: Transfer tokens to multisig vault ═══
-  Vault balance: Some(500)
-  ✅ Vault funded with 500 tokens!
-
-═══ STEP 4: Propose transfer 200 tokens from vault ═══
-  Proposal PDA: <address>
-  ✅ Proposal #1 created (1/2 approvals)
-
-═══ STEP 5: Member 2 approves ═══
-  ✅ 2/2 approvals — ready to execute!
-
-═══ STEP 6: Execute — transfer tokens via ChainedCall ═══
-
-═══ STEP 7: Verify results ═══
-  ✅ Proposal marked as executed
-  Vault balance: Some(300)
-  Recipient balance: Some(200)
-
-🎉 Full multisig + token transfer e2e test PASSED!
 ```
 
 ## On-Chain State
 
-See [SPEC.md](SPEC.md) for full details. Summary:
+See [SPEC.md](SPEC.md) for full details.
 
 ### Accounts
 
@@ -146,7 +117,13 @@ See [SPEC.md](SPEC.md) for full details. Summary:
 | Proposal | `"multisig_prop___" XOR create_key XOR index` | Single proposal: action + votes |
 | Vault | `"multisig_vault__" XOR create_key` | Holds assets controlled by multisig |
 
-All PDAs: `AccountId = SHA256(LEZ_PREFIX ‖ program_id ‖ seed)`
+All PDAs: `AccountId = SHA256(program_id ‖ seed)`
+
+**Derive any PDA from the CLI:**
+```bash
+multisig --idl multisig_idl.json --program-id <HEX> pda vault --create-key demo-abc
+multisig --idl multisig_idl.json --program-id <HEX> pda multisig-state --create-key demo-abc
+```
 
 ### Instructions
 
@@ -160,49 +137,70 @@ All PDAs: `AccountId = SHA256(LEZ_PREFIX ‖ program_id ‖ seed)`
 
 ## CLI
 
-The `cli/` crate is a thin wrapper around [`lez-cli`](https://github.com/jimmy-claw/lez-framework/?tab=readme-ov-file#the-cli-wrapper), which auto-generates subcommands from the multisig IDL.
-
-### Generate IDL (if needed)
-
-The IDL describes the program's instruction set. Regenerate it from source when the instruction types change:
+The `cli/` crate wraps [`lez-cli`](https://github.com/jimmy-claw/lez-framework), which auto-generates subcommands from the multisig IDL. All flags are derived from the IDL — no hardcoded commands.
 
 ```bash
-cargo run --bin generate_idl > multisig_idl.json
-```
+# Build the CLI
+cargo build -p multisig-cli
 
-The IDL generator lives at `methods/guest/src/bin/generate_idl.rs` and uses the `lez_framework::generate_idl!` macro to introspect `multisig_program/src/lib.rs`.
+# View available commands (IDL-driven)
+./target/debug/multisig --idl lez-multisig-ffi/src/multisig_idl.json --help
 
-### Use the CLI
-
-```bash
-# View available multisig commands
-cargo run --bin multisig -- --idl multisig_idl.json --help
+# Derive a PDA (no binary needed)
+./target/debug/multisig --idl lez-multisig-ffi/src/multisig_idl.json \
+  --program-id <64-char-hex> pda vault --create-key my-multisig
 
 # Create a multisig (dry-run)
-cargo run --bin multisig -- --idl multisig_idl.json --dry-run -p multisig.bin \
-  create-multisig --threshold 2 --members '[<member1>, <member2>, <member3>]'
+./target/debug/multisig --idl lez-multisig-ffi/src/multisig_idl.json \
+  --program multisig.bin --dry-run \
+  create-multisig \
+    --create-key my-multisig \
+    --threshold 2 \
+    --members <member1_hex>,<member2_hex>,<member3_hex> \
+    --member-accounts-account <m1_id> \
+    --member-accounts-account <m2_id> \
+    --member-accounts-account <m3_id>
 
-# Propose a transfer
-cargo run --bin multisig -- --idl multisig_idl.json -p multisig.bin \
-  propose --multisig-pda <pda> --action '{"Transfer": {"to": "<addr>", "amount": 200}}'
-
-# Approve a proposal
-cargo run --bin multisig -- --idl multisig_idl.json -p multisig.bin \
-  approve --multisig-pda <pda> --proposal-index 1
-
-# Execute an approved proposal
-cargo run --bin multisig -- --idl multisig_idl.json -p multisig.bin \
-  execute --multisig-pda <pda> --proposal-index 1
+# Propose a cross-program action (using target program's IDL)
+# First serialize the target instruction (dry-run):
+./target/debug/multisig --idl scripts/token-idl.json \
+  --program token.bin --dry-run \
+  transfer --amount-to-transfer 200
+# Then propose using the serialized bytes:
+./target/debug/multisig --idl lez-multisig-ffi/src/multisig_idl.json \
+  --program multisig.bin \
+  propose \
+    --multisig-state-account <state_pda> \
+    --proposer-account <signer_id> \
+    --proposal-account <fresh_account> \
+    --target-program-id <token_program_id_hex> \
+    --target-instruction-data <u32_words_csv> \
+    --target-account-count 2 \
+    --pda-seeds <vault_seed_hex> \
+    --authorized-indices 0
 ```
+
+## Cross-Program Governance
+
+The multisig can govern **any LEZ program** via ChainedCall. The proposal stores:
+- `target_program_id` — which program to call
+- `target_instruction_data` — serialized instruction bytes (from the target program's IDL)
+- `target_account_count` — how many accounts the ChainedCall needs
+- `pda_seeds` — seeds for PDA accounts the multisig owns (e.g. vault)
+
+This means you can use lez-cli with any program's IDL to generate the instruction bytes, then wrap them in a multisig proposal — without writing any code.
 
 ## Known Issues
 
 - [ ] No `CloseProposal` instruction yet (executed/rejected proposals stay on-chain)
-- [ ] Config change instructions (`AddMember`, `RemoveMember`, `ChangeThreshold`) not yet implemented in program
+- [ ] `ProposeConfig` (AddMember/RemoveMember/ChangeThreshold) not yet in program
 
 ## References
 
 - [Technical Specification (SPEC.md)](SPEC.md)
-- [FURPS Requirements](docs/FURPS.md)
-- [LEZ Repository (LSSA)](https://github.com/logos-blockchain/lssa)
+- [Demo Runbook (scripts/DEMO-RUNBOOK.md)](scripts/DEMO-RUNBOOK.md)
+- [FURPS Requirements (docs/FURPS.md)](docs/FURPS.md)
+- [LEZ Framework](https://github.com/jimmy-claw/lez-framework)
+- [LEZ Registry](https://github.com/jimmy-claw/lez-registry)
+- [LSSA (LEZ runtime)](https://github.com/logos-blockchain/lssa)
 - [Squads Protocol v4](https://squads.so/) — design inspiration
