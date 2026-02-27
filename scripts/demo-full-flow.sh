@@ -457,6 +457,33 @@ echo ""
 echo "  Waiting for Execute to land..."
 sleep 15
 
+# ── Step 10: Cross-Program Governance Demo (Token) ─────────────────────────
+
+banner "Step 10 — Cross-Program Governance: Token Transfer (Dry-Run)"
+
+echo "  Demonstrating how the multisig could govern a token program."
+echo "  Using --dry-run to serialize a token transfer without submitting."
+echo ""
+
+run "multisig --idl token-idl.json --dry-run transfer --amount-to-transfer 1000"
+TOKEN_TRANSFER_SERIALIZED=$($MULTISIG_CLI \
+  --idl "$MULTISIG_DIR/scripts/token-idl.json" \
+  --program "$MULTISIG_BIN" \
+  transfer \
+    --amount-to-transfer 1000 \
+    --dry-run 2>&1 | grep 'Serialized' | awk '{print $NF}')
+
+echo ""
+ok "Token transfer instruction serialized:"
+echo "  $TOKEN_TRANSFER_SERIALIZED"
+echo ""
+echo "  This could be used in a proposal:"
+echo "    multisig propose --target-program-id \ \"
+echo "                     --target-instruction-data \"
+echo ""
+info "Dry-run complete — no transaction submitted."
+
+
 # ── Final: Registry info ──────────────────────────────────────────────────
 
 banner "Final — Registry: Verify Multisig Is Discoverable"
