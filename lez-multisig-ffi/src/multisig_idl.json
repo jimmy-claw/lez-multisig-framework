@@ -74,6 +74,20 @@
           "name": "proposal",
           "signer": false,
           "writable": true
+        },
+        {
+          "init": false,
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "multisig_vault__"
+              }
+            ]
+          },
+          "signer": false,
+          "writable": false
         }
       ],
       "args": [
