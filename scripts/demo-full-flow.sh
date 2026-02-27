@@ -46,6 +46,10 @@ SEQUENCER_URL="${SEQUENCER_URL:-http://127.0.0.1:3040}"
 
 export NSSA_WALLET_HOME_DIR="${NSSA_WALLET_HOME_DIR:-$LSSA_DIR/wallet/configs/debug}"
 export REGISTRY_PROGRAM_ID="7d2b376bbe5c82c00c65068da8a57cff4a81c5207b3f5e0a1b3991120555e4d4"
+STORAGE_URL="http://127.0.0.1:8080"
+MOCK_CODEX_PY="$MULTISIG_DIR/scripts/mock-codex.py"
+TOKEN_IDL="$REGISTRY_DIR/registry-idl.json"
+MULTISIG_IDL="$MULTISIG_DIR/lez-multisig-ffi/src/multisig_idl.json"
 
 source "$HOME/.cargo/env" 2>/dev/null || true
 
@@ -93,6 +97,13 @@ ok "Sequencer is up at $SEQUENCER_URL"
   || err "Token binary not found: $TOKEN_BIN"
 
 ok "All binaries present"
+
+# Start mock Codex storage (serves /api/codex/v1/data)
+pkill -f mock-codex.py 2>/dev/null || true
+nohup python3 "$MOCK_CODEX_PY" > /tmp/mock-codex.log 2>&1 &
+sleep 1
+curl -sf "$STORAGE_URL/" > /dev/null 2>&1 || { err "Mock Codex failed to start"; }
+ok "Mock Codex storage running at $STORAGE_URL"
 sleep 1
 
 # ── Step 0: Show program IDs ───────────────────────────────────────────────
