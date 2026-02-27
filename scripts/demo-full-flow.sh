@@ -66,19 +66,12 @@ GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; RED='\033[0;31m'
 
 # ── Demo flow control ─────────────────────────────────────────────────────
 # AUTO=1   — run all steps without confirmation (default: prompt between steps)
-# SKIP_TO=N — skip to step N (skips reset + deploy, reuses existing state)
 AUTO="${AUTO:-0}"
-SKIP_TO="${SKIP_TO:-0}"
 
 pause() {
-  local step="$1"
-  if [[ "$step" -lt "$SKIP_TO" ]]; then
-    echo -e "  ${DIM}⏩  Skipping step $step (SKIP_TO=$SKIP_TO)${RESET}"
-    return 0
-  fi
   if [[ "$AUTO" != "1" ]]; then
     echo ""
-    echo -e "  ${DIM}Press Enter to continue to Step $step... (or Ctrl+C to abort)${RESET}"
+    echo -e "  ${DIM}Press Enter to continue... (or Ctrl+C to abort)${RESET}"
     read -r
   fi
 }
@@ -121,12 +114,7 @@ echo -e "${BOLD}  🔐  LEZ Multisig — Full Demo${RESET}"
 echo -e "${DIM}      Programs · Registry · Governance · Execution${RESET}"
 echo ""
 
-if [[ "$SKIP_TO" -gt 0 ]]; then
-  info "SKIP_TO=$SKIP_TO — skipping reset and deploy steps, reusing existing chain state"
-  info "Make sure sequencer is already running and programs are deployed!"
-else
-  info "Sequencer will be reset and restarted below..."
-fi
+info "Sequencer will be reset and restarted below..."
 
 [[ -f "$MULTISIG_BIN" ]] \
   || err "Multisig binary not found: $MULTISIG_BIN  →  run: bash $MULTISIG_DIR/scripts/build-guest.sh"
@@ -139,7 +127,6 @@ ok "All binaries present"
 
 # ── Reset sequencer state ─────────────────────────────────────────────────
 
-if [[ "$SKIP_TO" -eq 0 ]]; then
 echo -e "  ${YELLOW}⚡  Resetting sequencer — wiping chain state for a clean demo...${RESET}"
 
 # Kill existing sequencer
@@ -190,11 +177,10 @@ sleep 1
 curl -sf "$STORAGE_URL/" > /dev/null 2>&1 || { err "Mock Codex failed to start"; }
 ok "Mock Codex storage running at $STORAGE_URL"
 sleep 1
-fi  # end SKIP_TO == 0
 
 # ── Step 0: Show program IDs ───────────────────────────────────────────────
 
-pause 0
+pause
 banner "Step 0 — Program IDs (hash of bytecode)"
 
 run "multisig inspect <binaries>"
@@ -208,7 +194,7 @@ sleep 1
 
 # ── Step 1: Deploy Programs ───────────────────────────────────────────────
 
-pause 1
+pause
 banner "Step 1 — Deploy Programs"
 
 echo "  Deploying token program..."
@@ -266,7 +252,7 @@ ok "Signer: $SIGNER"
 
 # ── Step 2: Register Programs in Registry ────────────────────────────────
 
-pause 2
+pause
 banner "Step 2 — Register Programs in the On-Chain Registry"
 
 echo "  Registering token program..."
@@ -306,7 +292,7 @@ sleep 15
 
 # ── Step 3: List Registry ──────────────────────────────────────────────────
 
-pause 3
+pause
 banner "Step 3 — Registry: All Programs Discoverable On-Chain"
 
 run "registry list --registry-program ..."
@@ -317,7 +303,7 @@ sleep 1
 
 # ── Step 4: Generate Target Member Accounts ────────────────────────────────
 
-pause 4
+pause
 banner "Step 4 — Generate Fresh Target Member Keypairs"
 
 echo -e "  ${DIM}M2 and M3 are fresh target accounts to be added to the multisig."
@@ -349,7 +335,7 @@ sleep 1
 
 # ── Step 5: Create Multisig ────────────────────────────────────────────────
 
-pause 5
+pause
 banner "Step 5 — CreateMultisig  (threshold=1, initial member: SIGNER)"
 
 CREATE_KEY="demo-$SUFFIX"
@@ -382,7 +368,7 @@ sleep 15
 
 # ── Step 6: Propose Adding Member 2 ──────────────────────────────────────
 
-pause 6
+pause
 banner "Step 6 — Propose: Add Member 2 to the Multisig"
 
 echo "  SIGNER proposes adding M2. The proposer is auto-approved (vote #1)."
@@ -417,7 +403,7 @@ sleep 15
 
 # ── Step 7: Execute Proposal #1 ───────────────────────────────────────────
 
-pause 7
+pause
 banner "Step 7 — Execute Proposal #1  (threshold already met)"
 
 echo "  With threshold=1, SIGNER executes immediately after proposing."
@@ -446,7 +432,7 @@ sleep 15
 
 # ── Step 8: Propose Adding Member 3 ──────────────────────────────────────
 
-pause 8
+pause
 banner "Step 8 — Propose: Add Member 3  (threshold=1, SIGNER proposes)"
 
 echo "  Multisig now has 2 members (SIGNER, M2). SIGNER proposes adding M3."
@@ -479,7 +465,7 @@ sleep 15
 
 # ── Step 9: Execute Proposal #2 ─────────────────────────────────────────
 
-pause 9
+pause
 banner "Step 9 — Execute Proposal #2  (M3 joins)"
 
 echo "  SIGNER executes to make M3 official."
@@ -507,7 +493,7 @@ sleep 15
 
 # ── Step 10: Token Governance via Multisig (ChainedCall) ──────────────────
 
-pause 10
+pause
 banner "Step 10 — Token Governance: Multisig Proposes a Token Transfer"
 
 echo "  Marquee LEZ feature: a multisig governing another program via ChainedCall."
@@ -643,7 +629,7 @@ echo ""
 
 # ── Final: Registry info ──────────────────────────────────────────────────
 
-pause 11
+pause
 banner "Final — Registry: Verify Multisig Is Discoverable"
 
 run "registry info --program-id <multisig-id>"
