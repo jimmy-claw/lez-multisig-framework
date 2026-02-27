@@ -46,7 +46,7 @@ SEQUENCER_URL="${SEQUENCER_URL:-http://127.0.0.1:3040}"
 
 # Use a demo-local wallet dir so the demo never touches your real wallet storage
 # Override by setting NSSA_WALLET_HOME_DIR before running
-DEMO_WALLET_DIR="/demo-wallet"
+DEMO_WALLET_DIR="$MULTISIG_DIR/demo-wallet"
 export NSSA_WALLET_HOME_DIR="${NSSA_WALLET_HOME_DIR:-$DEMO_WALLET_DIR}"
 
 # Bootstrap demo wallet config from lssa if not already present
