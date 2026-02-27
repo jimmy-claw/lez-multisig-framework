@@ -127,7 +127,7 @@ if command -v python3 &>/dev/null && [ -f "${NSSA_WALLET_HOME_DIR}/wallet_config
 import json, sys
 p = '${NSSA_WALLET_HOME_DIR}/wallet_config.json'
 with open(p) as f: c = json.load(f)
-c['seq_poll_timeout_millis'] = 5000
+c['seq_poll_timeout_millis'] = 2000
 c['seq_tx_poll_max_blocks'] = 10
 c['seq_poll_max_retries'] = 10
 with open(p,'w') as f: json.dump(c, f, indent=4)
