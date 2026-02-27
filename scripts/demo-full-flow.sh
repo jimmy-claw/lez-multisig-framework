@@ -64,6 +64,28 @@ source "$HOME/.cargo/env" 2>/dev/null || true
 BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; RED='\033[0;31m'
 
+# ── Demo flow control ─────────────────────────────────────────────────────
+# AUTO=1   — run all steps without confirmation (default: prompt between steps)
+# SKIP_TO=N — skip to step N (skips reset + deploy, reuses existing state)
+AUTO="${AUTO:-0}"
+SKIP_TO="${SKIP_TO:-0}"
+
+pause() {
+  local step="$1"
+  [[ "$step" -lt "$SKIP_TO" ]] && return 0  # skip this step
+  if [[ "$AUTO" != "1" ]]; then
+    echo ""
+    echo -e "  ${DIM}Press Enter to continue to Step $step... (or Ctrl+C to abort)${RESET}"
+    read -r
+  fi
+}
+
+skip_step() {
+  local step="$1"
+  [[ "$step" -lt "$SKIP_TO" ]] && return 0  # true = skip
+  return 1  # false = run
+}
+
 banner() {
   echo ""
   echo -e "${CYAN}┌─────────────────────────────────────────────────────────┐${RESET}"
@@ -168,6 +190,7 @@ sleep 1
 
 # ── Step 0: Show program IDs ───────────────────────────────────────────────
 
+pause 0
 banner "Step 0 — Program IDs (hash of bytecode)"
 
 run "multisig inspect <binaries>"
@@ -181,6 +204,7 @@ sleep 1
 
 # ── Step 1: Deploy Programs ───────────────────────────────────────────────
 
+pause 1
 banner "Step 1 — Deploy Programs"
 
 echo "  Deploying token program..."
@@ -238,6 +262,7 @@ ok "Signer: $SIGNER"
 
 # ── Step 2: Register Programs in Registry ────────────────────────────────
 
+pause 2
 banner "Step 2 — Register Programs in the On-Chain Registry"
 
 echo "  Registering token program..."
@@ -277,6 +302,7 @@ sleep 15
 
 # ── Step 3: List Registry ──────────────────────────────────────────────────
 
+pause 3
 banner "Step 3 — Registry: All Programs Discoverable On-Chain"
 
 run "registry list --registry-program ..."
@@ -287,6 +313,7 @@ sleep 1
 
 # ── Step 4: Generate Target Member Accounts ────────────────────────────────
 
+pause 4
 banner "Step 4 — Generate Fresh Target Member Keypairs"
 
 echo -e "  ${DIM}M2 and M3 are fresh target accounts to be added to the multisig."
@@ -318,6 +345,7 @@ sleep 1
 
 # ── Step 5: Create Multisig ────────────────────────────────────────────────
 
+pause 5
 banner "Step 5 — CreateMultisig  (threshold=1, initial member: SIGNER)"
 
 CREATE_KEY="demo-$SUFFIX"
@@ -350,6 +378,7 @@ sleep 15
 
 # ── Step 6: Propose Adding Member 2 ──────────────────────────────────────
 
+pause 6
 banner "Step 6 — Propose: Add Member 2 to the Multisig"
 
 echo "  SIGNER proposes adding M2. The proposer is auto-approved (vote #1)."
@@ -384,6 +413,7 @@ sleep 15
 
 # ── Step 7: Execute Proposal #1 ───────────────────────────────────────────
 
+pause 7
 banner "Step 7 — Execute Proposal #1  (threshold already met)"
 
 echo "  With threshold=1, SIGNER executes immediately after proposing."
@@ -412,6 +442,7 @@ sleep 15
 
 # ── Step 8: Propose Adding Member 3 ──────────────────────────────────────
 
+pause 8
 banner "Step 8 — Propose: Add Member 3  (threshold=1, SIGNER proposes)"
 
 echo "  Multisig now has 2 members (SIGNER, M2). SIGNER proposes adding M3."
@@ -444,6 +475,7 @@ sleep 15
 
 # ── Step 9: Execute Proposal #2 ─────────────────────────────────────────
 
+pause 9
 banner "Step 9 — Execute Proposal #2  (M3 joins)"
 
 echo "  SIGNER executes to make M3 official."
@@ -471,6 +503,7 @@ sleep 15
 
 # ── Step 10: Token Governance via Multisig (ChainedCall) ──────────────────
 
+pause 10
 banner "Step 10 — Token Governance: Multisig Proposes a Token Transfer"
 
 echo "  Marquee LEZ feature: a multisig governing another program via ChainedCall."
@@ -606,6 +639,7 @@ echo ""
 
 # ── Final: Registry info ──────────────────────────────────────────────────
 
+pause 11
 banner "Final — Registry: Verify Multisig Is Discoverable"
 
 run "registry info --program-id <multisig-id>"
