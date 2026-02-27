@@ -45,8 +45,6 @@ mod multisig_program {
         proposer: AccountWithMetadata,
         #[account(init, pda = [literal("multisig_prop___"), arg("create_key"), arg("proposal_index")])]
         proposal: AccountWithMetadata,
-        #[account(pda = literal("multisig_vault__"))]
-        vault: AccountWithMetadata,
         target_program_id: ProgramId,
         target_instruction_data: Vec<u32>,
         target_account_count: u8,
@@ -55,7 +53,6 @@ mod multisig_program {
         create_key: [u8; 32],
         proposal_index: u64,
     ) -> LezResult {
-        let _ = vault; // declared for IDL PDA derivation only
         let accounts = vec![multisig_state, proposer, proposal];
         let (post_states, chained_calls) = crate::propose::handle(
             &accounts,
