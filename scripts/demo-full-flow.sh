@@ -466,23 +466,17 @@ echo "  Using --dry-run to serialize a token transfer without submitting."
 echo ""
 
 run "multisig --idl token-idl.json --dry-run transfer --amount-to-transfer 1000"
-TOKEN_TRANSFER_SERIALIZED=$($MULTISIG_CLI \
-  --idl "$MULTISIG_DIR/scripts/token-idl.json" \
-  --program "$MULTISIG_BIN" \
-  transfer \
-    --amount-to-transfer 1000 \
-    --dry-run 2>&1 | grep 'Serialized' | awk '{print $NF}')
+TOKEN_TRANSFER_SERIALIZED=$("$MULTISIG_CLI"   --idl "$MULTISIG_DIR/scripts/token-idl.json"   --program "$MULTISIG_BIN"   transfer     --amount-to-transfer 1000     --dry-run 2>&1 | grep 'Serialized' | awk '{print $NF}')
 
 echo ""
 ok "Token transfer instruction serialized:"
 echo "  $TOKEN_TRANSFER_SERIALIZED"
 echo ""
 echo "  This could be used in a proposal:"
-echo "    multisig propose --target-program-id \ \"
-echo "                     --target-instruction-data \"
+echo "    multisig propose --target-program-id $TOKEN_PROGRAM_ID \"
+echo "                     --target-instruction-data $TOKEN_TRANSFER_SERIALIZED"
 echo ""
 info "Dry-run complete — no transaction submitted."
-
 
 # ── Final: Registry info ──────────────────────────────────────────────────
 
