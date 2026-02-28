@@ -545,7 +545,7 @@ echo ""
 # Compute vault PDA + seed (vault not yet in IDL — TODO: annotate in Rust source)
 # Future: "$MULTISIG_CLI" --idl "$IDL" --program-id "$MULTISIG_PROGRAM_ID" pda vault --create-key "$CREATE_KEY"
 # Vault PDA via lez-cli raw pda command (no IDL needed)
-MULTISIG_VAULT_PDA=$("$MULTISIG_CLI" pda --program-id "$MULTISIG_PROGRAM_ID" "multisig_vault__" "$CREATE_KEY")
+MULTISIG_VAULT_PDA=$("$MULTISIG_CLI" pda --program-id "$MULTISIG_PROGRAM_ID_HEX" "multisig_vault__" "$CREATE_KEY")
 ok "Multisig vault PDA : $MULTISIG_VAULT_PDA"
 
 # Vault seed bytes still needed for --pda-seeds arg in propose
