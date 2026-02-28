@@ -51,7 +51,7 @@ export NSSA_WALLET_HOME_DIR="${NSSA_WALLET_HOME_DIR:-$DEMO_WALLET_DIR}"
 
 # Ensure demo wallet dir exists (wallet CLI creates fresh accounts as needed)
 mkdir -p "$NSSA_WALLET_HOME_DIR"
-export REGISTRY_PROGRAM_ID="7d2b376bbe5c82c00c65068da8a57cff4a81c5207b3f5e0a1b3991120555e4d4"
+# REGISTRY_PROGRAM_ID_HEX set dynamically from inspect below
 STORAGE_URL="http://127.0.0.1:8080"
 MOCK_CODEX_PY="$MULTISIG_DIR/scripts/mock-codex.py"
 TOKEN_IDL="$REGISTRY_DIR/registry-idl.json"
@@ -223,13 +223,21 @@ run "wallet deploy-program multisig.bin"
 
 echo ""
 # Grab program IDs for use in later steps (must be before poll)
+# Decimal format (comma-separated u32) — used by lez-cli --target-program-id (parses as LE)
 TOKEN_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$TOKEN_BIN" \
   | grep 'ProgramId (decimal)' | awk '{print $NF}')
 REGISTRY_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$REGISTRY_BIN" \
   | grep 'ProgramId (decimal)' | awk '{print $NF}')
 MULTISIG_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$MULTISIG_BIN" \
   | grep 'ProgramId (decimal)' | awk '{print $NF}')
-export REGISTRY_PROGRAM_ID
+# Hex format (64-char) — used by registry CLI (parses as BE u32)
+TOKEN_PROGRAM_ID_HEX=$("$MULTISIG_CLI" --idl "$IDL" inspect "$TOKEN_BIN" \
+  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+REGISTRY_PROGRAM_ID_HEX=$("$MULTISIG_CLI" --idl "$IDL" inspect "$REGISTRY_BIN" \
+  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+MULTISIG_PROGRAM_ID_HEX=$("$MULTISIG_CLI" --idl "$IDL" inspect "$MULTISIG_BIN" \
+  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+export REGISTRY_PROGRAM_ID_HEX
 
 echo ""
 sleep 10
@@ -258,8 +266,8 @@ echo "  Registering token program..."
 run "registry register --name lez-token --version 0.1.0 ..."
 "$REGISTRY_CLI" register \
   --account          "$SIGNER" \
-  --registry-program "$REGISTRY_PROGRAM_ID" \
-  --program-id       "$TOKEN_PROGRAM_ID" \
+  --registry-program "$REGISTRY_PROGRAM_ID_HEX" \
+  --program-id       "$TOKEN_PROGRAM_ID_HEX" \
   --name             "lez-token" \
   --version          "0.1.0" \
   --description      "Fungible token program for LEZ" \
@@ -276,8 +284,8 @@ echo "  Registering multisig program..."
 run "registry register --name lez-multisig --version 0.1.0 ..."
 "$REGISTRY_CLI" register \
   --account          "$SIGNER" \
-  --registry-program "$REGISTRY_PROGRAM_ID" \
-  --program-id       "$MULTISIG_PROGRAM_ID" \
+  --registry-program "$REGISTRY_PROGRAM_ID_HEX" \
+  --program-id       "$MULTISIG_PROGRAM_ID_HEX" \
   --name             "lez-multisig" \
   --version          "0.1.0" \
   --description      "M-of-N on-chain governance for LEZ" \
@@ -294,7 +302,7 @@ pause
 banner "Step 3 — Registry: All Programs Discoverable On-Chain"
 
 run "registry list --registry-program ..."
-"$REGISTRY_CLI" list --registry-program "$REGISTRY_PROGRAM_ID" 2>&1
+"$REGISTRY_CLI" list --registry-program "$REGISTRY_PROGRAM_ID_HEX" 2>&1
 ok "Registry is live — programs are discoverable!"
 
 sleep 1
@@ -696,8 +704,8 @@ banner "Final — Registry: Verify Multisig Is Discoverable"
 
 run "registry info --program-id <multisig-id>"
 "$REGISTRY_CLI" info \
-  --registry-program "$REGISTRY_PROGRAM_ID" \
-  --program-id       "$MULTISIG_PROGRAM_ID" 2>&1
+  --registry-program "$REGISTRY_PROGRAM_ID_HEX" \
+  --program-id       "$MULTISIG_PROGRAM_ID_HEX" 2>&1
 
 echo ""
 
