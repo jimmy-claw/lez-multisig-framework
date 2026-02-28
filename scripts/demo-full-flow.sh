@@ -543,22 +543,30 @@ echo "  Flow: create token → fund vault → propose transfer (token-idl.json) 
 echo ""
 
 # Compute vault PDA + seed (vault not yet in IDL — TODO: annotate in Rust source)
-# Future: "$MULTISIG_CLI" --idl "$IDL" --program-id "$MULTISIG_PROGRAM_ID" pda vault --create-key "$CREATE_KEY"
-# Vault PDA via lez-cli raw pda command (no IDL needed)
-MULTISIG_VAULT_PDA=$("$MULTISIG_CLI" pda --program-id "$MULTISIG_PROGRAM_ID_HEX" "multisig_vault__" "$CREATE_KEY")
-ok "Multisig vault PDA : $MULTISIG_VAULT_PDA"
-
-# Vault seed bytes still needed for --pda-seeds arg in propose
-# seed = SHA-256(pad32("multisig_vault__") || create_key_bytes)
-MULTISIG_VAULT_SEED=$(python3 -c "
-import hashlib, os
+# Compute vault seed + PDA via Python using nssa_core LE formula (bytemuck cast of [u32;8])
+# seed = SHA-256(pad32("multisig_vault__") || pad32(create_key))
+# PDA  = SHA-256(PREFIX || program_id_le_bytes || seed)
+VAULT_COMPUTED=$(python3 - << 'PYEOF'
+import hashlib, struct, os
 ck = os.environ['CREATE_KEY'].encode()
 tag = b'multisig_vault__'
 tag_padded = tag + b'\x00' * (32 - len(tag))
 seed = hashlib.sha256(tag_padded + ck.ljust(32, b'\x00')).digest()
-print(seed.hex())
-")
+PREFIX = b'/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00'
+prog_id_u32 = [int(x) for x in os.environ['MULTISIG_PROGRAM_ID'].split(',')]
+prog_id_bytes = b''.join(struct.pack('<I', x) for x in prog_id_u32)
+buf = PREFIX + prog_id_bytes + seed
+h = hashlib.sha256(buf).digest()
+ALPHA = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+n = int.from_bytes(h, 'big')
+b58 = ''
+while n: b58 = ALPHA[n % 58] + b58; n //= 58
+print(seed.hex(), b58)
+PYEOF
+)
+read MULTISIG_VAULT_SEED MULTISIG_VAULT_PDA <<< "$VAULT_COMPUTED"
 ok "Vault seed (hex)   : $MULTISIG_VAULT_SEED"
+ok "Multisig vault PDA : $MULTISIG_VAULT_PDA"
 echo ""
 
 # 10a: Fresh accounts for token def, holding, recipient
