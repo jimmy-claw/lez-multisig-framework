@@ -44,8 +44,14 @@ TOKEN_BIN="$LSSA_DIR/artifacts/program_methods/token.bin"
 
 SEQUENCER_URL="${SEQUENCER_URL:-http://127.0.0.1:3040}"
 
-export NSSA_WALLET_HOME_DIR="${NSSA_WALLET_HOME_DIR:-$LSSA_DIR/wallet/configs/debug}"
-export REGISTRY_PROGRAM_ID="7d2b376bbe5c82c00c65068da8a57cff4a81c5207b3f5e0a1b3991120555e4d4"
+# Use a demo-local wallet dir so the demo never touches your real wallet storage
+# Override by setting NSSA_WALLET_HOME_DIR before running
+DEMO_WALLET_DIR="$MULTISIG_DIR/demo-wallet"
+export NSSA_WALLET_HOME_DIR="${NSSA_WALLET_HOME_DIR:-$DEMO_WALLET_DIR}"
+
+# Ensure demo wallet dir exists (wallet CLI creates fresh accounts as needed)
+mkdir -p "$NSSA_WALLET_HOME_DIR"
+# REGISTRY_PROGRAM_ID_HEX set dynamically from inspect below
 STORAGE_URL="http://127.0.0.1:8080"
 MOCK_CODEX_PY="$MULTISIG_DIR/scripts/mock-codex.py"
 TOKEN_IDL="$REGISTRY_DIR/registry-idl.json"
@@ -57,6 +63,18 @@ source "$HOME/.cargo/env" 2>/dev/null || true
 
 BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; RED='\033[0;31m'
+
+# ── Demo flow control ─────────────────────────────────────────────────────
+# AUTO=1   — run all steps without confirmation (default: prompt between steps)
+AUTO="${AUTO:-0}"
+
+pause() {
+  if [[ "$AUTO" != "1" ]]; then
+    echo ""
+    echo -e "  ${DIM}Press Enter to continue... (or Ctrl+C to abort)${RESET}"
+    read -r
+  fi
+}
 
 banner() {
   echo ""
@@ -96,7 +114,7 @@ echo -e "${BOLD}  🔐  LEZ Multisig — Full Demo${RESET}"
 echo -e "${DIM}      Programs · Registry · Governance · Execution${RESET}"
 echo ""
 
-  info "Sequencer will be reset and restarted below..."
+info "Sequencer will be reset and restarted below..."
 
 [[ -f "$MULTISIG_BIN" ]] \
   || err "Multisig binary not found: $MULTISIG_BIN  →  run: bash $MULTISIG_DIR/scripts/build-guest.sh"
@@ -116,7 +134,7 @@ pkill -f sequencer_runner 2>/dev/null || true
 sleep 2
 
 # Wipe RocksDB state
-rm -rf "${LSSA_DIR}/rocksdb" "${LSSA_DIR}/mempool"
+rm -rf "${LSSA_DIR}/sequencer_runner/rocksdb" "${LSSA_DIR}/sequencer_runner/mempool" "${LSSA_DIR}/rocksdb" "${LSSA_DIR}/mempool"
 # Reset wallet nonce cache
 cp "${NSSA_WALLET_HOME_DIR}/storage.json" "${NSSA_WALLET_HOME_DIR}/storage.json.bak" 2>/dev/null || true
 rm -f "${NSSA_WALLET_HOME_DIR}/storage.json"
@@ -162,6 +180,7 @@ sleep 1
 
 # ── Step 0: Show program IDs ───────────────────────────────────────────────
 
+pause
 banner "Step 0 — Program IDs (hash of bytecode)"
 
 run "multisig inspect <binaries>"
@@ -175,6 +194,7 @@ sleep 1
 
 # ── Step 1: Deploy Programs ───────────────────────────────────────────────
 
+pause
 banner "Step 1 — Deploy Programs"
 
 echo "  Deploying token program..."
@@ -203,16 +223,23 @@ run "wallet deploy-program multisig.bin"
 
 echo ""
 # Grab program IDs for use in later steps (must be before poll)
+# Decimal format (comma-separated u32) — used by lez-cli --target-program-id (parses as LE)
 TOKEN_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$TOKEN_BIN" \
-  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+  | grep 'ProgramId (decimal)' | awk '{print $NF}')
 REGISTRY_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$REGISTRY_BIN" \
-  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+  | grep 'ProgramId (decimal)' | awk '{print $NF}')
 MULTISIG_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$MULTISIG_BIN" \
+  | grep 'ProgramId (decimal)' | awk '{print $NF}')
+# Hex format (64-char) — used by registry CLI (parses as BE u32)
+TOKEN_PROGRAM_ID_HEX=$("$MULTISIG_CLI" --idl "$IDL" inspect "$TOKEN_BIN" \
   | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
-export REGISTRY_PROGRAM_ID
+REGISTRY_PROGRAM_ID_HEX=$("$MULTISIG_CLI" --idl "$IDL" inspect "$REGISTRY_BIN" \
+  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+MULTISIG_PROGRAM_ID_HEX=$("$MULTISIG_CLI" --idl "$IDL" inspect "$MULTISIG_BIN" \
+  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+export REGISTRY_PROGRAM_ID_HEX
 
 echo ""
-echo "  Waiting for programs to land in a block (2 blocks)..."
 sleep 10
 ok "Programs deployed"
 
@@ -232,14 +259,15 @@ ok "Signer: $SIGNER"
 
 # ── Step 2: Register Programs in Registry ────────────────────────────────
 
+pause
 banner "Step 2 — Register Programs in the On-Chain Registry"
 
 echo "  Registering token program..."
 run "registry register --name lez-token --version 0.1.0 ..."
 "$REGISTRY_CLI" register \
   --account          "$SIGNER" \
-  --registry-program "$REGISTRY_PROGRAM_ID" \
-  --program-id       "$TOKEN_PROGRAM_ID" \
+  --registry-program "$REGISTRY_PROGRAM_ID_HEX" \
+  --program-id       "$TOKEN_PROGRAM_ID_HEX" \
   --name             "lez-token" \
   --version          "0.1.0" \
   --description      "Fungible token program for LEZ" \
@@ -256,8 +284,8 @@ echo "  Registering multisig program..."
 run "registry register --name lez-multisig --version 0.1.0 ..."
 "$REGISTRY_CLI" register \
   --account          "$SIGNER" \
-  --registry-program "$REGISTRY_PROGRAM_ID" \
-  --program-id       "$MULTISIG_PROGRAM_ID" \
+  --registry-program "$REGISTRY_PROGRAM_ID_HEX" \
+  --program-id       "$MULTISIG_PROGRAM_ID_HEX" \
   --name             "lez-multisig" \
   --version          "0.1.0" \
   --description      "M-of-N on-chain governance for LEZ" \
@@ -267,20 +295,21 @@ run "registry register --name lez-multisig --version 0.1.0 ..."
   && ok "lez-multisig registered" \
   || err "Registration failed — check output above"
 
-sleep 15
 
 # ── Step 3: List Registry ──────────────────────────────────────────────────
 
+pause
 banner "Step 3 — Registry: All Programs Discoverable On-Chain"
 
 run "registry list --registry-program ..."
-"$REGISTRY_CLI" list --registry-program "$REGISTRY_PROGRAM_ID" 2>&1
+"$REGISTRY_CLI" list --registry-program "$REGISTRY_PROGRAM_ID_HEX" 2>&1
 ok "Registry is live — programs are discoverable!"
 
 sleep 1
 
 # ── Step 4: Generate Target Member Accounts ────────────────────────────────
 
+pause
 banner "Step 4 — Generate Fresh Target Member Keypairs"
 
 echo -e "  ${DIM}M2 and M3 are fresh target accounts to be added to the multisig."
@@ -312,9 +341,11 @@ sleep 1
 
 # ── Step 5: Create Multisig ────────────────────────────────────────────────
 
+pause
 banner "Step 5 — CreateMultisig  (threshold=1, initial member: SIGNER)"
 
 CREATE_KEY="demo-$SUFFIX"
+export CREATE_KEY MULTISIG_PROGRAM_ID
 echo "  Threshold  : 1-of-1 approval required (grows as members join)"
 echo "  Create key : $CREATE_KEY"
 echo "  Initial member: SIGNER (hex pk)"
@@ -328,21 +359,22 @@ CREATE_OUT=$("$MULTISIG_CLI" \
     --create-key              "$CREATE_KEY" \
     --threshold               1 \
     --members                 "$M1_HEX" \
-    --member-accounts-account "$M1_ACCOUNT" 2>&1)
+    --member-accounts-account "$M1_ACCOUNT" 2>&1) || true
 
 echo "$CREATE_OUT"
 
 # Capture multisig state PDA from the submission output
 MULTISIG_STATE=$(echo "$CREATE_OUT" | grep 'PDA multisig_state' | awk '{print $NF}')
+[[ -n "$MULTISIG_STATE" ]] || err "Failed to create multisig — no state PDA in output"
+export MULTISIG_STATE
 ok "Multisig created!"
 ok "State PDA: $MULTISIG_STATE"
 
 echo ""
-echo "  Waiting for CreateMultisig to land in a block..."
-sleep 15
 
 # ── Step 6: Propose Adding Member 2 ──────────────────────────────────────
 
+pause
 banner "Step 6 — Propose: Add Member 2 to the Multisig"
 
 echo "  SIGNER proposes adding M2. The proposer is auto-approved (vote #1)."
@@ -363,18 +395,19 @@ run "multisig propose-add-member --new-member M2 --proposer SIGNER ..."
     --new-member              "$M2" \
     --multisig-state-account  "$MULTISIG_STATE" \
     --proposer-account        "$M1_ACCOUNT" \
-    --proposal-account        "$PROP1" 2>&1
+    --proposal-account        "$PROP1" \
+    --create-key              "$CREATE_KEY" \
+    --proposal-index          0 2>&1
 
 echo ""
 ok "Proposal #1 created!"
 ok "SIGNER auto-approved — 1 of 1 votes cast (threshold = 1 → ready to execute!)"
 
 echo ""
-echo "  Waiting for Propose to land in a block..."
-sleep 15
 
 # ── Step 7: Execute Proposal #1 ───────────────────────────────────────────
 
+pause
 banner "Step 7 — Execute Proposal #1  (threshold already met)"
 
 echo "  With threshold=1, SIGNER executes immediately after proposing."
@@ -386,10 +419,11 @@ run "multisig execute --proposal-index 1 --executor SIGNER ..."
   --idl     "$IDL" \
   --program "$MULTISIG_BIN" \
   execute \
-    --proposal-index         1 \
+    --proposal-index         0 \
     --multisig-state-account "$MULTISIG_STATE" \
     --executor-account       "$M1_ACCOUNT" \
     --proposal-account       "$PROP1" \
+    --create-key             "$CREATE_KEY" \
 2>&1
 
 echo ""
@@ -397,11 +431,10 @@ ok "Proposal #1 executed!"
 ok "M2 has joined the multisig. Members: SIGNER, M2"
 
 echo ""
-echo "  Waiting for Execute to land..."
-sleep 15
 
 # ── Step 8: Propose Adding Member 3 ──────────────────────────────────────
 
+pause
 banner "Step 8 — Propose: Add Member 3  (threshold=1, SIGNER proposes)"
 
 echo "  Multisig now has 2 members (SIGNER, M2). SIGNER proposes adding M3."
@@ -421,18 +454,18 @@ run "multisig propose-add-member --new-member M3 --proposer SIGNER ..."
     --multisig-state-account  "$MULTISIG_STATE" \
     --proposer-account        "$M1_ACCOUNT" \
     --proposal-account        "$PROP2" \
-2>&1
+    --create-key              "$CREATE_KEY" \
+    --proposal-index          1 2>&1
 
 echo ""
 ok "Proposal #2 created!"
 ok "SIGNER auto-approved (1/1 — threshold met)"
 
 echo ""
-echo "  Waiting for Propose to land..."
-sleep 15
 
 # ── Step 9: Execute Proposal #2 ─────────────────────────────────────────
 
+pause
 banner "Step 9 — Execute Proposal #2  (M3 joins)"
 
 echo "  SIGNER executes to make M3 official."
@@ -443,10 +476,11 @@ run "multisig execute --proposal-index 2 --executor SIGNER ..."
   --idl     "$IDL" \
   --program "$MULTISIG_BIN" \
   execute \
-    --proposal-index          2 \
+    --proposal-index          1 \
     --multisig-state-account  "$MULTISIG_STATE" \
     --executor-account        "$M1_ACCOUNT" \
     --proposal-account        "$PROP2" \
+    --create-key              "$CREATE_KEY" \
 2>&1
 
 echo ""
@@ -454,17 +488,232 @@ ok "Proposal #2 executed!"
 ok "M3 has joined. Final multisig: SIGNER, M2, M3 — threshold 1"
 
 echo ""
-echo "  Waiting for Execute to land..."
-sleep 15
+
+# ── Step 9.5: Raise threshold to 2-of-3 ─────────────────────────────────
+
+pause
+banner "Step 9.5 — Raise Threshold to 2-of-3  (real multisig governance)"
+
+echo "  Multisig now has 3 members. Time to make it a real 2-of-3."
+echo "  SIGNER proposes the change — but since threshold is still 1, executes immediately."
+echo ""
+
+read PROP_THRESH _PT_HEX <<< $(new_account "prop-thresh-$SUFFIX")
+ok "Threshold proposal account: $PROP_THRESH"
+echo ""
+
+run "multisig propose-change-threshold --new-threshold 2 ..."
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  propose-change-threshold \
+    --new-threshold           2 \
+    --multisig-state-account  "$MULTISIG_STATE" \
+    --proposer-account        "$M1_ACCOUNT" \
+    --proposal-account        "$PROP_THRESH" \
+    --create-key              "$CREATE_KEY" \
+    --proposal-index          2 2>&1 \
+  && ok "Threshold change proposed (proposal #2)" \
+  || err "propose-change-threshold failed"
+
+echo ""
+run "multisig execute --proposal-index 2 ..."
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  execute \
+    --proposal-index         2 \
+    --multisig-state-account "$MULTISIG_STATE" \
+    --executor-account       "$M1_ACCOUNT" \
+    --proposal-account       "$PROP_THRESH" \
+    --create-key             "$CREATE_KEY" \
+2>&1 \
+  && ok "Threshold raised to 2-of-3! Now two members must approve." \
+  || err "execute threshold change failed"
+
+echo ""
+
+# ── Step 10: Token Governance via Multisig (ChainedCall) ──────────────────
+
+pause
+banner "Step 10 — Token Governance: Multisig Proposes a Token Transfer"
+
+echo "  Marquee LEZ feature: a multisig governing another program via ChainedCall."
+echo "  Flow: create token → fund vault → propose transfer (token-idl.json) → execute"
+echo ""
+
+# Compute vault PDA + seed (vault not yet in IDL — TODO: annotate in Rust source)
+# Compute vault seed + PDA via Python using nssa_core LE formula (bytemuck cast of [u32;8])
+# seed = SHA-256(pad32("multisig_vault__") || pad32(create_key))
+# PDA  = SHA-256(PREFIX || program_id_le_bytes || seed)
+VAULT_COMPUTED=$(python3 - << 'PYEOF'
+import hashlib, struct, os
+ck = os.environ['CREATE_KEY'].encode()
+tag = b'multisig_vault__'
+tag_padded = tag + b'\x00' * (32 - len(tag))
+seed = hashlib.sha256(tag_padded + ck.ljust(32, b'\x00')).digest()
+PREFIX = b'/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00'
+prog_id_u32 = [int(x) for x in os.environ['MULTISIG_PROGRAM_ID'].split(',')]
+prog_id_bytes = b''.join(struct.pack('<I', x) for x in prog_id_u32)
+buf = PREFIX + prog_id_bytes + seed
+h = hashlib.sha256(buf).digest()
+ALPHA = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+n = int.from_bytes(h, 'big')
+b58 = ''
+while n: b58 = ALPHA[n % 58] + b58; n //= 58
+print(seed.hex(), b58)
+PYEOF
+)
+read MULTISIG_VAULT_SEED MULTISIG_VAULT_PDA <<< "$VAULT_COMPUTED"
+ok "Vault seed (hex)   : $MULTISIG_VAULT_SEED"
+ok "Multisig vault PDA : $MULTISIG_VAULT_PDA"
+echo ""
+
+# 10a: Fresh accounts for token def, holding, recipient
+read TOKEN_DEF _TDF_HEX     <<< $(new_account "token-def")
+read TOKEN_HOLDING _TH_HEX  <<< $(new_account "token-holding")
+read RECIPIENT _REC_HEX     <<< $(new_account "token-recipient")
+
+echo "  10a. Creating fungible token (supply=1,000,000)..."
+run "wallet token new --definition-account-id \$TOKEN_DEF --supply-account-id \$TOKEN_HOLDING --name LEZToken --total-supply 1000000"
+
+echo "demo-pass-$(date +%s)" | "$WALLET" token new \
+  --definition-account-id "Public/$TOKEN_DEF" \
+  --supply-account-id     "Public/$TOKEN_HOLDING" \
+  --name                  "LEZToken" \
+  --total-supply          1000000 2>&1 \
+  && ok "Token created — holding account has 1,000,000 LEZToken" \
+  || err "Token creation failed"
+
+sleep 8
+
+# 10b: Fund multisig vault
+echo ""
+echo "  10b. Funding multisig vault (500 tokens)..."
+run "wallet token send --from \$TOKEN_HOLDING --to \$MULTISIG_VAULT_PDA --amount 500"
+
+echo "demo-pass-$(date +%s)" | "$WALLET" token send \
+  --from   "Public/$TOKEN_HOLDING" \
+  --to     "Public/$MULTISIG_VAULT_PDA" \
+  --amount 500 2>&1 \
+  && ok "Vault funded with 500 LEZToken" \
+  || err "Vault funding failed"
+
+sleep 8
+
+# 10c: Serialize token Transfer(200) via token-idl.json → get u32 words
+echo ""
+echo "  10c. Serializing token::Transfer(200) via token-idl.json..."
+echo "  KEY POINT: the IDL drives serialization — no hardcoded bytes."
+echo ""
+run "multisig --idl token-idl.json --program token.bin --dry-run transfer --amount-to-transfer 200"
+
+DRY_RUN_OUT=$("$MULTISIG_CLI" \
+  --idl     "$MULTISIG_DIR/scripts/token-idl.json" \
+  --program "$TOKEN_BIN" \
+  --dry-run \
+  transfer \
+    --amount-to-transfer        200 \
+    --sender-holding-account    "$MULTISIG_VAULT_PDA" \
+    --recipient-holding-account "$RECIPIENT" \
+  2>&1) || true
+
+echo "$DRY_RUN_OUT"
+
+TARGET_INSTRUCTION_DATA=$(echo "$DRY_RUN_OUT" \
+  | grep -A1 "Serialized instruction data" | tail -1 \
+  | tr -d '[] ' \
+  | python3 -c "
+import sys
+words = [w for w in sys.stdin.read().strip().replace(',', ' ').split() if w]
+print(','.join(str(int(w, 16)) for w in words))
+") || true
+
+[[ -n "$TARGET_INSTRUCTION_DATA" ]] \
+  && ok "Serialized: $TARGET_INSTRUCTION_DATA" \
+  || err "Failed to serialize — check token-idl.json and token binary"
+
+echo ""
+
+# 10d: Propose — multisig stores the serialized instruction in a proposal account
+echo "  10d. Proposing token transfer via multisig (target-idl = token-idl.json)..."
+run "multisig propose --target-program-id \$TOKEN_PROGRAM_ID --target-instruction-data <bytes>"
+
+read PROP_TOKEN _PT_HEX <<< $(new_account "prop-token")
+
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  propose \
+    --multisig-state-account  "$MULTISIG_STATE" \
+    --proposer-account        "$M1_ACCOUNT" \
+    --proposal-account        "$PROP_TOKEN" \
+    --target-program-id       "$TOKEN_PROGRAM_ID" \
+    --target-instruction-data "$TARGET_INSTRUCTION_DATA" \
+    --target-account-count    2 \
+    --pda-seeds               "$MULTISIG_VAULT_SEED" \
+    --authorized-indices      0 \
+    --create-key              "$CREATE_KEY" \
+    --proposal-index          3 2>&1 \
+  && ok "Proposal created — 200 LEZToken transfer stored as ChainedCall" \
+  || err "Propose failed"
+
+sleep 10
+
+# 10d.5: M2 approves (threshold=2, need one more vote)
+echo ""
+echo "  10d.5. M2 approves the token transfer proposal..."
+run "multisig approve --proposal-index 3 --approver M2"
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  approve \
+    --proposal-index         3 \
+    --multisig-state-account "$MULTISIG_STATE" \
+    --approver-account       "$M2_ACCOUNT" \
+    --proposal-account       "$PROP_TOKEN" \
+    --create-key             "$CREATE_KEY" \
+2>&1 \
+  && ok "M2 approved — threshold met (2-of-3)!" \
+  || err "M2 approve failed"
+
+echo ""
+
+# 10e: Execute — ChainedCall fires, token program transfers tokens
+echo ""
+echo "  10e. Executing (threshold=2 met: SIGNER + M2)..."
+run "multisig execute --proposal-index 3 --target-accounts vault recipient"
+
+"$MULTISIG_CLI" \
+  --idl     "$IDL" \
+  --program "$MULTISIG_BIN" \
+  execute \
+    --proposal-index         3 \
+    --multisig-state-account "$MULTISIG_STATE" \
+    --executor-account       "$M1_ACCOUNT" \
+    --proposal-account       "$PROP_TOKEN" \
+    --create-key             "$CREATE_KEY" \
+    --target-accounts-account "$MULTISIG_VAULT_PDA,$RECIPIENT" \
+    2>&1 \
+  && ok "ChainedCall executed — 200 LEZToken transferred vault → recipient!" \
+  || err "Execute failed"
+
+echo ""
+echo -e "  ${BOLD}What this proves:${RESET}"
+echo -e "  • Multisig governs ANY LEZ program via ChainedCall"
+echo -e "  • token-idl.json drives serialization — fully composable"
+echo -e "  • ZK proof enforces the transfer — no trusted executor"
+echo ""
 
 # ── Final: Registry info ──────────────────────────────────────────────────
 
+pause
 banner "Final — Registry: Verify Multisig Is Discoverable"
 
 run "registry info --program-id <multisig-id>"
 "$REGISTRY_CLI" info \
-  --registry-program "$REGISTRY_PROGRAM_ID" \
-  --program-id       "$MULTISIG_PROGRAM_ID" 2>&1
+  --registry-program "$REGISTRY_PROGRAM_ID_HEX" \
+  --program-id       "$MULTISIG_PROGRAM_ID_HEX" 2>&1
 
 echo ""
 
@@ -483,7 +732,8 @@ echo -e "  ${GREEN}✅${RESET}  Step 5  — Created multisig (SIGNER as initial 
 echo -e "  ${GREEN}✅${RESET}  Step 6  — Proposed adding M2 (SIGNER auto-approved)"
 echo -e "  ${GREEN}✅${RESET}  Step 7  — Executed → M2 joined the multisig"
 echo -e "  ${GREEN}✅${RESET}  Step 8  — Proposed adding M3 (SIGNER auto-approved)"
-echo -e "  ${GREEN}✅${RESET}  Step 9  — Executed → M3 joined the multisig"
+echo -e "  ${GREEN}✅${RESET}  Step 9  — Executed → M3 joined the multisig
+  ${GREEN}✅${RESET}  Step 9.5 — Raised threshold to 2-of-3"
 echo -e "  ${GREEN}✅${RESET}  Final   — Registry confirmed multisig is discoverable"
 echo ""
 echo -e "  What this proves:"
