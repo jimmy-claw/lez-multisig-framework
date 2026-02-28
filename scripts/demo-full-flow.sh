@@ -134,7 +134,7 @@ pkill -f sequencer_runner 2>/dev/null || true
 sleep 2
 
 # Wipe RocksDB state
-rm -rf "${LSSA_DIR}/rocksdb" "${LSSA_DIR}/mempool"
+rm -rf "${LSSA_DIR}/sequencer_runner/rocksdb" "${LSSA_DIR}/sequencer_runner/mempool" "${LSSA_DIR}/rocksdb" "${LSSA_DIR}/mempool"
 # Reset wallet nonce cache
 cp "${NSSA_WALLET_HOME_DIR}/storage.json" "${NSSA_WALLET_HOME_DIR}/storage.json.bak" 2>/dev/null || true
 rm -f "${NSSA_WALLET_HOME_DIR}/storage.json"
