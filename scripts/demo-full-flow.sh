@@ -224,11 +224,11 @@ run "wallet deploy-program multisig.bin"
 echo ""
 # Grab program IDs for use in later steps (must be before poll)
 TOKEN_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$TOKEN_BIN" \
-  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+  | grep 'ProgramId (decimal)' | awk '{print $NF}')
 REGISTRY_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$REGISTRY_BIN" \
-  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+  | grep 'ProgramId (decimal)' | awk '{print $NF}')
 MULTISIG_PROGRAM_ID=$("$MULTISIG_CLI" --idl "$IDL" inspect "$MULTISIG_BIN" \
-  | grep 'ProgramId (hex)' | awk '{print $NF}' | tr -d ',')
+  | grep 'ProgramId (decimal)' | awk '{print $NF}')
 export REGISTRY_PROGRAM_ID
 
 echo ""
