@@ -117,6 +117,8 @@ help: ## Show this help
 	@echo "  Build & Deploy:"
 	@echo "  make build                 Build the guest binary (needs risc0 toolchain)"
 	@echo "  make build-cli             Build the standalone multisig CLI"
+	@echo "  make build-module          Build the Basecamp UI plugin + preview app (requires Qt6)"
+	@echo "  make run-module            Run the standalone UI preview (set LEZ_MULTISIG_PROGRAM_ID_HEX)"
 	@echo "  make deploy                Deploy multisig + token programs to sequencer"
 	@echo "  make test                  Run unit tests"
 	@echo "  make status                Show saved state (account IDs, etc.)"
@@ -178,6 +180,31 @@ build-ffi: generate ## Build the FFI .so (liblez_multisig_ffi.so) for use in Qt 
 	source ~/.cargo/env && RISC0_SKIP_BUILD=1 cargo build --release -p lez-multisig-ffi
 	@echo "✅ FFI .so built: target/release/liblez_multisig_ffi.so"
 	@ls -lh target/release/liblez_multisig_ffi.so
+
+# ── Basecamp UI Module ────────────────────────────────────────────────────────
+
+MODULE_DIR      := lez-multisig-module
+MODULE_BUILD    := $(MODULE_DIR)/build
+MODULE_APP      := $(MODULE_BUILD)/lez_multisig_app
+MODULE_PLUGIN   := $(MODULE_BUILD)/liblez_multisig_plugin.so
+FFI_LIB_DIR    := target/release
+
+.PHONY: build-module run-module
+
+build-module: build-ffi ## Build the Basecamp UI module plugin + standalone preview app
+	@echo "🔨 Building UI module..."
+	@mkdir -p $(MODULE_BUILD)
+	cd $(MODULE_BUILD) && cmake .. -DLEZ_MULTISIG_FFI_LIB_DIR=$(CURDIR)/$(FFI_LIB_DIR) -DCMAKE_BUILD_TYPE=Release
+	cmake --build $(MODULE_BUILD) --parallel
+	@echo "✅ Plugin: $(MODULE_PLUGIN)"
+	@echo "✅ App:    $(MODULE_APP)"
+
+run-module: build-module ## Run the standalone multisig UI preview (set LEZ_MULTISIG_PROGRAM_ID_HEX first)
+	@test -n "$(LEZ_MULTISIG_PROGRAM_ID_HEX)" || (echo "ERROR: Set LEZ_MULTISIG_PROGRAM_ID_HEX=<64-hex-chars>"; exit 1)
+	LD_LIBRARY_PATH=$(CURDIR)/$(FFI_LIB_DIR):$$LD_LIBRARY_PATH \
+	  QML_PATH=$(CURDIR)/$(MODULE_DIR)/qml \
+	  LEZ_MULTISIG_PROGRAM_ID_HEX=$(LEZ_MULTISIG_PROGRAM_ID_HEX) \
+	  $(MODULE_APP)
 
 # ── Headless Demo ─────────────────────────────────────────────────────────────
 
