@@ -118,7 +118,7 @@ help: ## Show this help
 	@echo "  make build                 Build the guest binary (needs risc0 toolchain)"
 	@echo "  make build-cli             Build the standalone multisig CLI"
 	@echo "  make build-module          Build the Basecamp UI plugin + preview app (requires Qt6)"
-	@echo "  make run-module            Run the standalone UI preview (set LEZ_MULTISIG_PROGRAM_ID_HEX)"
+	@echo "  make run-module            Run the standalone UI preview (program ID embedded at build time)"
 	@echo "  make deploy                Deploy multisig + token programs to sequencer"
 	@echo "  make test                  Run unit tests"
 	@echo "  make status                Show saved state (account IDs, etc.)"
@@ -177,7 +177,10 @@ test-e2e: ## Run full E2E tests (requires sequencer running + lssa artifacts)
 
 build-ffi: generate ## Build the FFI .so (liblez_multisig_ffi.so) for use in Qt module
 	@echo "🔨 Building FFI shared library..."
-	source ~/.cargo/env && RISC0_SKIP_BUILD=1 cargo build --release -p lez-multisig-ffi
+	@PROGRAM_ID=$$([ -f "$(MULTISIG_BIN)" ] && \
+	    spel inspect "$(MULTISIG_BIN)" 2>/dev/null | grep 'ImageID (hex bytes)' | awk '{print $$NF}' || echo ""); \
+	echo "  Program ID: $${PROGRAM_ID:-(not embedded — run 'make build' first)}"; \
+	source ~/.cargo/env && RISC0_SKIP_BUILD=1 MULTISIG_PROGRAM_ID_HEX=$$PROGRAM_ID cargo build --release -p lez-multisig-ffi
 	@echo "✅ FFI .so built: target/release/liblez_multisig_ffi.so"
 	@ls -lh target/release/liblez_multisig_ffi.so
 
@@ -199,11 +202,9 @@ build-module: build-ffi ## Build the Basecamp UI module plugin + standalone prev
 	@echo "✅ Plugin: $(MODULE_PLUGIN)"
 	@echo "✅ App:    $(MODULE_APP)"
 
-run-module: build-module ## Run the standalone multisig UI preview (set LEZ_MULTISIG_PROGRAM_ID_HEX first)
-	@test -n "$(LEZ_MULTISIG_PROGRAM_ID_HEX)" || (echo "ERROR: Set LEZ_MULTISIG_PROGRAM_ID_HEX=<64-hex-chars>"; exit 1)
+run-module: build-module ## Run the standalone multisig UI preview (program ID is embedded at build time)
 	LD_LIBRARY_PATH=$(CURDIR)/$(FFI_LIB_DIR):$$LD_LIBRARY_PATH \
 	  QML_PATH=$(CURDIR)/$(MODULE_DIR)/qml \
-	  LEZ_MULTISIG_PROGRAM_ID_HEX=$(LEZ_MULTISIG_PROGRAM_ID_HEX) \
 	  $(MODULE_APP)
 
 # ── Headless Demo ─────────────────────────────────────────────────────────────

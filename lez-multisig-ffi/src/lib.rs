@@ -141,6 +141,17 @@ pub extern "C" fn lez_multisig_get_idl() -> *mut c_char {
     to_cstring(IDL_JSON.to_string())
 }
 
+/// Return the program ID baked in at compile time via MULTISIG_PROGRAM_ID_HEX env var.
+/// Returns: {"program_id_hex":"<64-hex-chars>"}  — or {"program_id_hex":""} if not embedded.
+/// Caller must free with lez_multisig_free_string.
+#[no_mangle]
+pub extern "C" fn lez_multisig_program_id() -> *mut c_char {
+    to_cstring(format!(
+        r#"{{"program_id_hex":"{}"}}"#,
+        env!("MULTISIG_PROGRAM_ID_HEX", "")
+    ))
+}
+
 // ── Read-only helpers (not in IDL) ───────────────────────────────────────────
 
 /// List all proposals for a multisig.

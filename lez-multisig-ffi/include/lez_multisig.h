@@ -77,6 +77,13 @@ char *lez_multisig_version(void);
 char *lez_multisig_get_idl(void);
 
 /**
+ * Return the program ID baked in at compile time via MULTISIG_PROGRAM_ID_HEX env var.
+ * Returns: {"program_id_hex":"<64-hex-chars>"}  — or {"program_id_hex":""} if not embedded.
+ * Caller must free with lez_multisig_free_string.
+ */
+char *lez_multisig_program_id(void);
+
+/**
  * List all proposals for a multisig.
  *
  * args_json: {"multisig_state": "<account_id>", "program_id_hex": hex64,

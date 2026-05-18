@@ -1,7 +1,7 @@
 {
   "name": "lez_multisig",
   "version": "0.1.0",
-  "description": "M-of-N multisig governance UI for the Logos Execution Zone",
+  "description": "Qt/QML Basecamp module for the multisig_program program",
   "type": "ui",
   "category": "tools",
   "main": "liblez_multisig_plugin",
