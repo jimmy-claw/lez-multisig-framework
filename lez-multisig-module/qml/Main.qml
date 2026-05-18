@@ -27,26 +27,45 @@ Rectangle {
     // ── Toast notification ────────────────────────────────────────────────────
     Rectangle {
         id: toast
-        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 24 }
-        width: toastLabel.implicitWidth + 32; height: 38
+        anchors {
+            bottom: parent.bottom
+            horizontalCenter: parent.horizontalCenter
+            bottomMargin: 24
+        }
+        width: toastLabel.implicitWidth + 32
+        height: 38
         radius: 19
         color: toastSuccess ? root.colSuccess : root.colError
-        opacity: 0; z: 100
+        opacity: 0
+        z: 100
         property bool toastSuccess: true
-        Label { id: toastLabel; anchors.centerIn: parent; color: "#fff"; font.pixelSize: 13 }
+        Label {
+            id: toastLabel
+            anchors.centerIn: parent
+            color: "#fff"
+            font.pixelSize: 13
+        }
         SequentialAnimation {
             id: toastAnim
             NumberAnimation { target: toast; property: "opacity"; to: 1; duration: 180 }
             PauseAnimation  { duration: 3000 }
             NumberAnimation { target: toast; property: "opacity"; to: 0; duration: 350 }
         }
-        function show(msg, ok) { toastSuccess = ok; toastLabel.text = msg; toastAnim.restart() }
+        function show(msg, ok) {
+            toastSuccess = ok
+            toastLabel.text = msg
+            toastAnim.restart()
+        }
     }
 
     Connections {
         target: backend
-        function onOperationSuccess(op, txHash) { toast.show("✓ " + op + " — " + txHash.substring(0,14) + "…", true) }
-        function onOperationError(op, err)       { toast.show("✗ " + err, false) }
+        function onOperationSuccess(op, txHash) {
+            toast.show("✓ " + op + " — " + txHash.substring(0, 14) + "…", true)
+        }
+        function onOperationError(op, err) {
+            toast.show("✗ " + err, false)
+        }
     }
 
     // ── Setup sheet (shown when program ID is not configured) ─────────────────
@@ -64,16 +83,18 @@ Rectangle {
             Label {
                 text: "LEZ Multisig Setup"
                 color: root.colPrimary
-                font { pixelSize: 22; bold: true }
+                font.pixelSize: 22
+                font.bold: true
                 Layout.alignment: Qt.AlignHCenter
             }
             Label {
                 text: "Configure your wallet and the deployed multisig program ID to get started."
-                color: root.colMuted; font.pixelSize: 13
-                wrapMode: Text.WordWrap; Layout.fillWidth: true
+                color: root.colMuted
+                font.pixelSize: 13
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
             }
-
             MsTextField {
                 id: setupWalletPath
                 placeholderText: "Wallet path (default: $NSSA_WALLET_HOME_DIR)"
@@ -111,7 +132,7 @@ Rectangle {
             border.color: root.colBorder
 
             ColumnLayout {
-                anchors { fill: parent; margins: 0 }
+                anchors.fill: parent
                 spacing: 0
 
                 // Header
@@ -119,29 +140,49 @@ Rectangle {
                     Layout.fillWidth: true
                     height: 52
                     color: "transparent"
-                    border.color: root.colBorder
-                    border.width: 0
+
                     RowLayout {
-                        anchors { fill: parent; leftMargin: 14; rightMargin: 10 }
+                        anchors {
+                            fill: parent
+                            leftMargin: 14
+                            rightMargin: 10
+                        }
                         Label {
                             text: "Multisigs"
                             color: root.colText
-                            font { pixelSize: 14; bold: true }
+                            font.pixelSize: 14
+                            font.bold: true
                             Layout.fillWidth: true
                         }
-                        // Settings gear
                         Rectangle {
-                            width: 28; height: 28; radius: 6
+                            width: 28
+                            height: 28
+                            radius: 6
                             color: settingsGearMa.containsMouse ? root.colSurface2 : "transparent"
-                            Label { anchors.centerIn: parent; text: "⚙"; color: root.colMuted; font.pixelSize: 16 }
+                            Label {
+                                anchors.centerIn: parent
+                                text: "⚙"
+                                color: root.colMuted
+                                font.pixelSize: 16
+                            }
                             MouseArea {
                                 id: settingsGearMa
-                                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
                                 onClicked: settingsPopup.visible = !settingsPopup.visible
                             }
                         }
                     }
-                    Rectangle { anchors { bottom: parent.bottom; left: parent.left; right: parent.right }; height: 1; color: root.colBorder }
+                    Rectangle {
+                        anchors {
+                            bottom: parent.bottom
+                            left: parent.left
+                            right: parent.right
+                        }
+                        height: 1
+                        color: root.colBorder
+                    }
                 }
 
                 // Multisig list
@@ -165,50 +206,71 @@ Rectangle {
                                               ? root.colPrimary + "66" : "transparent"
 
                                 RowLayout {
-                                    anchors { fill: parent; leftMargin: 12; rightMargin: 8 }
+                                    anchors {
+                                        fill: parent
+                                        leftMargin: 12
+                                        rightMargin: 8
+                                    }
                                     spacing: 8
 
-                                    // Colored dot / initials block
                                     Rectangle {
-                                        width: 32; height: 32; radius: 6
+                                        width: 32
+                                        height: 32
+                                        radius: 6
                                         color: root.colPrimary + "44"
                                         Label {
                                             anchors.centerIn: parent
                                             text: modelData.threshold + "/" + modelData.member_count
-                                            color: root.colPrimary; font { pixelSize: 11; bold: true }
+                                            color: root.colPrimary
+                                            font.pixelSize: 11
+                                            font.bold: true
                                         }
                                     }
 
                                     ColumnLayout {
-                                        Layout.fillWidth: true; spacing: 2
+                                        Layout.fillWidth: true
+                                        spacing: 2
                                         Label {
                                             text: shortKey(modelData.create_key)
-                                            color: root.colText; font.pixelSize: 12
-                                            elide: Text.ElideRight; Layout.fillWidth: true
+                                            color: root.colText
+                                            font.pixelSize: 12
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
                                         }
                                         Label {
                                             text: modelData.member_count + " members · " + modelData.transaction_index + " proposals"
-                                            color: root.colMuted; font.pixelSize: 10
+                                            color: root.colMuted
+                                            font.pixelSize: 10
                                         }
                                     }
                                 }
 
                                 MouseArea {
-                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
                                     onClicked: backend.selectMultisig(modelData.create_key)
                                 }
-                                Rectangle { anchors { bottom: parent.bottom; left: parent.left; right: parent.right }; height: 1; color: root.colBorder + "88" }
+                                Rectangle {
+                                    anchors {
+                                        bottom: parent.bottom
+                                        left: parent.left
+                                        right: parent.right
+                                    }
+                                    height: 1
+                                    color: root.colBorder + "88"
+                                }
                             }
                         }
 
-                        // Empty state
                         Item {
                             visible: backend.multisigs.length === 0
-                            Layout.fillWidth: true; height: 80
+                            Layout.fillWidth: true
+                            height: 80
                             Label {
                                 anchors.centerIn: parent
                                 text: "No multisigs yet"
-                                color: root.colMuted; font.pixelSize: 12
+                                color: root.colMuted
+                                font.pixelSize: 12
                             }
                         }
                     }
@@ -217,7 +279,8 @@ Rectangle {
                 // Bottom actions
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 1; color: root.colBorder
+                    height: 1
+                    color: root.colBorder
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -232,7 +295,7 @@ Rectangle {
                     MsButton {
                         text: "+ Create new"
                         Layout.fillWidth: true
-                        onClicked: { mainContent.currentIndex = 2 }
+                        onClicked: mainContent.currentIndex = 2
                     }
                 }
             }
@@ -255,8 +318,18 @@ Rectangle {
                     ColumnLayout {
                         anchors.centerIn: parent
                         spacing: 12
-                        Label { text: "No multisig selected"; color: root.colMuted; font.pixelSize: 18; Layout.alignment: Qt.AlignHCenter }
-                        Label { text: "Load an existing multisig or create a new one."; color: root.colMuted; font.pixelSize: 13; Layout.alignment: Qt.AlignHCenter }
+                        Label {
+                            text: "No multisig selected"
+                            color: root.colMuted
+                            font.pixelSize: 18
+                            Layout.alignment: Qt.AlignHCenter
+                        }
+                        Label {
+                            text: "Load an existing multisig or create a new one."
+                            color: root.colMuted
+                            font.pixelSize: 13
+                            Layout.alignment: Qt.AlignHCenter
+                        }
                     }
                 }
 
@@ -266,174 +339,292 @@ Rectangle {
 
                     // Detail header
                     Rectangle {
-                        Layout.fillWidth: true; height: 52
+                        Layout.fillWidth: true
+                        height: 52
                         color: root.colSurface
                         border.color: root.colBorder
+
                         RowLayout {
-                            anchors { fill: parent; leftMargin: 20; rightMargin: 16 }
+                            anchors {
+                                fill: parent
+                                leftMargin: 20
+                                rightMargin: 16
+                            }
                             spacing: 12
+
                             Label {
                                 text: shortKey(backend.currentCreateKey)
-                                color: root.colText; font { pixelSize: 15; bold: true }
+                                color: root.colText
+                                font.pixelSize: 15
+                                font.bold: true
                             }
                             Rectangle {
-                                height: 22; width: thresholdLabel.implicitWidth + 16; radius: 4
-                                color: root.colPrimary + "33"; border.color: root.colPrimary + "88"
-                                Label { id: thresholdLabel; anchors.centerIn: parent
+                                height: 22
+                                width: thresholdLabel.implicitWidth + 16
+                                radius: 4
+                                color: root.colPrimary + "33"
+                                border.color: root.colPrimary + "88"
+                                Label {
+                                    id: thresholdLabel
+                                    anchors.centerIn: parent
                                     text: (backend.currentMultisig.threshold || "?") + "-of-" + (backend.currentMultisig.member_count || "?")
-                                    color: root.colPrimary; font { pixelSize: 11; bold: true } }
+                                    color: root.colPrimary
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                }
                             }
                             Item { Layout.fillWidth: true }
-                            // Refresh button
                             Rectangle {
-                                width: 30; height: 30; radius: 6
+                                width: 30
+                                height: 30
+                                radius: 6
                                 color: refreshMa.containsMouse ? root.colSurface2 : "transparent"
                                 border.color: root.colBorder
-                                Label { anchors.centerIn: parent; text: "↻"; color: root.colMuted; font.pixelSize: 16 }
-                                MouseArea { id: refreshMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: { backend.refreshCurrentMultisig(); backend.refreshProposals() } }
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: "↻"
+                                    color: root.colMuted
+                                    font.pixelSize: 16
+                                }
+                                MouseArea {
+                                    id: refreshMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        backend.refreshCurrentMultisig()
+                                        backend.refreshProposals()
+                                    }
+                                }
                             }
-                            // Remove from list
                             Rectangle {
-                                width: 30; height: 30; radius: 6
+                                width: 30
+                                height: 30
+                                radius: 6
                                 color: removeMa.containsMouse ? root.colError + "22" : "transparent"
                                 border.color: root.colBorder
-                                Label { anchors.centerIn: parent; text: "✕"; color: root.colMuted; font.pixelSize: 14 }
-                                MouseArea { id: removeMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: backend.removeLocalMultisig(backend.currentCreateKey) }
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: "✕"
+                                    color: root.colMuted
+                                    font.pixelSize: 14
+                                }
+                                MouseArea {
+                                    id: removeMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: backend.removeLocalMultisig(backend.currentCreateKey)
+                                }
                             }
                         }
-                        Rectangle { anchors { bottom: parent.bottom; left: parent.left; right: parent.right }; height: 1; color: root.colBorder }
+                        Rectangle {
+                            anchors {
+                                bottom: parent.bottom
+                                left: parent.left
+                                right: parent.right
+                            }
+                            height: 1
+                            color: root.colBorder
+                        }
                     }
 
                     // Tab bar
                     Rectangle {
-                        Layout.fillWidth: true; height: 40
+                        Layout.fillWidth: true
+                        height: 40
                         color: root.colSurface
+
                         RowLayout {
-                            anchors { fill: parent; leftMargin: 12 }; spacing: 4
+                            anchors {
+                                fill: parent
+                                leftMargin: 12
+                            }
+                            spacing: 4
+
                             Repeater {
                                 model: ["Proposals", "Members", "Config", "New Proposal"]
                                 delegate: Rectangle {
-                                    height: 32; width: tabLbl.implicitWidth + 20; radius: 6
+                                    height: 32
+                                    width: tabLbl.implicitWidth + 20
+                                    radius: 6
                                     color: detailTabs.currentIndex === index ? root.colPrimary + "33" : "transparent"
                                     border.color: detailTabs.currentIndex === index ? root.colPrimary + "66" : "transparent"
-                                    Label { id: tabLbl; anchors.centerIn: parent; text: modelData
+                                    Label {
+                                        id: tabLbl
+                                        anchors.centerIn: parent
+                                        text: modelData
                                         color: detailTabs.currentIndex === index ? root.colPrimary : root.colMuted
-                                        font { pixelSize: 13; bold: detailTabs.currentIndex === index } }
-                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                                        onClicked: detailTabs.currentIndex = index }
+                                        font.pixelSize: 13
+                                        font.bold: detailTabs.currentIndex === index
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: detailTabs.currentIndex = index
+                                    }
                                 }
                             }
                             Item { Layout.fillWidth: true }
                         }
-                        Rectangle { anchors { bottom: parent.bottom; left: parent.left; right: parent.right }; height: 1; color: root.colBorder }
+                        Rectangle {
+                            anchors {
+                                bottom: parent.bottom
+                                left: parent.left
+                                right: parent.right
+                            }
+                            height: 1
+                            color: root.colBorder
+                        }
                     }
 
                     StackLayout {
                         id: detailTabs
-                        Layout.fillWidth: true; Layout.fillHeight: true
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
                         currentIndex: 0
 
                         // ── Tab 0: Proposals ──────────────────────────────────
                         Item {
                             ColumnLayout {
-                                anchors { fill: parent; margins: 16 }; spacing: 10
+                                anchors {
+                                    fill: parent
+                                    margins: 16
+                                }
+                                spacing: 10
 
-                                // Filter row
                                 RowLayout {
+                                    id: filterRow
                                     spacing: 6
                                     property int filter: 0
-                                    id: filterRow
+
                                     Repeater {
                                         model: ["All", "Active", "Executed", "Rejected"]
                                         delegate: Rectangle {
-                                            height: 26; width: filterLbl.implicitWidth + 16; radius: 5
+                                            height: 26
+                                            width: filterLbl.implicitWidth + 16
+                                            radius: 5
                                             color: filterRow.filter === index ? root.colPrimary : "transparent"
                                             border.color: filterRow.filter === index ? "transparent" : root.colBorder
-                                            Label { id: filterLbl; anchors.centerIn: parent; text: modelData
-                                                color: filterRow.filter === index ? "#fff" : root.colMuted; font.pixelSize: 12 }
-                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                                                onClicked: filterRow.filter = index }
+                                            Label {
+                                                id: filterLbl
+                                                anchors.centerIn: parent
+                                                text: modelData
+                                                color: filterRow.filter === index ? "#fff" : root.colMuted
+                                                font.pixelSize: 12
+                                            }
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: filterRow.filter = index
+                                            }
                                         }
                                     }
                                     Item { Layout.fillWidth: true }
                                     Label {
                                         text: filteredProposals().length + " proposals"
-                                        color: root.colMuted; font.pixelSize: 12
+                                        color: root.colMuted
+                                        font.pixelSize: 12
                                     }
                                 }
 
                                 ScrollView {
-                                    Layout.fillWidth: true; Layout.fillHeight: true; clip: true
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    clip: true
+
                                     ColumnLayout {
-                                        width: parent.width; spacing: 8
+                                        width: parent.width
+                                        spacing: 8
 
                                         Repeater {
                                             model: filteredProposals()
                                             delegate: Rectangle {
                                                 Layout.fillWidth: true
                                                 implicitHeight: proposalCol.implicitHeight + 20
-                                                radius: root.radius; color: root.colSurface
+                                                radius: root.radius
+                                                color: root.colSurface
                                                 border.color: statusColor(modelData.status) + "55"
 
                                                 ColumnLayout {
                                                     id: proposalCol
-                                                    anchors { fill: parent; margins: 14 }; spacing: 8
+                                                    anchors {
+                                                        fill: parent
+                                                        margins: 14
+                                                    }
+                                                    spacing: 8
 
                                                     RowLayout {
                                                         spacing: 8
                                                         Label {
                                                             text: "#" + modelData.index + "  " + proposalType(modelData)
-                                                            color: root.colText; font { pixelSize: 13; bold: true }
+                                                            color: root.colText
+                                                            font.pixelSize: 13
+                                                            font.bold: true
                                                             Layout.fillWidth: true
                                                         }
-                                                        // Status badge
                                                         Rectangle {
-                                                            height: 20; width: statusLbl.implicitWidth + 12; radius: 4
+                                                            height: 20
+                                                            width: statusLbl.implicitWidth + 12
+                                                            radius: 4
                                                             color: statusColor(modelData.status) + "33"
-                                                            Label { id: statusLbl; anchors.centerIn: parent; text: modelData.status
-                                                                color: statusColor(modelData.status); font.pixelSize: 11 }
+                                                            Label {
+                                                                id: statusLbl
+                                                                anchors.centerIn: parent
+                                                                text: modelData.status
+                                                                color: statusColor(modelData.status)
+                                                                font.pixelSize: 11
+                                                            }
                                                         }
                                                     }
 
-                                                    // Proposer
                                                     Label {
                                                         text: "Proposer: " + shortKey(modelData.proposer)
-                                                        color: root.colMuted; font.pixelSize: 11
+                                                        color: root.colMuted
+                                                        font.pixelSize: 11
                                                     }
 
                                                     // Voting bar
-                                                    ColumnLayout { spacing: 4; Layout.fillWidth: true
+                                                    ColumnLayout {
+                                                        spacing: 4
+                                                        Layout.fillWidth: true
+
                                                         RowLayout {
-                                                            Label { text: modelData.approvals + "/" + modelData.threshold + " approvals"
-                                                                color: root.colText; font.pixelSize: 11 }
+                                                            Label {
+                                                                text: modelData.approvals + "/" + modelData.threshold + " approvals"
+                                                                color: root.colText
+                                                                font.pixelSize: 11
+                                                            }
                                                             Item { Layout.fillWidth: true }
                                                             Label {
                                                                 visible: modelData.rejections > 0
                                                                 text: modelData.rejections + " rejection" + (modelData.rejections > 1 ? "s" : "")
-                                                                color: root.colError; font.pixelSize: 11
+                                                                color: root.colError
+                                                                font.pixelSize: 11
                                                             }
                                                         }
                                                         Rectangle {
-                                                            Layout.fillWidth: true; height: 5; radius: 3
+                                                            Layout.fillWidth: true
+                                                            height: 5
+                                                            radius: 3
                                                             color: root.colBorder
                                                             Rectangle {
                                                                 width: parent.width * Math.min(modelData.approvals / modelData.threshold, 1.0)
-                                                                height: parent.height; radius: parent.radius
+                                                                height: parent.height
+                                                                radius: parent.radius
                                                                 color: modelData.approvals >= modelData.threshold ? root.colSuccess : root.colPrimary
                                                                 Behavior on width { NumberAnimation { duration: 300 } }
                                                             }
                                                         }
-                                                        // Dead proposal warning
                                                         Label {
                                                             visible: isDeadProposal(modelData)
                                                             text: "⚠ Cannot reach threshold"
-                                                            color: root.colWarning; font.pixelSize: 11
+                                                            color: root.colWarning
+                                                            font.pixelSize: 11
                                                         }
                                                     }
 
-                                                    // Action buttons (only for Active proposals)
+                                                    // Action buttons
                                                     RowLayout {
                                                         visible: modelData.status === "Active"
                                                         spacing: 8
@@ -463,11 +654,16 @@ Rectangle {
                                             }
                                         }
 
-                                        // Empty state
                                         Item {
                                             visible: backend.proposals.length === 0
-                                            Layout.fillWidth: true; height: 80
-                                            Label { anchors.centerIn: parent; text: "No proposals yet"; color: root.colMuted; font.pixelSize: 13 }
+                                            Layout.fillWidth: true
+                                            height: 80
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: "No proposals yet"
+                                                color: root.colMuted
+                                                font.pixelSize: 13
+                                            }
                                         }
                                     }
                                 }
@@ -477,32 +673,70 @@ Rectangle {
                         // ── Tab 1: Members ────────────────────────────────────
                         Item {
                             ColumnLayout {
-                                anchors { fill: parent; margins: 16 }; spacing: 12
+                                anchors {
+                                    fill: parent
+                                    margins: 16
+                                }
+                                spacing: 12
 
                                 RowLayout {
-                                    Label { text: "Members"; color: root.colText; font { pixelSize: 14; bold: true }; Layout.fillWidth: true }
+                                    Label {
+                                        text: "Members"
+                                        color: root.colText
+                                        font.pixelSize: 14
+                                        font.bold: true
+                                        Layout.fillWidth: true
+                                    }
                                     Label {
                                         text: (backend.currentMultisig.member_count || 0) + " / 10"
-                                        color: root.colMuted; font.pixelSize: 12
+                                        color: root.colMuted
+                                        font.pixelSize: 12
                                     }
                                 }
 
                                 ScrollView {
-                                    Layout.fillWidth: true; Layout.preferredHeight: 260; clip: true
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 260
+                                    clip: true
+
                                     ColumnLayout {
-                                        width: parent.width; spacing: 6
+                                        width: parent.width
+                                        spacing: 6
+
                                         Repeater {
                                             model: backend.currentMultisig.members || []
                                             delegate: Rectangle {
-                                                Layout.fillWidth: true; height: 44
-                                                radius: 8; color: root.colSurface; border.color: root.colBorder
+                                                Layout.fillWidth: true
+                                                height: 44
+                                                radius: 8
+                                                color: root.colSurface
+                                                border.color: root.colBorder
+
                                                 RowLayout {
-                                                    anchors { fill: parent; leftMargin: 12; rightMargin: 12 }; spacing: 8
-                                                    Label { text: index + 1 + "."; color: root.colMuted; font.pixelSize: 12; Layout.preferredWidth: 20 }
-                                                    Label { text: modelData; color: root.colText; font { pixelSize: 12; family: "monospace" }
-                                                        elide: Text.ElideMiddle; Layout.fillWidth: true }
+                                                    anchors {
+                                                        fill: parent
+                                                        leftMargin: 12
+                                                        rightMargin: 12
+                                                    }
+                                                    spacing: 8
+                                                    Label {
+                                                        text: index + 1 + "."
+                                                        color: root.colMuted
+                                                        font.pixelSize: 12
+                                                        Layout.preferredWidth: 20
+                                                    }
+                                                    Label {
+                                                        text: modelData
+                                                        color: root.colText
+                                                        font.pixelSize: 12
+                                                        font.family: "monospace"
+                                                        elide: Text.ElideMiddle
+                                                        Layout.fillWidth: true
+                                                    }
                                                     MsButton {
-                                                        text: "Remove"; destructive: true; height: 28
+                                                        text: "Remove"
+                                                        destructive: true
+                                                        height: 28
                                                         Layout.preferredWidth: 70
                                                         enabled: !backend.busy
                                                         onClicked: backend.proposeRemoveMember(modelData)
@@ -513,16 +747,32 @@ Rectangle {
                                     }
                                 }
 
-                                Rectangle { Layout.fillWidth: true; height: 1; color: root.colBorder }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 1
+                                    color: root.colBorder
+                                }
 
-                                // Add member form
-                                Label { text: "Propose Add Member"; color: root.colText; font { pixelSize: 13; bold: true } }
-                                MsTextField { id: newMemberField; placeholderText: "New member public key (hex)"; Layout.fillWidth: true }
+                                Label {
+                                    text: "Propose Add Member"
+                                    color: root.colText
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                }
+                                MsTextField {
+                                    id: newMemberField
+                                    placeholderText: "New member public key (hex)"
+                                    Layout.fillWidth: true
+                                }
                                 MsButton {
                                     text: "Propose Add Member"
-                                    accent: true; Layout.fillWidth: true
+                                    accent: true
+                                    Layout.fillWidth: true
                                     enabled: !backend.busy && newMemberField.text.length > 0
-                                    onClicked: { backend.proposeAddMember(newMemberField.text.trim()); newMemberField.text = "" }
+                                    onClicked: {
+                                        backend.proposeAddMember(newMemberField.text.trim())
+                                        newMemberField.text = ""
+                                    }
                                 }
 
                                 Item { Layout.fillHeight: true }
@@ -532,39 +782,71 @@ Rectangle {
                         // ── Tab 2: Config ─────────────────────────────────────
                         Item {
                             ColumnLayout {
-                                anchors { fill: parent; margins: 16 }; spacing: 16
+                                anchors {
+                                    fill: parent
+                                    margins: 16
+                                }
+                                spacing: 16
 
-                                Label { text: "Configuration"; color: root.colText; font { pixelSize: 14; bold: true } }
+                                Label {
+                                    text: "Configuration"
+                                    color: root.colText
+                                    font.pixelSize: 14
+                                    font.bold: true
+                                }
 
-                                // Current config summary
                                 Rectangle {
-                                    Layout.fillWidth: true; implicitHeight: configGrid.implicitHeight + 24
-                                    radius: root.radius; color: root.colSurface; border.color: root.colBorder
+                                    Layout.fillWidth: true
+                                    implicitHeight: configGrid.implicitHeight + 24
+                                    radius: root.radius
+                                    color: root.colSurface
+                                    border.color: root.colBorder
+
                                     GridLayout {
-                                        id: configGrid; anchors { fill: parent; margins: 14 }
-                                        columns: 2; columnSpacing: 20; rowSpacing: 8
-                                        Label { text: "Threshold";     color: root.colMuted; font.pixelSize: 12 }
-                                        Label { text: (backend.currentMultisig.threshold || "—") + " of " + (backend.currentMultisig.member_count || "—") + " members required"
-                                            color: root.colText; font.pixelSize: 13 }
-                                        Label { text: "Members";       color: root.colMuted; font.pixelSize: 12 }
+                                        id: configGrid
+                                        anchors {
+                                            fill: parent
+                                            margins: 14
+                                        }
+                                        columns: 2
+                                        columnSpacing: 20
+                                        rowSpacing: 8
+
+                                        Label { text: "Threshold"; color: root.colMuted; font.pixelSize: 12 }
+                                        Label {
+                                            text: (backend.currentMultisig.threshold || "—") + " of " + (backend.currentMultisig.member_count || "—") + " members required"
+                                            color: root.colText
+                                            font.pixelSize: 13
+                                        }
+                                        Label { text: "Members"; color: root.colMuted; font.pixelSize: 12 }
                                         Label { text: backend.currentMultisig.member_count || "—"; color: root.colText; font.pixelSize: 13 }
                                         Label { text: "Total proposals"; color: root.colMuted; font.pixelSize: 12 }
                                         Label { text: backend.currentMultisig.transaction_index || "0"; color: root.colText; font.pixelSize: 13 }
                                         Label { text: "State account"; color: root.colMuted; font.pixelSize: 12 }
-                                        Label { text: backend.currentMultisig.multisig_state_id || "—"
-                                            color: root.colText; font { pixelSize: 11; family: "monospace" }
-                                            elide: Text.ElideMiddle; Layout.fillWidth: true }
+                                        Label {
+                                            text: backend.currentMultisig.multisig_state_id || "—"
+                                            color: root.colText
+                                            font.pixelSize: 11
+                                            font.family: "monospace"
+                                            elide: Text.ElideMiddle
+                                            Layout.fillWidth: true
+                                        }
                                     }
                                 }
 
                                 Rectangle { Layout.fillWidth: true; height: 1; color: root.colBorder }
 
-                                // Change threshold form
-                                Label { text: "Propose Change Threshold"; color: root.colText; font { pixelSize: 13; bold: true } }
+                                Label {
+                                    text: "Propose Change Threshold"
+                                    color: root.colText
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                }
                                 RowLayout {
                                     spacing: 10
                                     MsTextField {
-                                        id: newThresholdField; placeholderText: "New threshold (1 – member count)"
+                                        id: newThresholdField
+                                        placeholderText: "New threshold"
                                         Layout.preferredWidth: 200
                                         inputMethodHints: Qt.ImhDigitsOnly
                                     }
@@ -586,32 +868,64 @@ Rectangle {
                         // ── Tab 3: New Proposal ───────────────────────────────
                         Item {
                             ColumnLayout {
-                                anchors { fill: parent; margins: 16 }; spacing: 14
+                                anchors {
+                                    fill: parent
+                                    margins: 16
+                                }
+                                spacing: 14
 
-                                Label { text: "New Transaction Proposal"; color: root.colText; font { pixelSize: 14; bold: true } }
+                                Label {
+                                    text: "New Transaction Proposal"
+                                    color: root.colText
+                                    font.pixelSize: 14
+                                    font.bold: true
+                                }
                                 Label {
                                     text: "Propose execution of an instruction on another LEZ program via this multisig."
-                                    color: root.colMuted; font.pixelSize: 12
-                                    wrapMode: Text.WordWrap; Layout.fillWidth: true
+                                    color: root.colMuted
+                                    font.pixelSize: 12
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
                                 }
 
                                 GridLayout {
-                                    columns: 2; columnSpacing: 12; rowSpacing: 10; Layout.fillWidth: true
+                                    columns: 2
+                                    columnSpacing: 12
+                                    rowSpacing: 10
+                                    Layout.fillWidth: true
 
                                     Label { text: "PDA Seeds (comma-sep hex)"; color: root.colMuted; font.pixelSize: 12 }
-                                    MsTextField { id: pdaSeedsField; placeholderText: "0xabcd…, 0xef01…"; Layout.fillWidth: true }
+                                    MsTextField {
+                                        id: pdaSeedsField
+                                        placeholderText: "0xabcd…, 0xef01…"
+                                        Layout.fillWidth: true
+                                    }
 
-                                    Label { text: "Payload (JSON)"; color: root.colMuted; font.pixelSize: 12
-                                        Layout.alignment: Qt.AlignTop }
+                                    Label {
+                                        text: "Payload (JSON)"
+                                        color: root.colMuted
+                                        font.pixelSize: 12
+                                        Layout.alignment: Qt.AlignTop
+                                    }
                                     Rectangle {
-                                        Layout.fillWidth: true; height: 120
-                                        radius: 8; color: root.colBg; border.color: payloadInput.activeFocus ? root.colPrimary : root.colBorder; border.width: payloadInput.activeFocus ? 2 : 1
+                                        Layout.fillWidth: true
+                                        height: 120
+                                        radius: 8
+                                        color: root.colBg
+                                        border.color: payloadInput.activeFocus ? root.colPrimary : root.colBorder
+                                        border.width: payloadInput.activeFocus ? 2 : 1
                                         ScrollView {
-                                            anchors { fill: parent; margins: 8 }; clip: true
+                                            anchors {
+                                                fill: parent
+                                                margins: 8
+                                            }
+                                            clip: true
                                             TextArea {
                                                 id: payloadInput
                                                 placeholderText: '{"instruction": "Transfer", "amount": 100}'
-                                                color: root.colText; font { pixelSize: 13; family: "monospace" }
+                                                color: root.colText
+                                                font.pixelSize: 13
+                                                font.family: "monospace"
                                                 background: null
                                                 wrapMode: TextArea.Wrap
                                             }
@@ -639,21 +953,34 @@ Rectangle {
                         }
                     }
 
-                    // Busy + status bar
+                    // Status bar
                     Rectangle {
-                        Layout.fillWidth: true; height: 32
-                        color: root.colSurface; border.color: root.colBorder
+                        Layout.fillWidth: true
+                        height: 32
+                        color: root.colSurface
+                        border.color: root.colBorder
                         visible: backend.busy || backend.lastError !== ""
+
                         RowLayout {
-                            anchors { fill: parent; leftMargin: 14; rightMargin: 14 }; spacing: 8
+                            anchors {
+                                fill: parent
+                                leftMargin: 14
+                                rightMargin: 14
+                            }
+                            spacing: 8
                             BusyIndicator {
-                                width: 18; height: 18; running: backend.busy; visible: backend.busy
+                                width: 18
+                                height: 18
+                                running: backend.busy
+                                visible: backend.busy
                                 palette.dark: root.colPrimary
                             }
                             Label {
                                 text: backend.busy ? "Working…" : "Error: " + backend.lastError
                                 color: backend.lastError !== "" ? root.colError : root.colMuted
-                                font.pixelSize: 12; Layout.fillWidth: true; elide: Text.ElideRight
+                                font.pixelSize: 12
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
                             }
                         }
                     }
@@ -662,34 +989,72 @@ Rectangle {
                 // ── 2: Create multisig form ───────────────────────────────────
                 Item {
                     ColumnLayout {
-                        anchors { fill: parent; margins: 32 }; spacing: 16
-                        Layout.maximumWidth: 520
+                        anchors {
+                            fill: parent
+                            margins: 32
+                        }
+                        spacing: 16
 
-                        Label { text: "Create New Multisig"; color: root.colText; font { pixelSize: 18; bold: true } }
-                        Label { text: "Deploy a new M-of-N multisig on LEZ."; color: root.colMuted; font.pixelSize: 13 }
+                        Label {
+                            text: "Create New Multisig"
+                            color: root.colText
+                            font.pixelSize: 18
+                            font.bold: true
+                        }
+                        Label {
+                            text: "Deploy a new M-of-N multisig on LEZ."
+                            color: root.colMuted
+                            font.pixelSize: 13
+                        }
 
                         Rectangle { Layout.fillWidth: true; height: 1; color: root.colBorder }
 
                         GridLayout {
-                            columns: 2; columnSpacing: 12; rowSpacing: 10; Layout.fillWidth: true
+                            columns: 2
+                            columnSpacing: 12
+                            rowSpacing: 10
+                            Layout.fillWidth: true
 
                             Label { text: "Create Key (hex32)"; color: root.colMuted; font.pixelSize: 12 }
-                            MsTextField { id: createKeyField; placeholderText: "32-byte hex (0x…) — unique ID for this multisig"; Layout.fillWidth: true }
-
+                            MsTextField {
+                                id: createKeyField
+                                placeholderText: "32-byte hex (0x…) — unique ID for this multisig"
+                                Layout.fillWidth: true
+                            }
                             Label { text: "Threshold (M)"; color: root.colMuted; font.pixelSize: 12 }
-                            MsTextField { id: thresholdField; placeholderText: "e.g. 2"; inputMethodHints: Qt.ImhDigitsOnly; Layout.preferredWidth: 100 }
-
-                            Label { text: "Members (one per line)"; color: root.colMuted; font.pixelSize: 12; Layout.alignment: Qt.AlignTop }
+                            MsTextField {
+                                id: thresholdField
+                                placeholderText: "e.g. 2"
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                Layout.preferredWidth: 100
+                            }
+                            Label {
+                                text: "Members (one per line)"
+                                color: root.colMuted
+                                font.pixelSize: 12
+                                Layout.alignment: Qt.AlignTop
+                            }
                             Rectangle {
-                                Layout.fillWidth: true; height: 100
-                                radius: 8; color: root.colBg; border.color: membersInput.activeFocus ? root.colPrimary : root.colBorder; border.width: membersInput.activeFocus ? 2 : 1
+                                Layout.fillWidth: true
+                                height: 100
+                                radius: 8
+                                color: root.colBg
+                                border.color: membersInput.activeFocus ? root.colPrimary : root.colBorder
+                                border.width: membersInput.activeFocus ? 2 : 1
                                 ScrollView {
-                                    anchors { fill: parent; margins: 8 }; clip: true
+                                    anchors {
+                                        fill: parent
+                                        margins: 8
+                                    }
+                                    clip: true
                                     TextArea {
                                         id: membersInput
                                         placeholderText: "0xpubkey1\n0xpubkey2\n0xpubkey3"
-                                        color: root.colText; font { pixelSize: 12; family: "monospace" }
-                                        background: null; wrapMode: TextArea.Wrap
+                                        color: root.colText
+                                        font.pixelSize: 12
+                                        font.family: "monospace"
+                                        background: null
+                                        wrapMode: TextArea.Wrap
                                     }
                                 }
                             }
@@ -704,11 +1069,14 @@ Rectangle {
                             }
                             MsButton {
                                 text: "Create Multisig"
-                                accent: true; Layout.fillWidth: true
+                                accent: true
+                                Layout.fillWidth: true
                                 enabled: !backend.busy && createKeyField.text.length > 0
                                          && thresholdField.text.length > 0 && membersInput.text.trim().length > 0
                                 onClicked: {
-                                    var members = membersInput.text.trim().split("\n").map(function(s) { return s.trim() }).filter(function(s) { return s.length > 0 })
+                                    var members = membersInput.text.trim().split("\n")
+                                                  .map(function(s) { return s.trim() })
+                                                  .filter(function(s) { return s.length > 0 })
                                     backend.createMultisig(parseInt(thresholdField.text), members, createKeyField.text.trim())
                                     mainContent.currentIndex = 1
                                 }
@@ -726,22 +1094,42 @@ Rectangle {
     Rectangle {
         id: loadDialog
         anchors.centerIn: parent
-        width: 440; height: 160
-        radius: root.radius; color: root.colSurface
+        width: 440
+        height: 160
+        radius: root.radius
+        color: root.colSurface
         border.color: root.colBorder
-        visible: false; z: 40
-        layer.enabled: true
-        layer.effect: null
+        visible: false
+        z: 40
 
         ColumnLayout {
-            anchors { fill: parent; margins: 20 }; spacing: 12
-            Label { text: "Load Multisig by Create Key"; color: root.colText; font { pixelSize: 14; bold: true } }
-            MsTextField { id: loadKeyField; placeholderText: "Create key (32-byte hex, 0x…)"; Layout.fillWidth: true }
+            anchors {
+                fill: parent
+                margins: 20
+            }
+            spacing: 12
+            Label {
+                text: "Load Multisig by Create Key"
+                color: root.colText
+                font.pixelSize: 14
+                font.bold: true
+            }
+            MsTextField {
+                id: loadKeyField
+                placeholderText: "Create key (32-byte hex, 0x…)"
+                Layout.fillWidth: true
+            }
             RowLayout {
                 spacing: 8
-                MsButton { text: "Cancel"; Layout.preferredWidth: 80; onClicked: { loadDialog.visible = false; loadKeyField.text = "" } }
                 MsButton {
-                    text: "Load"; accent: true; Layout.fillWidth: true
+                    text: "Cancel"
+                    Layout.preferredWidth: 80
+                    onClicked: { loadDialog.visible = false; loadKeyField.text = "" }
+                }
+                MsButton {
+                    text: "Load"
+                    accent: true
+                    Layout.fillWidth: true
                     enabled: loadKeyField.text.length > 0
                     onClicked: {
                         backend.loadMultisig(loadKeyField.text.trim())
@@ -757,22 +1145,32 @@ Rectangle {
     // ── Settings popup ────────────────────────────────────────────────────────
     Rectangle {
         id: settingsPopup
-        x: 12; y: 52
-        width: 340; implicitHeight: settingsCol.implicitHeight + 24
-        radius: root.radius; color: root.colSurface
+        x: 12
+        y: 52
+        width: 340
+        implicitHeight: settingsCol.implicitHeight + 24
+        radius: root.radius
+        color: root.colSurface
         border.color: root.colBorder
-        visible: false; z: 40
+        visible: false
+        z: 40
 
         ColumnLayout {
             id: settingsCol
-            anchors { fill: parent; margins: 14 }; spacing: 10
-            Label { text: "Settings"; color: root.colText; font { pixelSize: 13; bold: true } }
+            anchors {
+                fill: parent
+                margins: 14
+            }
+            spacing: 10
+            Label { text: "Settings"; color: root.colText; font.pixelSize: 13; font.bold: true }
             Label { text: "Wallet Path"; color: root.colMuted; font.pixelSize: 11 }
             MsTextField { id: settingsWalletPath; text: backend.walletPath; Layout.fillWidth: true }
             Label { text: "Program ID (hex)"; color: root.colMuted; font.pixelSize: 11 }
             MsTextField { id: settingsProgramId; text: backend.programIdHex; Layout.fillWidth: true }
             MsButton {
-                text: "Save"; accent: true; Layout.fillWidth: true
+                text: "Save"
+                accent: true
+                Layout.fillWidth: true
                 onClicked: {
                     backend.setWalletPath(settingsWalletPath.text.trim())
                     backend.setProgramIdHex(settingsProgramId.text.trim())
@@ -815,22 +1213,25 @@ Rectangle {
     }
 
     function filteredProposals() {
-        var filter = filterRow.filter
-        if (filter === 0) return backend.proposals
-        var status = ["", "Active", "Executed", "Rejected"][filter]
-        return backend.proposals.filter(function(p) { return p.status === status })
+        var f = filterRow.filter
+        if (f === 0) return backend.proposals
+        var statusMap = ["", "Active", "Executed", "Rejected"]
+        var s = statusMap[f]
+        return backend.proposals.filter(function(p) { return p.status === s })
     }
 
-    // ── Inline shared components ──────────────────────────────────────────────
+    // ── Shared components ─────────────────────────────────────────────────────
 
     component MsTextField: TextField {
         Layout.fillWidth: true
         color: root.colText
         placeholderTextColor: root.colMuted
         font.pixelSize: 13
-        leftPadding: 12; rightPadding: 12
+        leftPadding: 12
+        rightPadding: 12
         background: Rectangle {
-            radius: 8; color: root.colBg
+            radius: 8
+            color: root.colBg
             border.color: parent.activeFocus ? root.colPrimary : root.colBorder
             border.width: parent.activeFocus ? 2 : 1
         }
@@ -845,21 +1246,23 @@ Rectangle {
         signal clicked
         implicitHeight: 36
         radius: 8
-        color: !btn.enabled   ? root.colBorder
-             : btn.destructive ? (btnMa.containsMouse ? root.colError : root.colError + "cc")
-             : btn.accent      ? (btnMa.containsMouse ? Qt.lighter(root.colPrimary, 1.1) : root.colPrimary)
-                              : (btnMa.containsMouse ? root.colSurface2 : root.colSurface)
+        color: !btn.enabled      ? root.colBorder
+             : btn.destructive   ? (btnMa.containsMouse ? root.colError : root.colError + "cc")
+             : btn.accent        ? (btnMa.containsMouse ? Qt.lighter(root.colPrimary, 1.1) : root.colPrimary)
+                                 : (btnMa.containsMouse ? root.colSurface2 : root.colSurface)
         border.color: btn.accent || btn.destructive ? "transparent" : root.colBorder
         Behavior on color { ColorAnimation { duration: 80 } }
         Label {
             anchors.centerIn: parent
             text: btn.text
             color: btn.enabled ? "#fff" : root.colMuted
-            font { pixelSize: 13; bold: btn.accent }
+            font.pixelSize: 13
+            font.bold: btn.accent
         }
         MouseArea {
             id: btnMa
-            anchors.fill: parent; hoverEnabled: true
+            anchors.fill: parent
+            hoverEnabled: true
             enabled: btn.enabled
             cursorShape: btn.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
             onClicked: if (btn.enabled) btn.clicked()
