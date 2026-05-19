@@ -5,6 +5,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMetaObject>
+#include <QSettings>
 #include <QThreadPool>
 #include <QtConcurrent/QtConcurrent>
 
@@ -25,11 +26,11 @@ extern "C" {
 
 LezMultisigBackend::LezMultisigBackend(LogosAPI* /*api*/, QObject* parent)
     : QObject(parent)
-    , m_walletPath(qEnvironmentVariable("NSSA_WALLET_HOME_DIR", ".scaffold/wallet"))
-    , m_sequencerUrl(qEnvironmentVariable("NSSA_SEQUENCER_URL", "http://127.0.0.1:3040"))
 {
-    // Priority: explicit env var > baked-in compile-time constant
-    m_programIdHex = qEnvironmentVariable("LEZ_MULTISIG_PROGRAM_ID_HEX");
+    QSettings s("logos-co", "lez_multisig");
+    m_walletPath   = s.value("walletPath",   qEnvironmentVariable("NSSA_WALLET_HOME_DIR",  ".scaffold/wallet")).toString();
+    m_sequencerUrl = s.value("sequencerUrl", qEnvironmentVariable("NSSA_SEQUENCER_URL",   "http://127.0.0.1:3040")).toString();
+    m_programIdHex = s.value("programIdHex", qEnvironmentVariable("LEZ_MULTISIG_PROGRAM_ID_HEX")).toString();
     if (m_programIdHex.isEmpty()) {
         char* raw = lez_multisig_program_id();
         if (raw) {
@@ -41,6 +42,29 @@ LezMultisigBackend::LezMultisigBackend(LogosAPI* /*api*/, QObject* parent)
 }
 
 LezMultisigBackend::~LezMultisigBackend() = default;
+
+// ── Configuration ────────────────────────────────────────────────────────
+
+void LezMultisigBackend::setWalletPath(const QString& v) {
+    if (m_walletPath == v) return;
+    m_walletPath = v;
+    QSettings("logos-co", "lez_multisig").setValue("walletPath", v);
+    emit walletPathChanged();
+}
+
+void LezMultisigBackend::setSequencerUrl(const QString& v) {
+    if (m_sequencerUrl == v) return;
+    m_sequencerUrl = v;
+    QSettings("logos-co", "lez_multisig").setValue("sequencerUrl", v);
+    emit sequencerUrlChanged();
+}
+
+void LezMultisigBackend::setProgramIdHex(const QString& v) {
+    if (m_programIdHex == v) return;
+    m_programIdHex = v;
+    QSettings("logos-co", "lez_multisig").setValue("programIdHex", v);
+    emit programIdHexChanged();
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 

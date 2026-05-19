@@ -23,10 +23,13 @@ QWidget* LezMultisigPlugin::createWidget(LogosAPI* api) {
 	view->engine()->rootContext()->setContextProperty("backend", m_backend);
 	view->setResizeMode(QQuickWidget::SizeRootObjectToView);
 	const char* qmlPath = std::getenv("QML_PATH");
-	if (qmlPath)
+	if (qmlPath) {
 		view->setSource(QUrl::fromLocalFile(QString::fromUtf8(qmlPath) + "/Main.qml"));
-	else
+	} else {
+		// Qt does not auto-register embedded resources in dynamically loaded plugins.
+		Q_INIT_RESOURCE(lez_multisig_qml); // name must match qt_add_resources() in CMakeLists.txt
 		view->setSource(QUrl("qrc:/qml/Main.qml"));
+	}
 	return view;
 }
 

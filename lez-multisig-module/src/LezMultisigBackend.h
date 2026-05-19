@@ -23,6 +23,11 @@ class LezMultisigBackend : public QObject {
     Q_PROPERTY(QString    lastTxHash READ lastTxHash NOTIFY lastTxHashChanged)
     Q_PROPERTY(QVariantMap lastResult READ lastResult NOTIFY lastResultChanged)
 
+    // ── Configuration ────────────────────────────────────────────────────
+    Q_PROPERTY(QString walletPath   READ walletPath   WRITE setWalletPath   NOTIFY walletPathChanged)
+    Q_PROPERTY(QString sequencerUrl READ sequencerUrl WRITE setSequencerUrl NOTIFY sequencerUrlChanged)
+    Q_PROPERTY(QString programIdHex READ programIdHex WRITE setProgramIdHex NOTIFY programIdHexChanged)
+
 public:
     explicit LezMultisigBackend(LogosAPI* api, QObject* parent = nullptr);
     ~LezMultisigBackend() override;
@@ -31,6 +36,13 @@ public:
     QString    lastError()  const { return m_lastError; }
     QString    lastTxHash() const { return m_lastTxHash; }
     QVariantMap lastResult() const { return m_lastResult; }
+
+    QString walletPath()   const { return m_walletPath; }
+    QString sequencerUrl() const { return m_sequencerUrl; }
+    QString programIdHex() const { return m_programIdHex; }
+    Q_INVOKABLE void setWalletPath(const QString& v);
+    Q_INVOKABLE void setSequencerUrl(const QString& v);
+    Q_INVOKABLE void setProgramIdHex(const QString& v);
 
     // ── Instructions ──────────────────────────────────────────────────────
     Q_INVOKABLE void createMultisig(const QString& createKey, quint32 threshold, const QVariantList& members);
@@ -49,6 +61,9 @@ signals:
     void lastResultChanged();
     void operationSuccess(const QString& operation, const QString& txHash);
     void operationError(const QString& operation, const QString& error);
+    void walletPathChanged();
+    void sequencerUrlChanged();
+    void programIdHexChanged();
 
 private:
     using FfiFn = char* (*)(const char*);
