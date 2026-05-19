@@ -8,6 +8,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -17,17 +18,19 @@ class LezMultisigBackend : public QObject {
     Q_OBJECT
 
     // ── Async status ──────────────────────────────────────────────────────
-    Q_PROPERTY(bool    busy       READ busy       NOTIFY busyChanged)
-    Q_PROPERTY(QString lastError  READ lastError  NOTIFY lastErrorChanged)
-    Q_PROPERTY(QString lastTxHash READ lastTxHash NOTIFY lastTxHashChanged)
+    Q_PROPERTY(bool       busy       READ busy       NOTIFY busyChanged)
+    Q_PROPERTY(QString    lastError  READ lastError  NOTIFY lastErrorChanged)
+    Q_PROPERTY(QString    lastTxHash READ lastTxHash NOTIFY lastTxHashChanged)
+    Q_PROPERTY(QVariantMap lastResult READ lastResult NOTIFY lastResultChanged)
 
 public:
     explicit LezMultisigBackend(LogosAPI* api, QObject* parent = nullptr);
     ~LezMultisigBackend() override;
 
-    bool    busy()       const { return m_busy; }
-    QString lastError()  const { return m_lastError; }
-    QString lastTxHash() const { return m_lastTxHash; }
+    bool       busy()       const { return m_busy; }
+    QString    lastError()  const { return m_lastError; }
+    QString    lastTxHash() const { return m_lastTxHash; }
+    QVariantMap lastResult() const { return m_lastResult; }
 
     // ── Instructions ──────────────────────────────────────────────────────
     Q_INVOKABLE void createMultisig(const QString& createKey, quint32 threshold, const QVariantList& members);
@@ -43,6 +46,7 @@ signals:
     void busyChanged();
     void lastErrorChanged();
     void lastTxHashChanged();
+    void lastResultChanged();
     void operationSuccess(const QString& operation, const QString& txHash);
     void operationError(const QString& operation, const QString& error);
 
@@ -58,7 +62,10 @@ private:
     QString m_sequencerUrl;
     QString m_programIdHex;
 
-    bool    m_busy      = false;
-    QString m_lastError;
-    QString m_lastTxHash;
+    bool       m_busy      = false;
+    QString    m_lastError;
+    QString    m_lastTxHash;
+    QVariantMap m_lastResult;
 };
+
+// Expected environment variable: LEZ_MULTISIG_PROGRAM_ID_HEX

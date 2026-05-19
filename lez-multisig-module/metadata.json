@@ -12,7 +12,7 @@
     },
     "external_libraries": [
       {
-        "name": "lez_multisig_ffi",
+        "name": "multisig_program_ffi",
         "vendor_path": "lib"
       }
     ]

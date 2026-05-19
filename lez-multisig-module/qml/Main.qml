@@ -67,7 +67,7 @@ Item {
                         }
 
                         TextField {
-                            id: create_multisig_create_key_f
+                            id: create_multisig_create_keyf
                             Layout.fillWidth: true
                             placeholderText: "createKey"
                             color: root.colText
@@ -80,7 +80,7 @@ Item {
                         }
 
                         TextField {
-                            id: create_multisig_threshold_f
+                            id: create_multisig_thresholdf
                             Layout.fillWidth: true
                             placeholderText: "threshold"
                             color: root.colText
@@ -92,12 +92,13 @@ Item {
                             }
                         }
 
-                        TextField {
-                            id: create_multisig_members_f
+                        TextArea {
+                            id: create_multisig_membersf
                             Layout.fillWidth: true
-                            placeholderText: "members"
+                            implicitHeight: 72
+                            placeholderText: "members (one per line)"
                             color: root.colText
-                            placeholderTextColor: root.colMuted
+                            wrapMode: TextArea.Wrap
                             background: Rectangle {
                                 color: root.colBg
                                 border.color: root.colBorder
@@ -109,7 +110,7 @@ Item {
                             text: backend.busy ? "\u2026" : "CreateMultisig"
                             enabled: !backend.busy
                             Layout.alignment: Qt.AlignRight
-                            onClicked: backend.createMultisig(create_multisig_create_key_f.text, parseInt(create_multisig_threshold_f.text), create_multisig_members_f.text)
+                            onClicked: backend.createMultisig(create_multisig_create_keyf.text, parseInt(create_multisig_thresholdf.text), create_multisig_membersf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }))
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -144,7 +145,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_proposer_id_f
+                            id: propose_proposer_idf
                             Layout.fillWidth: true
                             placeholderText: "proposerId"
                             color: root.colText
@@ -157,7 +158,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_target_program_id_f
+                            id: propose_target_program_idf
                             Layout.fillWidth: true
                             placeholderText: "targetProgramId"
                             color: root.colText
@@ -169,12 +170,13 @@ Item {
                             }
                         }
 
-                        TextField {
-                            id: propose_target_instruction_data_f
+                        TextArea {
+                            id: propose_target_instruction_dataf
                             Layout.fillWidth: true
-                            placeholderText: "targetInstructionData"
+                            implicitHeight: 72
+                            placeholderText: "targetInstructionData (one per line)"
                             color: root.colText
-                            placeholderTextColor: root.colMuted
+                            wrapMode: TextArea.Wrap
                             background: Rectangle {
                                 color: root.colBg
                                 border.color: root.colBorder
@@ -183,7 +185,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_target_account_count_f
+                            id: propose_target_account_countf
                             Layout.fillWidth: true
                             placeholderText: "targetAccountCount"
                             color: root.colText
@@ -195,12 +197,27 @@ Item {
                             }
                         }
 
-                        TextField {
-                            id: propose_pda_seeds_f
+                        TextArea {
+                            id: propose_pda_seedsf
                             Layout.fillWidth: true
-                            placeholderText: "pdaSeeds"
+                            implicitHeight: 72
+                            placeholderText: "pdaSeeds (one per line)"
                             color: root.colText
-                            placeholderTextColor: root.colMuted
+                            wrapMode: TextArea.Wrap
+                            background: Rectangle {
+                                color: root.colBg
+                                border.color: root.colBorder
+                                radius: root.radius / 2
+                            }
+                        }
+
+                        TextArea {
+                            id: propose_authorized_indicesf
+                            Layout.fillWidth: true
+                            implicitHeight: 72
+                            placeholderText: "authorizedIndices (one per line)"
+                            color: root.colText
+                            wrapMode: TextArea.Wrap
                             background: Rectangle {
                                 color: root.colBg
                                 border.color: root.colBorder
@@ -209,20 +226,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_authorized_indices_f
-                            Layout.fillWidth: true
-                            placeholderText: "authorizedIndices"
-                            color: root.colText
-                            placeholderTextColor: root.colMuted
-                            background: Rectangle {
-                                color: root.colBg
-                                border.color: root.colBorder
-                                radius: root.radius / 2
-                            }
-                        }
-
-                        TextField {
-                            id: propose_create_key_f
+                            id: propose_create_keyf
                             Layout.fillWidth: true
                             placeholderText: "createKey"
                             color: root.colText
@@ -235,7 +239,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_proposal_index_f
+                            id: propose_proposal_indexf
                             Layout.fillWidth: true
                             placeholderText: "proposalIndex"
                             color: root.colText
@@ -251,7 +255,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Propose"
                             enabled: !backend.busy
                             Layout.alignment: Qt.AlignRight
-                            onClicked: backend.propose(propose_proposer_id_f.text, propose_target_program_id_f.text, propose_target_instruction_data_f.text, parseInt(propose_target_account_count_f.text), propose_pda_seeds_f.text, propose_authorized_indices_f.text, propose_create_key_f.text, parseInt(propose_proposal_index_f.text))
+                            onClicked: backend.propose(propose_proposer_idf.text, propose_target_program_idf.text, propose_target_instruction_dataf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }), parseInt(propose_target_account_countf.text), propose_pda_seedsf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }), propose_authorized_indicesf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }), propose_create_keyf.text, parseInt(propose_proposal_indexf.text))
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -286,7 +290,7 @@ Item {
                         }
 
                         TextField {
-                            id: approve_approver_id_f
+                            id: approve_approver_idf
                             Layout.fillWidth: true
                             placeholderText: "approverId"
                             color: root.colText
@@ -299,7 +303,7 @@ Item {
                         }
 
                         TextField {
-                            id: approve_proposal_index_f
+                            id: approve_proposal_indexf
                             Layout.fillWidth: true
                             placeholderText: "proposalIndex"
                             color: root.colText
@@ -312,7 +316,7 @@ Item {
                         }
 
                         TextField {
-                            id: approve_create_key_f
+                            id: approve_create_keyf
                             Layout.fillWidth: true
                             placeholderText: "createKey"
                             color: root.colText
@@ -328,7 +332,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Approve"
                             enabled: !backend.busy
                             Layout.alignment: Qt.AlignRight
-                            onClicked: backend.approve(approve_approver_id_f.text, parseInt(approve_proposal_index_f.text), approve_create_key_f.text)
+                            onClicked: backend.approve(approve_approver_idf.text, parseInt(approve_proposal_indexf.text), approve_create_keyf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -363,7 +367,7 @@ Item {
                         }
 
                         TextField {
-                            id: reject_rejector_id_f
+                            id: reject_rejector_idf
                             Layout.fillWidth: true
                             placeholderText: "rejectorId"
                             color: root.colText
@@ -376,7 +380,7 @@ Item {
                         }
 
                         TextField {
-                            id: reject_proposal_index_f
+                            id: reject_proposal_indexf
                             Layout.fillWidth: true
                             placeholderText: "proposalIndex"
                             color: root.colText
@@ -389,7 +393,7 @@ Item {
                         }
 
                         TextField {
-                            id: reject_create_key_f
+                            id: reject_create_keyf
                             Layout.fillWidth: true
                             placeholderText: "createKey"
                             color: root.colText
@@ -405,7 +409,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Reject"
                             enabled: !backend.busy
                             Layout.alignment: Qt.AlignRight
-                            onClicked: backend.reject(reject_rejector_id_f.text, parseInt(reject_proposal_index_f.text), reject_create_key_f.text)
+                            onClicked: backend.reject(reject_rejector_idf.text, parseInt(reject_proposal_indexf.text), reject_create_keyf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -440,7 +444,7 @@ Item {
                         }
 
                         TextField {
-                            id: execute_executor_id_f
+                            id: execute_executor_idf
                             Layout.fillWidth: true
                             placeholderText: "executorId"
                             color: root.colText
@@ -453,7 +457,7 @@ Item {
                         }
 
                         TextField {
-                            id: execute_proposal_index_f
+                            id: execute_proposal_indexf
                             Layout.fillWidth: true
                             placeholderText: "proposalIndex"
                             color: root.colText
@@ -466,7 +470,7 @@ Item {
                         }
 
                         TextField {
-                            id: execute_create_key_f
+                            id: execute_create_keyf
                             Layout.fillWidth: true
                             placeholderText: "createKey"
                             color: root.colText
@@ -482,7 +486,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Execute"
                             enabled: !backend.busy
                             Layout.alignment: Qt.AlignRight
-                            onClicked: backend.execute(execute_executor_id_f.text, parseInt(execute_proposal_index_f.text), execute_create_key_f.text)
+                            onClicked: backend.execute(execute_executor_idf.text, parseInt(execute_proposal_indexf.text), execute_create_keyf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -517,7 +521,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_add_member_proposer_id_f
+                            id: propose_add_member_proposer_idf
                             Layout.fillWidth: true
                             placeholderText: "proposerId"
                             color: root.colText
@@ -530,7 +534,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_add_member_new_member_f
+                            id: propose_add_member_new_memberf
                             Layout.fillWidth: true
                             placeholderText: "newMember"
                             color: root.colText
@@ -543,7 +547,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_add_member_create_key_f
+                            id: propose_add_member_create_keyf
                             Layout.fillWidth: true
                             placeholderText: "createKey"
                             color: root.colText
@@ -556,7 +560,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_add_member_proposal_index_f
+                            id: propose_add_member_proposal_indexf
                             Layout.fillWidth: true
                             placeholderText: "proposalIndex"
                             color: root.colText
@@ -572,7 +576,7 @@ Item {
                             text: backend.busy ? "\u2026" : "ProposeAddMember"
                             enabled: !backend.busy
                             Layout.alignment: Qt.AlignRight
-                            onClicked: backend.proposeAddMember(propose_add_member_proposer_id_f.text, propose_add_member_new_member_f.text, propose_add_member_create_key_f.text, parseInt(propose_add_member_proposal_index_f.text))
+                            onClicked: backend.proposeAddMember(propose_add_member_proposer_idf.text, propose_add_member_new_memberf.text, propose_add_member_create_keyf.text, parseInt(propose_add_member_proposal_indexf.text))
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -607,7 +611,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_remove_member_proposer_id_f
+                            id: propose_remove_member_proposer_idf
                             Layout.fillWidth: true
                             placeholderText: "proposerId"
                             color: root.colText
@@ -620,7 +624,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_remove_member_member_f
+                            id: propose_remove_member_memberf
                             Layout.fillWidth: true
                             placeholderText: "member"
                             color: root.colText
@@ -633,7 +637,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_remove_member_create_key_f
+                            id: propose_remove_member_create_keyf
                             Layout.fillWidth: true
                             placeholderText: "createKey"
                             color: root.colText
@@ -646,7 +650,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_remove_member_proposal_index_f
+                            id: propose_remove_member_proposal_indexf
                             Layout.fillWidth: true
                             placeholderText: "proposalIndex"
                             color: root.colText
@@ -662,7 +666,7 @@ Item {
                             text: backend.busy ? "\u2026" : "ProposeRemoveMember"
                             enabled: !backend.busy
                             Layout.alignment: Qt.AlignRight
-                            onClicked: backend.proposeRemoveMember(propose_remove_member_proposer_id_f.text, propose_remove_member_member_f.text, propose_remove_member_create_key_f.text, parseInt(propose_remove_member_proposal_index_f.text))
+                            onClicked: backend.proposeRemoveMember(propose_remove_member_proposer_idf.text, propose_remove_member_memberf.text, propose_remove_member_create_keyf.text, parseInt(propose_remove_member_proposal_indexf.text))
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -697,7 +701,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_change_threshold_proposer_id_f
+                            id: propose_change_threshold_proposer_idf
                             Layout.fillWidth: true
                             placeholderText: "proposerId"
                             color: root.colText
@@ -710,7 +714,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_change_threshold_new_threshold_f
+                            id: propose_change_threshold_new_thresholdf
                             Layout.fillWidth: true
                             placeholderText: "newThreshold"
                             color: root.colText
@@ -723,7 +727,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_change_threshold_create_key_f
+                            id: propose_change_threshold_create_keyf
                             Layout.fillWidth: true
                             placeholderText: "createKey"
                             color: root.colText
@@ -736,7 +740,7 @@ Item {
                         }
 
                         TextField {
-                            id: propose_change_threshold_proposal_index_f
+                            id: propose_change_threshold_proposal_indexf
                             Layout.fillWidth: true
                             placeholderText: "proposalIndex"
                             color: root.colText
@@ -752,7 +756,7 @@ Item {
                             text: backend.busy ? "\u2026" : "ProposeChangeThreshold"
                             enabled: !backend.busy
                             Layout.alignment: Qt.AlignRight
-                            onClicked: backend.proposeChangeThreshold(propose_change_threshold_proposer_id_f.text, parseInt(propose_change_threshold_new_threshold_f.text), propose_change_threshold_create_key_f.text, parseInt(propose_change_threshold_proposal_index_f.text))
+                            onClicked: backend.proposeChangeThreshold(propose_change_threshold_proposer_idf.text, parseInt(propose_change_threshold_new_thresholdf.text), propose_change_threshold_create_keyf.text, parseInt(propose_change_threshold_proposal_indexf.text))
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2

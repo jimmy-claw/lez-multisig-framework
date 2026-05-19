@@ -18,7 +18,6 @@ extern "C" {
     char* multisig_program_propose_remove_member(const char* args_json);
     char* multisig_program_propose_change_threshold(const char* args_json);
     void  multisig_program_free_string(char* s);
-    // NOTE: lez_multisig_program_id() uses the stable wrapper prefix (baked-in at compile time)
     char* lez_multisig_program_id();
 }
 
@@ -90,6 +89,9 @@ void LezMultisigBackend::handleFfiResult(const QString& operation, const QString
     m_lastError.clear();
     emit lastErrorChanged();
 
+    m_lastResult = obj.toVariantMap();
+    emit lastResultChanged();
+
     if (obj.contains("tx_hash")) {
         m_lastTxHash = obj.value("tx_hash").toString();
         emit lastTxHashChanged();
@@ -105,7 +107,7 @@ void LezMultisigBackend::createMultisig(const QString& createKey, quint32 thresh
     args["threshold"] = static_cast<int>(threshold);
     {
         QJsonArray _arr;
-        for (const auto& _s : members) _arr.append(_s.toString());
+        for (const QVariant& _v : members) _arr.append(QJsonValue::fromVariant(_v));
         args["members"] = _arr;
     }
     dispatchFfi("create_multisig", [this, args]() {
@@ -119,18 +121,18 @@ void LezMultisigBackend::propose(const QString& proposerId, const QString& targe
     args["target_program_id"] = targetProgramId;
     {
         QJsonArray _arr;
-        for (const auto& _s : targetInstructionData) _arr.append(_s.toString());
+        for (const QVariant& _v : targetInstructionData) _arr.append(QJsonValue::fromVariant(_v));
         args["target_instruction_data"] = _arr;
     }
     args["target_account_count"] = static_cast<int>(targetAccountCount);
     {
         QJsonArray _arr;
-        for (const auto& _s : pdaSeeds) _arr.append(_s.toString());
+        for (const QVariant& _v : pdaSeeds) _arr.append(QJsonValue::fromVariant(_v));
         args["pda_seeds"] = _arr;
     }
     {
         QJsonArray _arr;
-        for (const auto& _s : authorizedIndices) _arr.append(_s.toString());
+        for (const QVariant& _v : authorizedIndices) _arr.append(QJsonValue::fromVariant(_v));
         args["authorized_indices"] = _arr;
     }
     args["create_key"] = createKey;
