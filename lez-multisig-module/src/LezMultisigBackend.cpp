@@ -17,8 +17,8 @@ extern "C" {
     char* multisig_program_propose_add_member(const char* args_json);
     char* multisig_program_propose_remove_member(const char* args_json);
     char* multisig_program_propose_change_threshold(const char* args_json);
-    void  multisig_program_free_string(char* s);
     char* lez_multisig_program_id();
+    void  multisig_program_free_string(char* s);
 }
 
 // ── Construction ──────────────────────────────────────────────────────────
@@ -96,6 +96,8 @@ void LezMultisigBackend::handleFfiResult(const QString& operation, const QString
         m_lastTxHash = obj.value("tx_hash").toString();
         emit lastTxHashChanged();
         emit operationSuccess(operation, m_lastTxHash);
+    } else {
+        emit operationSuccess(operation, QString());
     }
 }
 

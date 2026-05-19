@@ -12,7 +12,7 @@ nix_packages:
   runtime: []
 
 external_libraries:
-  - name: multisig_program_ffi
+  - name: lez_multisig_ffi
     vendor_path: lib
 
 cmake:
