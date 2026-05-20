@@ -18,6 +18,8 @@ extern "C" {
     char* multisig_program_propose_add_member(const char* args_json);
     char* multisig_program_propose_remove_member(const char* args_json);
     char* multisig_program_propose_change_threshold(const char* args_json);
+    char* multisig_program_fetch_multisig_state(const char* args_json);
+    char* multisig_program_fetch_proposal(const char* args_json);
     char* lez_multisig_program_id();
     void  multisig_program_free_string(char* s);
 }
@@ -141,7 +143,7 @@ void LezMultisigBackend::createMultisig(const QString& createKey, quint32 thresh
     });
 }
 
-void LezMultisigBackend::propose(const QString& proposerId, const QString& targetProgramId, const QVariantList& targetInstructionData, quint32 targetAccountCount, const QVariantList& pdaSeeds, const QVariantList& authorizedIndices, const QString& createKey, quint64 proposalIndex) {
+void LezMultisigBackend::propose(const QString& proposerId, const QString& targetProgramId, const QVariantList& targetInstructionData, quint32 targetAccountCount, const QVariantList& pdaSeeds, const QVariantList& authorizedIndices, const QString& createKey, const QString& proposalIndex) {
     QJsonObject args = baseArgs();
     args["proposer"] = proposerId;
     args["target_program_id"] = targetProgramId;
@@ -162,72 +164,105 @@ void LezMultisigBackend::propose(const QString& proposerId, const QString& targe
         args["authorized_indices"] = _arr;
     }
     args["create_key"] = createKey;
-    args["proposal_index"] = static_cast<qint64>(proposalIndex);
+    args["proposal_index"] = proposalIndex;
     dispatchFfi("propose", [this, args]() {
         return callFfi(multisig_program_propose, args);
     });
 }
 
-void LezMultisigBackend::approve(const QString& approverId, quint64 proposalIndex, const QString& createKey) {
+void LezMultisigBackend::approve(const QString& approverId, const QString& proposalIndex, const QString& createKey) {
     QJsonObject args = baseArgs();
     args["approver"] = approverId;
-    args["proposal_index"] = static_cast<qint64>(proposalIndex);
+    args["proposal_index"] = proposalIndex;
     args["create_key"] = createKey;
     dispatchFfi("approve", [this, args]() {
         return callFfi(multisig_program_approve, args);
     });
 }
 
-void LezMultisigBackend::reject(const QString& rejectorId, quint64 proposalIndex, const QString& createKey) {
+void LezMultisigBackend::reject(const QString& rejectorId, const QString& proposalIndex, const QString& createKey) {
     QJsonObject args = baseArgs();
     args["rejector"] = rejectorId;
-    args["proposal_index"] = static_cast<qint64>(proposalIndex);
+    args["proposal_index"] = proposalIndex;
     args["create_key"] = createKey;
     dispatchFfi("reject", [this, args]() {
         return callFfi(multisig_program_reject, args);
     });
 }
 
-void LezMultisigBackend::execute(const QString& executorId, quint64 proposalIndex, const QString& createKey) {
+void LezMultisigBackend::execute(const QString& executorId, const QString& proposalIndex, const QString& createKey) {
     QJsonObject args = baseArgs();
     args["executor"] = executorId;
-    args["proposal_index"] = static_cast<qint64>(proposalIndex);
+    args["proposal_index"] = proposalIndex;
     args["create_key"] = createKey;
     dispatchFfi("execute", [this, args]() {
         return callFfi(multisig_program_execute, args);
     });
 }
 
-void LezMultisigBackend::proposeAddMember(const QString& proposerId, const QString& newMember, const QString& createKey, quint64 proposalIndex) {
+void LezMultisigBackend::proposeAddMember(const QString& proposerId, const QString& newMember, const QString& createKey, const QString& proposalIndex) {
     QJsonObject args = baseArgs();
     args["proposer"] = proposerId;
     args["new_member"] = newMember;
     args["create_key"] = createKey;
-    args["proposal_index"] = static_cast<qint64>(proposalIndex);
+    args["proposal_index"] = proposalIndex;
     dispatchFfi("propose_add_member", [this, args]() {
         return callFfi(multisig_program_propose_add_member, args);
     });
 }
 
-void LezMultisigBackend::proposeRemoveMember(const QString& proposerId, const QString& member, const QString& createKey, quint64 proposalIndex) {
+void LezMultisigBackend::proposeRemoveMember(const QString& proposerId, const QString& member, const QString& createKey, const QString& proposalIndex) {
     QJsonObject args = baseArgs();
     args["proposer"] = proposerId;
     args["member"] = member;
     args["create_key"] = createKey;
-    args["proposal_index"] = static_cast<qint64>(proposalIndex);
+    args["proposal_index"] = proposalIndex;
     dispatchFfi("propose_remove_member", [this, args]() {
         return callFfi(multisig_program_propose_remove_member, args);
     });
 }
 
-void LezMultisigBackend::proposeChangeThreshold(const QString& proposerId, quint32 newThreshold, const QString& createKey, quint64 proposalIndex) {
+void LezMultisigBackend::proposeChangeThreshold(const QString& proposerId, quint32 newThreshold, const QString& createKey, const QString& proposalIndex) {
     QJsonObject args = baseArgs();
     args["proposer"] = proposerId;
     args["new_threshold"] = static_cast<int>(newThreshold);
     args["create_key"] = createKey;
-    args["proposal_index"] = static_cast<qint64>(proposalIndex);
+    args["proposal_index"] = proposalIndex;
     dispatchFfi("propose_change_threshold", [this, args]() {
         return callFfi(multisig_program_propose_change_threshold, args);
+    });
+}
+
+// ── Fetch ────────────────────────────────────────────────────────────────
+
+void LezMultisigBackend::fetchMultisigState(const QString& createKey) {
+    QJsonObject args = baseArgs();
+    args["create_key"] = createKey;
+    QThreadPool::globalInstance()->start([this, args]() {
+        QString result = callFfi(multisig_program_fetch_multisig_state, args);
+        QMetaObject::invokeMethod(this, [this, result]() {
+            QJsonObject obj = QJsonDocument::fromJson(result.toUtf8()).object();
+            if (obj.value("success").toBool() && obj.contains("state")) {
+                m_multisigState = obj.value("state").toObject().toVariantMap();
+                emit multisigStateChanged();
+            }
+        }, Qt::QueuedConnection);
+    });
+}
+
+void LezMultisigBackend::fetchProposal(const QString& createKey, const QString& proposalIndex) {
+    QJsonObject args = baseArgs();
+    args["create_key"] = createKey;
+    args["proposal_index"] = proposalIndex;
+    QThreadPool::globalInstance()->start([this, args]() {
+        QString result = callFfi(multisig_program_fetch_proposal, args);
+        QMetaObject::invokeMethod(this, [this, result]() {
+            QJsonObject obj = QJsonDocument::fromJson(result.toUtf8()).object();
+            if (obj.value("success").toBool() && obj.contains("state")) {
+                m_proposal = obj.value("state").toObject().toVariantMap();
+                emit proposalChanged();
+            }
+        }, Qt::QueuedConnection);
     });
 }
 

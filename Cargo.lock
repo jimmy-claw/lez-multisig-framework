@@ -2965,7 +2965,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "spel-framework-core",
+ "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
  "tokio",
  "wallet",
 ]
@@ -2976,7 +2976,7 @@ version = "0.1.0"
 dependencies = [
  "multisig_program",
  "serde_json",
- "spel-framework",
+ "spel-framework 0.3.0 (git+https://github.com/logos-co/spel.git?rev=4b8a71c)",
 ]
 
 [[package]]
@@ -3747,7 +3747,7 @@ dependencies = [
  "nssa_core",
  "risc0-zkvm",
  "serde_json",
- "spel-framework",
+ "spel-framework 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
 ]
 
 [[package]]
@@ -3764,6 +3764,7 @@ dependencies = [
  "borsh",
  "nssa_core",
  "serde",
+ "spel-framework 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
 ]
 
 [[package]]
@@ -3775,7 +3776,7 @@ dependencies = [
  "nssa_core",
  "risc0-zkvm",
  "serde",
- "spel-framework",
+ "spel-framework 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
 ]
 
 [[package]]
@@ -5552,7 +5553,7 @@ dependencies = [
  "sequencer_service_rpc",
  "serde",
  "serde_json",
- "spel-framework-core",
+ "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
  "tokio",
  "toml",
  "wallet",
@@ -5566,8 +5567,20 @@ dependencies = [
  "borsh",
  "nssa_core",
  "serde_json",
- "spel-framework-core",
- "spel-framework-macros",
+ "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
+ "spel-framework-macros 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
+]
+
+[[package]]
+name = "spel-framework"
+version = "0.3.0"
+source = "git+https://github.com/logos-co/spel.git?rev=4b8a71c#4b8a71c4956992411f826045ab734d7454c0a4a4"
+dependencies = [
+ "borsh",
+ "nssa_core",
+ "serde_json",
+ "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?rev=4b8a71c)",
+ "spel-framework-macros 0.3.0 (git+https://github.com/logos-co/spel.git?rev=4b8a71c)",
 ]
 
 [[package]]
@@ -5586,6 +5599,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "spel-framework-core"
+version = "0.3.0"
+source = "git+https://github.com/logos-co/spel.git?rev=4b8a71c#4b8a71c4956992411f826045ab734d7454c0a4a4"
+dependencies = [
+ "borsh",
+ "nssa_core",
+ "proc-macro2",
+ "serde",
+ "serde_json",
+ "sha2",
+ "syn 2.0.117",
+ "thiserror 1.0.69",
+ "toml",
+]
+
+[[package]]
 name = "spel-framework-macros"
 version = "0.3.0"
 source = "git+https://github.com/logos-co/spel.git?tag=v0.3.0#ea07765e4291bd253e1de267ddb1cde0e38062d3"
@@ -5594,7 +5623,20 @@ dependencies = [
  "quote",
  "serde_json",
  "sha2",
- "spel-framework-core",
+ "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "spel-framework-macros"
+version = "0.3.0"
+source = "git+https://github.com/logos-co/spel.git?rev=4b8a71c#4b8a71c4956992411f826045ab734d7454c0a4a4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "sha2",
+ "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?rev=4b8a71c)",
  "syn 2.0.117",
 ]
 

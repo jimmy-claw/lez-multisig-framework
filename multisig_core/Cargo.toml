@@ -7,3 +7,4 @@ edition = "2024"
 nssa_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3" }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 borsh = "1.5.7"
+spel-framework = { git = "https://github.com/logos-co/spel.git", tag = "v0.3.0" }

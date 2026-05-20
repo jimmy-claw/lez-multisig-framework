@@ -6,6 +6,8 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
+    property int currentPageIndex: 0
+
     // ── Logos palette ────────────────────────────────────────────────
     readonly property color colBg:      "#0f1117"
     readonly property color colSurface: "#1a1d27"
@@ -61,28 +63,227 @@ Item {
 
                 Rectangle { Layout.fillWidth: true; height: 1; color: root.colBorder }
 
-                ListView {
-                    id: navList
+                ScrollView {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    currentIndex: 0
                     clip: true
-                    model: ["Create Multisig", "Propose", "Approve", "Reject", "Execute", "Propose Add Member", "Propose Remove Member", "Propose Change Threshold", "Settings"]
+                    contentWidth: sidebar.width
 
-                    delegate: ItemDelegate {
-                        width: ListView.view.width
-                        height: 40
-                        onClicked: navList.currentIndex = index
-                        background: Rectangle {
-                            color: navList.currentIndex === index
-                                   ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
-                        }
-                        contentItem: Text {
-                            text: modelData
-                            color: navList.currentIndex === index ? root.colPrimary : root.colText
-                            font.pixelSize: 13
-                            leftPadding: 16
+                    Column {
+                        width: sidebar.width
+
+                        Text {
+                            x: 12; width: sidebar.width - 12; height: 28
+                            text: "ACCOUNTS"
+                            color: root.colMuted
+                            font.pixelSize: 10
+                            font.letterSpacing: 1
+                            font.bold: true
                             verticalAlignment: Text.AlignVCenter
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 0
+                            background: Rectangle {
+                                color: root.currentPageIndex === 0
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Multisig State"
+                                color: root.currentPageIndex === 0 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 1
+                            background: Rectangle {
+                                color: root.currentPageIndex === 1
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Proposal"
+                                color: root.currentPageIndex === 1 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        Rectangle {
+                            width: sidebar.width
+                            height: 1
+                            color: root.colBorder
+                        }
+                        Text {
+                            x: 12; width: sidebar.width - 12; height: 28
+                            text: "INSTRUCTIONS"
+                            color: root.colMuted
+                            font.pixelSize: 10
+                            font.letterSpacing: 1
+                            font.bold: true
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 2
+                            background: Rectangle {
+                                color: root.currentPageIndex === 2
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Create Multisig"
+                                color: root.currentPageIndex === 2 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 3
+                            background: Rectangle {
+                                color: root.currentPageIndex === 3
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Propose"
+                                color: root.currentPageIndex === 3 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 4
+                            background: Rectangle {
+                                color: root.currentPageIndex === 4
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Approve"
+                                color: root.currentPageIndex === 4 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 5
+                            background: Rectangle {
+                                color: root.currentPageIndex === 5
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Reject"
+                                color: root.currentPageIndex === 5 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 6
+                            background: Rectangle {
+                                color: root.currentPageIndex === 6
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Execute"
+                                color: root.currentPageIndex === 6 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 7
+                            background: Rectangle {
+                                color: root.currentPageIndex === 7
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Propose Add Member"
+                                color: root.currentPageIndex === 7 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 8
+                            background: Rectangle {
+                                color: root.currentPageIndex === 8
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Propose Remove Member"
+                                color: root.currentPageIndex === 8 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 9
+                            background: Rectangle {
+                                color: root.currentPageIndex === 9
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Propose Change Threshold"
+                                color: root.currentPageIndex === 9 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                        Rectangle {
+                            width: sidebar.width
+                            height: 1
+                            color: root.colBorder
+                        }
+                        Text {
+                            x: 12; width: sidebar.width - 12; height: 28
+                            text: "SETTINGS"
+                            color: root.colMuted
+                            font.pixelSize: 10
+                            font.letterSpacing: 1
+                            font.bold: true
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        ItemDelegate {
+                            width: sidebar.width
+                            height: 40
+                            onClicked: root.currentPageIndex = 10
+                            background: Rectangle {
+                                color: root.currentPageIndex === 10
+                                       ? Qt.rgba(0.49, 0.43, 0.96, 0.15) : "transparent"
+                            }
+                            contentItem: Text {
+                                text: "Settings"
+                                color: root.currentPageIndex === 10 ? root.colPrimary : root.colText
+                                font.pixelSize: 13
+                                leftPadding: 16
+                                verticalAlignment: Text.AlignVCenter
+                            }
                         }
                     }
                 }
@@ -93,7 +294,206 @@ Item {
         StackLayout {
             id: pageStack
             anchors { left: sidebar.right; right: parent.right; top: parent.top; bottom: parent.bottom }
-            currentIndex: navList.currentIndex
+            currentIndex: root.currentPageIndex
+
+            Item {
+                id: pageFetchMultisigState
+                Rectangle { anchors.fill: parent; color: root.colSurface }
+                ScrollView {
+                    anchors.fill: parent; clip: true
+                    contentWidth: availableWidth
+
+                    ColumnLayout {
+                        width: pageFetchMultisigState.width; spacing: 12
+
+                        Item { Layout.fillWidth: true; height: 24 }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 24; Layout.rightMargin: 24
+                            Text {
+                                text: "Multisig State"
+                                color: root.colText
+                                font.pixelSize: 18; font.bold: true
+                                Layout.fillWidth: true
+                            }
+                            Button {
+                                text: "\u21ba"
+                                onClicked: backend.fetchMultisigState(fetchMultisigState_create_key_f.text)
+                                background: Rectangle {
+                                    color: root.colSurface; border.color: root.colBorder; radius: root.radius / 2
+                                }
+                                contentItem: Text {
+                                    text: parent.text; color: root.colMuted
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+                        }
+
+                        TextField {
+                            id: fetchMultisigState_create_key_f
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "createKey (seed)"
+                            color: root.colText
+                            placeholderTextColor: root.colMuted
+                            background: Rectangle {
+                                color: root.colSurface
+                                border.color: root.colBorder
+                                radius: root.radius / 2
+                            }
+                        }
+
+                        Repeater {
+                            model: Object.keys(backend.multisigState)
+                            delegate: RowLayout {
+                                Layout.fillWidth: true
+                                Layout.leftMargin: 24
+                                Layout.rightMargin: 8
+                                Text { text: modelData + ":"; color: root.colMuted; font.pixelSize: 12; Layout.preferredWidth: 140 }
+                                Text {
+                                    property var _v: backend.multisigState[modelData]
+                                    text: Array.isArray(_v) ? _v.join("\n") : (_v ?? "")
+                                    color: root.colText; font.pixelSize: 12
+                                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                                    Layout.fillWidth: true
+                                }
+                                Button {
+                                    implicitWidth: 28; implicitHeight: 28
+                                    property var _v: backend.multisigState[modelData]
+                                    onClicked: clipHelper.copyText(Array.isArray(_v) ? _v.join("\n") : (_v ?? ""))
+                                    background: Item {}
+                                    contentItem: Text {
+                                        text: "\u29C9"
+                                        color: root.colMuted
+                                        font.pixelSize: 14
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            visible: Object.keys(backend.multisigState).length === 0
+                            text: "No data — press \u21ba to fetch."
+                            color: root.colMuted; font.pixelSize: 12
+                            Layout.leftMargin: 24
+                        }
+
+                        Item { Layout.fillWidth: true; height: 80 }
+                    }
+                }
+            }
+
+            Item {
+                id: pageFetchProposal
+                Rectangle { anchors.fill: parent; color: root.colSurface }
+                ScrollView {
+                    anchors.fill: parent; clip: true
+                    contentWidth: availableWidth
+
+                    ColumnLayout {
+                        width: pageFetchProposal.width; spacing: 12
+
+                        Item { Layout.fillWidth: true; height: 24 }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 24; Layout.rightMargin: 24
+                            Text {
+                                text: "Proposal"
+                                color: root.colText
+                                font.pixelSize: 18; font.bold: true
+                                Layout.fillWidth: true
+                            }
+                            Button {
+                                text: "\u21ba"
+                                onClicked: backend.fetchProposal(fetchProposal_create_key_f.text, parseInt(fetchProposal_proposal_index_f.text))
+                                background: Rectangle {
+                                    color: root.colSurface; border.color: root.colBorder; radius: root.radius / 2
+                                }
+                                contentItem: Text {
+                                    text: parent.text; color: root.colMuted
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+                        }
+
+                        TextField {
+                            id: fetchProposal_create_key_f
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "createKey (seed)"
+                            color: root.colText
+                            placeholderTextColor: root.colMuted
+                            background: Rectangle {
+                                color: root.colSurface
+                                border.color: root.colBorder
+                                radius: root.radius / 2
+                            }
+                        }
+
+                        TextField {
+                            id: fetchProposal_proposal_index_f
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "proposalIndex (seed)"
+                            color: root.colText
+                            placeholderTextColor: root.colMuted
+                            background: Rectangle {
+                                color: root.colSurface
+                                border.color: root.colBorder
+                                radius: root.radius / 2
+                            }
+                        }
+
+                        Repeater {
+                            model: Object.keys(backend.proposal)
+                            delegate: RowLayout {
+                                Layout.fillWidth: true
+                                Layout.leftMargin: 24
+                                Layout.rightMargin: 8
+                                Text { text: modelData + ":"; color: root.colMuted; font.pixelSize: 12; Layout.preferredWidth: 140 }
+                                Text {
+                                    property var _v: backend.proposal[modelData]
+                                    text: Array.isArray(_v) ? _v.join("\n") : (_v ?? "")
+                                    color: root.colText; font.pixelSize: 12
+                                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                                    Layout.fillWidth: true
+                                }
+                                Button {
+                                    implicitWidth: 28; implicitHeight: 28
+                                    property var _v: backend.proposal[modelData]
+                                    onClicked: clipHelper.copyText(Array.isArray(_v) ? _v.join("\n") : (_v ?? ""))
+                                    background: Item {}
+                                    contentItem: Text {
+                                        text: "\u29C9"
+                                        color: root.colMuted
+                                        font.pixelSize: 14
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            visible: Object.keys(backend.proposal).length === 0
+                            text: "No data — press \u21ba to fetch."
+                            color: root.colMuted; font.pixelSize: 12
+                            Layout.leftMargin: 24
+                        }
+
+                        Item { Layout.fillWidth: true; height: 80 }
+                    }
+                }
+            }
 
             Item {
                 id: pageCreateMultisig
@@ -109,15 +509,23 @@ Item {
                         Text {
                             text: "Create Multisig"
                             color: root.colText
-                            font.pixelSize: 18; font.bold: true
+                            font.pixelSize: 18
+                            font.bold: true
                             Layout.leftMargin: 24
                         }
 
+                        Text {
+                            text: "createKey"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: create_multisig_create_keyf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "createKey"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -127,11 +535,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "threshold"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: create_multisig_thresholdf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "threshold"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            validator: IntValidator { bottom: 0; top: 255 }
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -141,6 +557,12 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "members"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextArea {
                             id: create_multisig_membersf
                             Layout.fillWidth: true
@@ -191,15 +613,23 @@ Item {
                         Text {
                             text: "Propose"
                             color: root.colText
-                            font.pixelSize: 18; font.bold: true
+                            font.pixelSize: 18
+                            font.bold: true
                             Layout.leftMargin: 24
                         }
 
+                        Text {
+                            text: "proposerId"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_proposer_idf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposerId"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -209,11 +639,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "targetProgramId"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_target_program_idf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "targetProgramId"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "value"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -223,6 +660,12 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "targetInstructionData"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextArea {
                             id: propose_target_instruction_dataf
                             Layout.fillWidth: true
@@ -237,11 +680,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "targetAccountCount"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_target_account_countf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "targetAccountCount"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            validator: IntValidator { bottom: 0; top: 255 }
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -251,6 +702,12 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "pdaSeeds"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextArea {
                             id: propose_pda_seedsf
                             Layout.fillWidth: true
@@ -265,6 +722,12 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "authorizedIndices"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextArea {
                             id: propose_authorized_indicesf
                             Layout.fillWidth: true
@@ -279,11 +742,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "createKey"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_create_keyf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "createKey"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -293,11 +763,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "proposalIndex"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_proposal_indexf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposalIndex"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            inputMethodHints: Qt.ImhDigitsOnly
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -311,7 +789,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Propose"
                             enabled: !backend.busy
                             Layout.rightMargin: 24; Layout.alignment: Qt.AlignRight
-                            onClicked: backend.propose(propose_proposer_idf.text, propose_target_program_idf.text, propose_target_instruction_dataf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }), parseInt(propose_target_account_countf.text), propose_pda_seedsf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }), propose_authorized_indicesf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }), propose_create_keyf.text, parseInt(propose_proposal_indexf.text))
+                            onClicked: backend.propose(propose_proposer_idf.text, propose_target_program_idf.text, propose_target_instruction_dataf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }), parseInt(propose_target_account_countf.text), propose_pda_seedsf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }), propose_authorized_indicesf.text.split("\n").map(function(s){ return s.trim() }).filter(function(s){ return s.length > 0 }), propose_create_keyf.text, propose_proposal_indexf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -343,15 +821,23 @@ Item {
                         Text {
                             text: "Approve"
                             color: root.colText
-                            font.pixelSize: 18; font.bold: true
+                            font.pixelSize: 18
+                            font.bold: true
                             Layout.leftMargin: 24
                         }
 
+                        Text {
+                            text: "approverId"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: approve_approver_idf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "approverId"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -361,11 +847,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "proposalIndex"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: approve_proposal_indexf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposalIndex"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            inputMethodHints: Qt.ImhDigitsOnly
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -375,11 +869,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "createKey"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: approve_create_keyf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "createKey"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -393,7 +894,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Approve"
                             enabled: !backend.busy
                             Layout.rightMargin: 24; Layout.alignment: Qt.AlignRight
-                            onClicked: backend.approve(approve_approver_idf.text, parseInt(approve_proposal_indexf.text), approve_create_keyf.text)
+                            onClicked: backend.approve(approve_approver_idf.text, approve_proposal_indexf.text, approve_create_keyf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -425,15 +926,23 @@ Item {
                         Text {
                             text: "Reject"
                             color: root.colText
-                            font.pixelSize: 18; font.bold: true
+                            font.pixelSize: 18
+                            font.bold: true
                             Layout.leftMargin: 24
                         }
 
+                        Text {
+                            text: "rejectorId"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: reject_rejector_idf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "rejectorId"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -443,11 +952,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "proposalIndex"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: reject_proposal_indexf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposalIndex"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            inputMethodHints: Qt.ImhDigitsOnly
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -457,11 +974,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "createKey"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: reject_create_keyf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "createKey"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -475,7 +999,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Reject"
                             enabled: !backend.busy
                             Layout.rightMargin: 24; Layout.alignment: Qt.AlignRight
-                            onClicked: backend.reject(reject_rejector_idf.text, parseInt(reject_proposal_indexf.text), reject_create_keyf.text)
+                            onClicked: backend.reject(reject_rejector_idf.text, reject_proposal_indexf.text, reject_create_keyf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -507,15 +1031,23 @@ Item {
                         Text {
                             text: "Execute"
                             color: root.colText
-                            font.pixelSize: 18; font.bold: true
+                            font.pixelSize: 18
+                            font.bold: true
                             Layout.leftMargin: 24
                         }
 
+                        Text {
+                            text: "executorId"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: execute_executor_idf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "executorId"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -525,11 +1057,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "proposalIndex"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: execute_proposal_indexf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposalIndex"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            inputMethodHints: Qt.ImhDigitsOnly
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -539,11 +1079,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "createKey"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: execute_create_keyf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "createKey"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -557,7 +1104,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Execute"
                             enabled: !backend.busy
                             Layout.rightMargin: 24; Layout.alignment: Qt.AlignRight
-                            onClicked: backend.execute(execute_executor_idf.text, parseInt(execute_proposal_indexf.text), execute_create_keyf.text)
+                            onClicked: backend.execute(execute_executor_idf.text, execute_proposal_indexf.text, execute_create_keyf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -589,15 +1136,23 @@ Item {
                         Text {
                             text: "Propose Add Member"
                             color: root.colText
-                            font.pixelSize: 18; font.bold: true
+                            font.pixelSize: 18
+                            font.bold: true
                             Layout.leftMargin: 24
                         }
 
+                        Text {
+                            text: "proposerId"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_add_member_proposer_idf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposerId"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -607,11 +1162,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "newMember"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_add_member_new_memberf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "newMember"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -621,11 +1183,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "createKey"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_add_member_create_keyf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "createKey"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -635,11 +1204,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "proposalIndex"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_add_member_proposal_indexf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposalIndex"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            inputMethodHints: Qt.ImhDigitsOnly
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -653,7 +1230,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Propose Add Member"
                             enabled: !backend.busy
                             Layout.rightMargin: 24; Layout.alignment: Qt.AlignRight
-                            onClicked: backend.proposeAddMember(propose_add_member_proposer_idf.text, propose_add_member_new_memberf.text, propose_add_member_create_keyf.text, parseInt(propose_add_member_proposal_indexf.text))
+                            onClicked: backend.proposeAddMember(propose_add_member_proposer_idf.text, propose_add_member_new_memberf.text, propose_add_member_create_keyf.text, propose_add_member_proposal_indexf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -685,15 +1262,23 @@ Item {
                         Text {
                             text: "Propose Remove Member"
                             color: root.colText
-                            font.pixelSize: 18; font.bold: true
+                            font.pixelSize: 18
+                            font.bold: true
                             Layout.leftMargin: 24
                         }
 
+                        Text {
+                            text: "proposerId"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_remove_member_proposer_idf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposerId"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -703,11 +1288,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "member"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_remove_member_memberf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "member"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -717,11 +1309,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "createKey"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_remove_member_create_keyf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "createKey"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -731,11 +1330,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "proposalIndex"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_remove_member_proposal_indexf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposalIndex"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            inputMethodHints: Qt.ImhDigitsOnly
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -749,7 +1356,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Propose Remove Member"
                             enabled: !backend.busy
                             Layout.rightMargin: 24; Layout.alignment: Qt.AlignRight
-                            onClicked: backend.proposeRemoveMember(propose_remove_member_proposer_idf.text, propose_remove_member_memberf.text, propose_remove_member_create_keyf.text, parseInt(propose_remove_member_proposal_indexf.text))
+                            onClicked: backend.proposeRemoveMember(propose_remove_member_proposer_idf.text, propose_remove_member_memberf.text, propose_remove_member_create_keyf.text, propose_remove_member_proposal_indexf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -781,15 +1388,23 @@ Item {
                         Text {
                             text: "Propose Change Threshold"
                             color: root.colText
-                            font.pixelSize: 18; font.bold: true
+                            font.pixelSize: 18
+                            font.bold: true
                             Layout.leftMargin: 24
                         }
 
+                        Text {
+                            text: "proposerId"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_change_threshold_proposer_idf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposerId"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -799,11 +1414,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "newThreshold"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_change_threshold_new_thresholdf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "newThreshold"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            validator: IntValidator { bottom: 0; top: 255 }
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -813,11 +1436,18 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "createKey"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_change_threshold_create_keyf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "createKey"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "base58 or 0x… hex"
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -827,11 +1457,19 @@ Item {
                             }
                         }
 
+                        Text {
+                            text: "proposalIndex"
+                            color: root.colMuted
+                            font.pixelSize: 11
+                            Layout.leftMargin: 24
+                        }
                         TextField {
                             id: propose_change_threshold_proposal_indexf
                             Layout.fillWidth: true
-                            Layout.leftMargin: 24; Layout.rightMargin: 24
-                            placeholderText: "proposalIndex"
+                            Layout.leftMargin: 24
+                            Layout.rightMargin: 24
+                            placeholderText: "integer (≥ 0)"
+                            inputMethodHints: Qt.ImhDigitsOnly
                             color: root.colText
                             placeholderTextColor: root.colMuted
                             background: Rectangle {
@@ -845,7 +1483,7 @@ Item {
                             text: backend.busy ? "\u2026" : "Propose Change Threshold"
                             enabled: !backend.busy
                             Layout.rightMargin: 24; Layout.alignment: Qt.AlignRight
-                            onClicked: backend.proposeChangeThreshold(propose_change_threshold_proposer_idf.text, parseInt(propose_change_threshold_new_thresholdf.text), propose_change_threshold_create_keyf.text, parseInt(propose_change_threshold_proposal_indexf.text))
+                            onClicked: backend.proposeChangeThreshold(propose_change_threshold_proposer_idf.text, parseInt(propose_change_threshold_new_thresholdf.text), propose_change_threshold_create_keyf.text, propose_change_threshold_proposal_indexf.text)
                             background: Rectangle {
                                 color: parent.down ? Qt.darker(root.colPrimary, 1.2) : root.colPrimary
                                 radius: root.radius / 2
@@ -865,6 +1503,7 @@ Item {
 
             Item {
                 id: pageSettings
+                Rectangle { anchors.fill: parent; color: root.colSurface }
                 ScrollView {
                     anchors.fill: parent; clip: true
                     contentWidth: availableWidth
@@ -966,4 +1605,9 @@ Item {
             }
         }
     }
+    TextEdit {
+        id: clipHelper; visible: false
+        function copyText(t) { clipHelper.text = t; selectAll(); copy() }
+    }
+
 }

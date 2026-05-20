@@ -103,6 +103,16 @@ char *lez_multisig_list_proposals(const char *args_json);
  */
 char *lez_multisig_get_state(const char *args_json);
 
+/**
+ * FFI: fetch and decode `proposal` account state.
+ */
+char *multisig_program_fetch_proposal(const char *args_json);
+
+/**
+ * FFI: fetch and decode `multisig_state` account state.
+ */
+char *multisig_program_fetch_multisig_state(const char *args_json);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus

@@ -51,7 +51,11 @@ FFI_RS      := lez-multisig-ffi/src/multisig.rs
 HEADER_H    := lez-multisig-ffi/include/lez_multisig.h
 GENERATE_IDL_BIN := methods/guest/Cargo.toml
 
-.PHONY: generate generate-idl generate-ffi generate-header check-generated install-tools
+MODULE_SRC := lez-multisig-module/src
+MODULE_QML := lez-multisig-module/qml
+MODULE_GEN_DIR := /tmp/lez-module-gen
+
+.PHONY: generate generate-idl generate-ffi generate-header generate-module check-generated install-tools
 
 install-tools: ## Install spel-client-gen + cbindgen (required for generate/generate-header)
 	source ~/.cargo/env && cargo install --git $(SPEL_FW_GIT) --tag $(SPEL_FW_TAG) spel-client-gen --locked 2>/dev/null || \
@@ -62,6 +66,8 @@ generate-idl: ## Regenerate IDL from Rust annotations in lib.rs
 	@echo "🔨 Generating IDL from multisig_program/src/lib.rs..."
 	source ~/.cargo/env && cargo run -p lez-multisig-idl-gen > $(IDL_JSON)
 	@echo "✅ IDL written to $(IDL_JSON)"
+
+FFI_HELPERS := lez-multisig-ffi/src/ffi_helpers.rs.inc
 
 generate-ffi: ## Regenerate FFI client (multisig.rs) from IDL
 	@echo "🔨 Generating FFI client from $(IDL_JSON)..."
@@ -75,13 +81,30 @@ generate-ffi: ## Regenerate FFI client (multisig.rs) from IDL
 	@# Remove once upstream fixes: https://github.com/logos-co/spel/issues/200
 	@sed -i 's#let create_key = serde_json::from_value#let create_key: [u8; 32] = serde_json::from_value#g' $(FFI_RS)
 	@grep -q 'create_key: \[u8; 32\]' $(FFI_RS) || (echo "ERROR: create_key type patch did not apply" && exit 1)
+	@# Inject parse_create_key/parse_bytes32 helpers and fix [u8;32] arg parsing to accept base58/hex strings.
+	@# Remove once upstream fixes: https://github.com/logos-co/spel/pull/209
+	@python3 scripts/patch-ffi-gen.sh $(FFI_RS) $(FFI_HELPERS)
 	@echo "✅ FFI client written to $(FFI_RS)"
 
-generate: ## Regenerate IDL, FFI client, and C header from Rust annotations (run after changing lib.rs)
+generate-module: ## Regenerate Qt module files (backend, plugin, QML) from IDL via spel-client-gen --target logos-module
+	@echo "🔨 Generating logos-module from $(IDL_JSON)..."
+	source ~/.cargo/env && spel-client-gen --idl $(IDL_JSON) --target logos-module \
+		--module-name lez_multisig --out-dir $(MODULE_GEN_DIR) || \
+		(echo "ERROR: spel-client-gen not found. Run: make install-tools" && exit 1)
+	@cp $(MODULE_GEN_DIR)/src/LezMultisigBackend.h   $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/src/LezMultisigBackend.cpp $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/src/LezMultisigPlugin.h    $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/src/LezMultisigPlugin.cpp  $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/src/main.cpp               $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/qml/Main.qml               $(MODULE_QML)/Main.qml
+	@echo "✅ Module files written to $(MODULE_SRC)/ and $(MODULE_QML)/"
+
+generate: ## Regenerate IDL, FFI client, C header, and Qt module from Rust annotations (run after changing lib.rs)
 	@echo "🔄 Regenerating all generated files..."
 	$(MAKE) generate-idl
 	$(MAKE) generate-ffi
 	$(MAKE) generate-header
+	$(MAKE) generate-module
 	@echo ""
 	@echo "✅ Generation complete. Run 'cargo check' to verify."
 
@@ -108,10 +131,11 @@ help: ## Show this help
 	@echo ""
 	@echo "  Code Generation (start here after changing lib.rs):"
 	@echo "  make install-tools         Install spel-client-gen + cbindgen (first-time setup)"
-	@echo "  make generate              Regen IDL + FFI client + C header from lib.rs annotations"
+	@echo "  make generate              Regen IDL + FFI + C header + Qt module (all steps)"
 	@echo "  make generate-idl          Regen IDL only"
 	@echo "  make generate-ffi          Regen FFI client only (requires IDL)"
 	@echo "  make generate-header       Regen C header via cbindgen (requires cbindgen)"
+	@echo "  make generate-module       Regen Qt module files (backend, plugin, QML)"
 	@echo "  make check-generated       CI: regenerate and verify C header not drifted"
 	@echo ""
 	@echo "  Build & Deploy:"

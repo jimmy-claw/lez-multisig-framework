@@ -91,7 +91,7 @@ else()
         src/LezMultisigBackend.cpp
     )
 
-    qt_add_resources(${APP_TARGET} "lez_multisig_app_qml"
+    qt_add_resources(${APP_TARGET} "lez_multisig_qml"
         PREFIX "/qml"
         BASE "qml"
         FILES qml/Main.qml

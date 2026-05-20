@@ -1,4 +1,8 @@
 target/
+nohup.out
+scaffold.toml
+lez-multisig-module/build/
+lez-multisig-module/build-spel-gen/
 
 # Local multisig state
 .multisig-state
@@ -10,3 +14,4 @@ lez-multisig-ffi/src/multisig_idl.json
 lez-multisig-ffi/src/multisig.rs
 lez-multisig-ffi/src/generated/
 multisig.json
+.scaffold

@@ -17,6 +17,10 @@ class LogosAPI;
 class LezMultisigBackend : public QObject {
     Q_OBJECT
 
+    // ── Fetched state ─────────────────────────────────────────────────────
+    Q_PROPERTY(QVariantMap multisigState READ multisigState NOTIFY multisigStateChanged)
+    Q_PROPERTY(QVariantMap proposal READ proposal NOTIFY proposalChanged)
+
     // ── Async status ──────────────────────────────────────────────────────
     Q_PROPERTY(bool       busy       READ busy       NOTIFY busyChanged)
     Q_PROPERTY(QString    lastError  READ lastError  NOTIFY lastErrorChanged)
@@ -32,6 +36,9 @@ public:
     explicit LezMultisigBackend(LogosAPI* api, QObject* parent = nullptr);
     ~LezMultisigBackend() override;
 
+    QVariantMap multisigState() const { return m_multisigState; }
+    QVariantMap proposal() const { return m_proposal; }
+
     bool       busy()       const { return m_busy; }
     QString    lastError()  const { return m_lastError; }
     QString    lastTxHash() const { return m_lastTxHash; }
@@ -46,15 +53,21 @@ public:
 
     // ── Instructions ──────────────────────────────────────────────────────
     Q_INVOKABLE void createMultisig(const QString& createKey, quint32 threshold, const QVariantList& members);
-    Q_INVOKABLE void propose(const QString& proposerId, const QString& targetProgramId, const QVariantList& targetInstructionData, quint32 targetAccountCount, const QVariantList& pdaSeeds, const QVariantList& authorizedIndices, const QString& createKey, quint64 proposalIndex);
-    Q_INVOKABLE void approve(const QString& approverId, quint64 proposalIndex, const QString& createKey);
-    Q_INVOKABLE void reject(const QString& rejectorId, quint64 proposalIndex, const QString& createKey);
-    Q_INVOKABLE void execute(const QString& executorId, quint64 proposalIndex, const QString& createKey);
-    Q_INVOKABLE void proposeAddMember(const QString& proposerId, const QString& newMember, const QString& createKey, quint64 proposalIndex);
-    Q_INVOKABLE void proposeRemoveMember(const QString& proposerId, const QString& member, const QString& createKey, quint64 proposalIndex);
-    Q_INVOKABLE void proposeChangeThreshold(const QString& proposerId, quint32 newThreshold, const QString& createKey, quint64 proposalIndex);
+    Q_INVOKABLE void propose(const QString& proposerId, const QString& targetProgramId, const QVariantList& targetInstructionData, quint32 targetAccountCount, const QVariantList& pdaSeeds, const QVariantList& authorizedIndices, const QString& createKey, const QString& proposalIndex);
+    Q_INVOKABLE void approve(const QString& approverId, const QString& proposalIndex, const QString& createKey);
+    Q_INVOKABLE void reject(const QString& rejectorId, const QString& proposalIndex, const QString& createKey);
+    Q_INVOKABLE void execute(const QString& executorId, const QString& proposalIndex, const QString& createKey);
+    Q_INVOKABLE void proposeAddMember(const QString& proposerId, const QString& newMember, const QString& createKey, const QString& proposalIndex);
+    Q_INVOKABLE void proposeRemoveMember(const QString& proposerId, const QString& member, const QString& createKey, const QString& proposalIndex);
+    Q_INVOKABLE void proposeChangeThreshold(const QString& proposerId, quint32 newThreshold, const QString& createKey, const QString& proposalIndex);
+
+    // ── Fetch ─────────────────────────────────────────────────────────────
+    Q_INVOKABLE void fetchMultisigState(const QString& createKey);
+    Q_INVOKABLE void fetchProposal(const QString& createKey, const QString& proposalIndex);
 
 signals:
+    void multisigStateChanged();
+    void proposalChanged();
     void busyChanged();
     void lastErrorChanged();
     void lastTxHashChanged();
@@ -76,6 +89,9 @@ private:
     QString m_walletPath;
     QString m_sequencerUrl;
     QString m_programIdHex;
+
+    QVariantMap m_multisigState;
+    QVariantMap m_proposal;
 
     bool       m_busy      = false;
     QString    m_lastError;
