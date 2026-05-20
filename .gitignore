@@ -13,5 +13,13 @@ demo-wallet/
 lez-multisig-ffi/src/multisig_idl.json
 lez-multisig-ffi/src/multisig.rs
 lez-multisig-ffi/src/generated/
+lez-multisig-ffi/src/ffi_helpers.rs.inc
+lez-multisig-ffi/include/lez_multisig.h
+lez-multisig-module/src/LezMultisigBackend.h
+lez-multisig-module/src/LezMultisigBackend.cpp
+lez-multisig-module/src/LezMultisigPlugin.h
+lez-multisig-module/src/LezMultisigPlugin.cpp
+lez-multisig-module/src/main.cpp
+lez-multisig-module/qml/Main.qml
 multisig.json
 .scaffold
