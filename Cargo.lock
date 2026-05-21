@@ -2965,7 +2965,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
+ "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?branch=feat%2F207-logos-module-codegen)",
  "tokio",
  "wallet",
 ]
@@ -5595,6 +5595,20 @@ dependencies = [
  "serde_json",
  "sha2",
  "syn 2.0.117",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "spel-framework-core"
+version = "0.3.0"
+source = "git+https://github.com/logos-co/spel.git?branch=feat%2F207-logos-module-codegen#95063978b25e7648360001c6cb6ed62404607fb0"
+dependencies = [
+ "base58",
+ "borsh",
+ "nssa_core",
+ "serde",
+ "serde_json",
+ "sha2",
  "thiserror 1.0.69",
 ]
 
