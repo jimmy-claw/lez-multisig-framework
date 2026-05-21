@@ -75,9 +75,6 @@ generate-ffi: ## Regenerate FFI client (multisig.rs) from IDL
 	@# Prepend generated-file header, then append spel-client-gen output
 	@echo "// GENERATED FILE — do not edit manually. Run 'make generate' to regenerate from Rust annotations." > $(FFI_RS)
 	@cat /tmp/lez-ffi-gen/multisig_program_ffi.rs >> $(FFI_RS)
-	@# Fix member_accounts type: generator else-branch clones Vec<[u8;32]> into Vec<AccountId>.
-	@# Remove once upstream fixes: https://github.com/logos-co/spel/pull/209
-	@python3 scripts/patch-ffi-gen.sh $(FFI_RS)
 	@echo "✅ FFI client written to $(FFI_RS)"
 
 generate-module: ## Regenerate Qt module files (backend, plugin, QML, CMakeLists, manifest) from IDL via spel-client-gen --target logos-module

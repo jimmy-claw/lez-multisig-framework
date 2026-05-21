@@ -261,15 +261,6 @@ cargo install --path /path/to/spel/spel-client-gen
 make generate build-module
 ```
 
-### Why patches exist
-
-`make generate-ffi` runs `scripts/patch-ffi-gen.sh` after `spel-client-gen`. The patches work around gaps that are tracked upstream in [SPEL PR #209](https://github.com/logos-co/spel/pull/209) and will be removed once that PR lands:
-
-| Patch | Reason |
-|-------|--------|
-| `parse_bytes32` helper | Generator maps `[u8;32]` fields via `AccountId`; instruction structs need raw `[u8;32]` |
-| `member_accounts` derivation | UI sends `members` once; FFI must not require it twice |
-
 ## Known Issues
 
 - [ ] No `CloseProposal` instruction yet (executed/rejected proposals stay on-chain)
