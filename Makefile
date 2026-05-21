@@ -67,8 +67,6 @@ generate-idl: ## Regenerate IDL from Rust annotations in lib.rs
 	source ~/.cargo/env && cargo run -p lez-multisig-idl-gen > $(IDL_JSON)
 	@echo "✅ IDL written to $(IDL_JSON)"
 
-FFI_HELPERS := lez-multisig-ffi/src/ffi_helpers.rs.inc
-
 generate-ffi: ## Regenerate FFI client (multisig.rs) from IDL
 	@echo "🔨 Generating FFI client from $(IDL_JSON)..."
 	@mkdir -p /tmp/lez-ffi-gen
@@ -77,19 +75,17 @@ generate-ffi: ## Regenerate FFI client (multisig.rs) from IDL
 	@# Prepend generated-file header, then append spel-client-gen output
 	@echo "// GENERATED FILE — do not edit manually. Run 'make generate' to regenerate from Rust annotations." > $(FFI_RS)
 	@cat /tmp/lez-ffi-gen/multisig_program_ffi.rs >> $(FFI_RS)
-	@# spel-client-gen omits the [u8; 32] type on create_key; Rust can't infer it from .as_ref() alone (E0282).
-	@# Remove once upstream fixes: https://github.com/logos-co/spel/issues/200
-	@sed -i 's#let create_key = serde_json::from_value#let create_key: [u8; 32] = serde_json::from_value#g' $(FFI_RS)
-	@grep -q 'create_key: \[u8; 32\]' $(FFI_RS) || (echo "ERROR: create_key type patch did not apply" && exit 1)
-	@# Inject parse_create_key/parse_bytes32 helpers and fix [u8;32] arg parsing to accept base58/hex strings.
+	@# Fix member_accounts type: generator else-branch clones Vec<[u8;32]> into Vec<AccountId>.
 	@# Remove once upstream fixes: https://github.com/logos-co/spel/pull/209
-	@python3 scripts/patch-ffi-gen.sh $(FFI_RS) $(FFI_HELPERS)
+	@python3 scripts/patch-ffi-gen.sh $(FFI_RS)
 	@echo "✅ FFI client written to $(FFI_RS)"
 
-generate-module: ## Regenerate Qt module files (backend, plugin, QML) from IDL via spel-client-gen --target logos-module
+generate-module: ## Regenerate Qt module files (backend, plugin, QML, CMakeLists, manifest) from IDL via spel-client-gen --target logos-module
 	@echo "🔨 Generating logos-module from $(IDL_JSON)..."
 	source ~/.cargo/env && spel-client-gen --idl $(IDL_JSON) --target logos-module \
-		--module-name lez_multisig --out-dir $(MODULE_GEN_DIR) || \
+		--module-name lez_multisig \
+		--ffi-lib-path ../../target/release/liblez_multisig_ffi.so \
+		--out-dir $(MODULE_GEN_DIR) || \
 		(echo "ERROR: spel-client-gen not found. Run: make install-tools" && exit 1)
 	@cp $(MODULE_GEN_DIR)/src/LezMultisigBackend.h   $(MODULE_SRC)/
 	@cp $(MODULE_GEN_DIR)/src/LezMultisigBackend.cpp $(MODULE_SRC)/
@@ -97,7 +93,10 @@ generate-module: ## Regenerate Qt module files (backend, plugin, QML) from IDL v
 	@cp $(MODULE_GEN_DIR)/src/LezMultisigPlugin.cpp  $(MODULE_SRC)/
 	@cp $(MODULE_GEN_DIR)/src/main.cpp               $(MODULE_SRC)/
 	@cp $(MODULE_GEN_DIR)/qml/Main.qml               $(MODULE_QML)/Main.qml
-	@echo "✅ Module files written to $(MODULE_SRC)/ and $(MODULE_QML)/"
+	@cp $(MODULE_GEN_DIR)/CMakeLists.txt             $(MODULE_DIR)/
+	@cp $(MODULE_GEN_DIR)/manifest.json              $(MODULE_DIR)/
+	@cp $(MODULE_GEN_DIR)/module.yaml                $(MODULE_DIR)/
+	@echo "✅ Module files written to $(MODULE_SRC)/, $(MODULE_QML)/, and $(MODULE_DIR)/"
 
 generate: ## Regenerate IDL, FFI client, C header, and Qt module from Rust annotations (run after changing lib.rs)
 	@echo "🔄 Regenerating all generated files..."
@@ -212,16 +211,16 @@ build-ffi: generate ## Build the FFI .so (liblez_multisig_ffi.so) for use in Qt 
 
 MODULE_DIR      := lez-multisig-module
 MODULE_BUILD    := $(MODULE_DIR)/build
-MODULE_APP      := $(MODULE_BUILD)/lez_multisig_app
+MODULE_APP      := $(MODULE_BUILD)/LezMultisigApp
 MODULE_PLUGIN   := $(MODULE_BUILD)/liblez_multisig_plugin.so
 FFI_LIB_DIR    := target/release
 
 .PHONY: build-module run-module
 
-build-module: build-ffi ## Build the Basecamp UI module plugin + standalone preview app
+build-module: build-ffi generate-module ## Build the Basecamp UI module plugin + standalone preview app
 	@echo "🔨 Building UI module..."
 	@mkdir -p $(MODULE_BUILD)
-	cd $(MODULE_BUILD) && cmake .. -DLEZ_MULTISIG_FFI_LIB_DIR=$(CURDIR)/$(FFI_LIB_DIR) -DCMAKE_BUILD_TYPE=Release
+	cd $(MODULE_BUILD) && cmake .. -DCMAKE_BUILD_TYPE=Release
 	cmake --build $(MODULE_BUILD) --parallel
 	@echo "✅ Plugin: $(MODULE_PLUGIN)"
 	@echo "✅ App:    $(MODULE_APP)"
