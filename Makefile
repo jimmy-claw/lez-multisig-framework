@@ -222,9 +222,9 @@ build-module: build-ffi generate-module ## Build the Basecamp UI module plugin +
 	@echo "✅ Plugin: $(MODULE_PLUGIN)"
 	@echo "✅ App:    $(MODULE_APP)"
 
-run-module: build-module ## Run the standalone multisig UI preview (program ID is embedded at build time)
+run-module: build-module ## Run the standalone multisig UI preview (set LEZ_MULTISIG_PROGRAM_ID=<hex> to inject program ID)
 	LD_LIBRARY_PATH=$(CURDIR)/$(FFI_LIB_DIR):$$LD_LIBRARY_PATH \
-	  QML_PATH=$(CURDIR)/$(MODULE_DIR)/qml \
+	  LEZ_MULTISIG_PROGRAM_ID=$(LEZ_MULTISIG_PROGRAM_ID) \
 	  $(MODULE_APP)
 
 # ── Headless Demo ─────────────────────────────────────────────────────────────
