@@ -81,7 +81,7 @@ generate-module: ## Regenerate Qt module files (backend, plugin, QML, CMakeLists
 	@echo "🔨 Generating logos-module from $(IDL_JSON)..."
 	source ~/.cargo/env && spel-client-gen --idl $(IDL_JSON) --target logos-module \
 		--module-name lez_multisig \
-		--ffi-lib-path ../../target/release/liblez_multisig_ffi.so \
+		--ffi-lib-path ../target/release/liblez_multisig_ffi.so \
 		--out-dir $(MODULE_GEN_DIR) || \
 		(echo "ERROR: spel-client-gen not found. Run: make install-tools" && exit 1)
 	@cp $(MODULE_GEN_DIR)/src/LezMultisigBackend.h   $(MODULE_SRC)/
