@@ -16,10 +16,10 @@ SHELL := /bin/bash
 STATE_FILE := .multisig-state
 PROGRAMS_DIR := target/riscv32im-risc0-zkvm-elf/docker
 
-# Token program binary — set this to point to your logos-execution-zone build
-# e.g. LSSA_DIR=../logos-execution-zone
-LSSA_DIR ?=
-TOKEN_BIN := $(LSSA_DIR)/artifacts/program_methods/token.bin
+# Token program binary — set this to point to your lez-programs build
+# e.g. LEZ_PROGRAMS_DIR=../lez-programs
+LEZ_PROGRAMS_DIR ?=
+TOKEN_BIN := $(LEZ_PROGRAMS_DIR)/target/riscv32im-risc0-zkvm-elf/docker/token.bin
 
 MULTISIG_BIN := $(PROGRAMS_DIR)/multisig.bin
 
@@ -161,7 +161,7 @@ help: ## Show this help
 	@echo "  make status                Show saved state (account IDs, etc.)"
 	@echo "  make clean                 Remove saved state"
 	@echo ""
-	@echo "Required env: LSSA_DIR=<path to logos-execution-zone repo>"
+	@echo "Required env: LEZ_PROGRAMS_DIR=<path to lez-programs repo>"
 
 build: ## Build the multisig guest binary
 	cargo risczero build --manifest-path methods/guest/Cargo.toml
@@ -176,7 +176,7 @@ build-cli: ## Build the standalone multisig CLI
 
 deploy: ## Deploy multisig and token programs to sequencer
 	@test -f "$(MULTISIG_BIN)" || (echo "ERROR: Multisig binary not found. Run 'make build' first."; exit 1)
-	@test -f "$(TOKEN_BIN)" || (echo "ERROR: Token binary not found at $(TOKEN_BIN). Set LSSA_DIR correctly."; exit 1)
+	@test -f "$(TOKEN_BIN)" || (echo "ERROR: Token binary not found at $(TOKEN_BIN). Set LEZ_PROGRAMS_DIR correctly."; exit 1)
 	wallet deploy-program $(MULTISIG_BIN)
 	wallet deploy-program $(TOKEN_BIN)
 	@echo ""
@@ -192,7 +192,7 @@ status: ## Show saved state
 	@echo ""
 	@echo "Binaries:"
 	@ls -la $(MULTISIG_BIN) 2>/dev/null || echo "  multisig.bin: NOT BUILT (run 'make build')"
-	@ls -la $(TOKEN_BIN) 2>/dev/null || echo "  token.bin: NOT FOUND (check LSSA_DIR)"
+	@ls -la $(TOKEN_BIN) 2>/dev/null || echo "  token.bin: NOT FOUND (check LEZ_PROGRAMS_DIR)"
 
 clean: ## Remove saved state
 	rm -f $(STATE_FILE) $(STATE_FILE).tmp
@@ -202,8 +202,8 @@ clean: ## Remove saved state
 
 .PHONY: test-e2e
 
-test-e2e: ## Run full E2E tests (requires sequencer running + lssa artifacts)
-	@test -n "$(LSSA_DIR)" || (echo "ERROR: Set LSSA_DIR=<path to logos-execution-zone repo>"; exit 1)
+test-e2e: ## Run full E2E tests (requires sequencer running + lez-programs artifacts)
+	@test -n "$(LEZ_PROGRAMS_DIR)" || (echo "ERROR: Set LEZ_PROGRAMS_DIR=<path to lez-programs repo>"; exit 1)
 	@echo "🧪 Running E2E tests..."
 	RISC0_SKIP_BUILD=1 SEQUENCER_URL=http://127.0.0.1:3040 	  MULTISIG_PROGRAM=$(PROGRAMS_DIR)/multisig.bin 	  TOKEN_PROGRAM=$(TOKEN_BIN) 	  cargo test -p lez-multisig-e2e --test e2e_multisig -- --nocapture
 	@echo "✅ E2E tests passed"
