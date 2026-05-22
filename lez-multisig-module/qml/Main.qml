@@ -513,19 +513,26 @@ Item {
                                         onClicked: proposeDialog.open()
                                     }
                                 }
-                                Rectangle {
-                                    width: addMemberText.implicitWidth + 16; height: 26; radius: Theme.spacing.radiusLarge
-                                    color: addMemberArea.containsMouse ? Theme.palette.backgroundMuted : "transparent"
-                                    border.color: Theme.palette.border
-                                    Text {
-                                        id: addMemberText; anchors.centerIn: parent
-                                        text: "Add Member"; color: Theme.palette.textMuted
-                                        font.pixelSize: 12; font.family: Theme.typography.publicSans
-                                    }
-                                    MouseArea {
-                                        id: addMemberArea; anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor; hoverEnabled: true
-                                        onClicked: addMemberDialog.open()
+                                Repeater {
+                                    model: ["Add Member", "Remove Member", "Change Threshold"]
+                                    Rectangle {
+                                        width: govText.implicitWidth + 16; height: 26; radius: Theme.spacing.radiusLarge
+                                        color: govArea.containsMouse ? Theme.palette.backgroundMuted : "transparent"
+                                        border.color: Theme.palette.border
+                                        Text {
+                                            id: govText; anchors.centerIn: parent
+                                            text: modelData; color: Theme.palette.textMuted
+                                            font.pixelSize: 12; font.family: Theme.typography.publicSans
+                                        }
+                                        MouseArea {
+                                            id: govArea; anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                                            onClicked: {
+                                                if (modelData === "Add Member")       addMemberDialog.open()
+                                                else if (modelData === "Remove Member")   removeMemberDialog.open()
+                                                else if (modelData === "Change Threshold") changeThresholdDialog.open()
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1384,6 +1391,139 @@ Item {
                             backend.proposeAddMember(amProposerId.text.trim(), amNewMember.text.trim(),
                                                      activeCreateKey, propIdx)
                             addMemberDialog.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Remove member dialog ──────────────────────────────────────────────────
+    Dialog {
+        id: removeMemberDialog
+        title: "Propose Remove Member"
+        modal: true; anchors.centerIn: parent
+        width: Math.min(420, parent.width - 48)
+        background: Rectangle { color: Theme.palette.backgroundSecondary; border.color: Theme.palette.border; radius: Theme.spacing.radiusLarge }
+
+        header: Item {
+            height: 52
+            Text {
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 20 }
+                text: removeMemberDialog.title; color: Theme.palette.text
+                font.pixelSize: 15; font.bold: true; font.family: Theme.typography.publicSans
+            }
+        }
+
+        ColumnLayout {
+            width: parent.width; spacing: 10
+
+            Text { text: "Proposer account ID"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+            LogosTextField { id: rmProposerId; Layout.fillWidth: true; placeholderText: "your account ID" }
+
+            Text { text: "Member to remove (account ID)"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+            LogosTextField { id: rmMember; Layout.fillWidth: true; placeholderText: "account ID to remove" }
+
+            Text { text: "Proposal index"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+            LogosTextField {
+                id: rmPropIdx; Layout.fillWidth: true
+                placeholderText: String(parseInt(backend.multisigState["transaction_index"]) || 0)
+            }
+        }
+
+        footer: RowLayout {
+            spacing: 8; Layout.rightMargin: 16; Layout.bottomMargin: 12
+            Item { Layout.fillWidth: true }
+            LogosButton { text: "Cancel"; onClicked: removeMemberDialog.close() }
+            Rectangle {
+                width: rmOkText.implicitWidth + 24; height: 40; radius: Theme.spacing.radiusXlarge
+                color: rmOkArea.containsMouse ? Theme.palette.primaryHover : Theme.palette.primary
+                opacity: backend.busy ? 0.5 : 1.0
+                Text {
+                    id: rmOkText; anchors.centerIn: parent
+                    text: "Propose"; color: Theme.palette.text
+                    font.pixelSize: 13; font.family: Theme.typography.publicSans
+                }
+                MouseArea {
+                    id: rmOkArea; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                    onClicked: {
+                        if (!backend.busy) {
+                            var propIdx = rmPropIdx.text.length > 0
+                                ? rmPropIdx.text
+                                : String(parseInt(backend.multisigState["transaction_index"]) || 0)
+                            backend.proposeRemoveMember(rmProposerId.text.trim(), rmMember.text.trim(),
+                                                        activeCreateKey, propIdx)
+                            removeMemberDialog.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Change threshold dialog ───────────────────────────────────────────────
+    Dialog {
+        id: changeThresholdDialog
+        title: "Propose Change Threshold"
+        modal: true; anchors.centerIn: parent
+        width: Math.min(420, parent.width - 48)
+        background: Rectangle { color: Theme.palette.backgroundSecondary; border.color: Theme.palette.border; radius: Theme.spacing.radiusLarge }
+
+        header: Item {
+            height: 52
+            Text {
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 20 }
+                text: changeThresholdDialog.title; color: Theme.palette.text
+                font.pixelSize: 15; font.bold: true; font.family: Theme.typography.publicSans
+            }
+        }
+
+        ColumnLayout {
+            width: parent.width; spacing: 10
+
+            Text {
+                text: "Current threshold: " + threshold() + " of " + memberCount()
+                color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans
+                visible: Object.keys(backend.multisigState).length > 0
+            }
+
+            Text { text: "Proposer account ID"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+            LogosTextField { id: ctProposerId; Layout.fillWidth: true; placeholderText: "your account ID" }
+
+            Text { text: "New threshold (M)"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+            LogosTextField { id: ctNewThreshold; Layout.fillWidth: true; placeholderText: "e.g. 3" }
+
+            Text { text: "Proposal index"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+            LogosTextField {
+                id: ctPropIdx; Layout.fillWidth: true
+                placeholderText: String(parseInt(backend.multisigState["transaction_index"]) || 0)
+            }
+        }
+
+        footer: RowLayout {
+            spacing: 8; Layout.rightMargin: 16; Layout.bottomMargin: 12
+            Item { Layout.fillWidth: true }
+            LogosButton { text: "Cancel"; onClicked: changeThresholdDialog.close() }
+            Rectangle {
+                width: ctOkText.implicitWidth + 24; height: 40; radius: Theme.spacing.radiusXlarge
+                color: ctOkArea.containsMouse ? Theme.palette.primaryHover : Theme.palette.primary
+                opacity: backend.busy ? 0.5 : 1.0
+                Text {
+                    id: ctOkText; anchors.centerIn: parent
+                    text: "Propose"; color: Theme.palette.text
+                    font.pixelSize: 13; font.family: Theme.typography.publicSans
+                }
+                MouseArea {
+                    id: ctOkArea; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                    onClicked: {
+                        if (!backend.busy && ctNewThreshold.text.length > 0) {
+                            var propIdx = ctPropIdx.text.length > 0
+                                ? ctPropIdx.text
+                                : String(parseInt(backend.multisigState["transaction_index"]) || 0)
+                            backend.proposeChangeThreshold(ctProposerId.text.trim(),
+                                                           parseInt(ctNewThreshold.text),
+                                                           activeCreateKey, propIdx)
+                            changeThresholdDialog.close()
                         }
                     }
                 }
