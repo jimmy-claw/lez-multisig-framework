@@ -19,7 +19,6 @@ lez-multisig-module/src/LezMultisigBackend.cpp
 lez-multisig-module/src/LezMultisigPlugin.h
 lez-multisig-module/src/LezMultisigPlugin.cpp
 lez-multisig-module/src/main.cpp
-lez-multisig-module/qml/Main.qml
 lez-multisig-module/CMakeLists.txt
 lez-multisig-module/manifest.json
 lez-multisig-module/module.yaml

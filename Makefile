@@ -55,7 +55,7 @@ MODULE_SRC := lez-multisig-module/src
 MODULE_QML := lez-multisig-module/qml
 MODULE_GEN_DIR := /tmp/lez-module-gen
 
-.PHONY: generate generate-idl generate-ffi generate-header generate-module check-generated install-tools
+.PHONY: generate generate-idl generate-ffi generate-header generate-module generate-module-scaffold check-generated install-tools
 
 install-tools: ## Install spel-client-gen + cbindgen (required for generate/generate-header)
 	source ~/.cargo/env && cargo install --git $(SPEL_FW_GIT) --tag $(SPEL_FW_TAG) spel-client-gen --locked 2>/dev/null || \
@@ -77,12 +77,28 @@ generate-ffi: ## Regenerate FFI client (multisig.rs) from IDL
 	@cat /tmp/lez-ffi-gen/multisig_program_ffi.rs >> $(FFI_RS)
 	@echo "✅ FFI client written to $(FFI_RS)"
 
-generate-module: ## Regenerate Qt module files (backend, plugin, QML, CMakeLists, manifest) from IDL via spel-client-gen --target logos-module
-	@echo "🔨 Generating logos-module from $(IDL_JSON)..."
-	source ~/.cargo/env && spel-client-gen --idl $(IDL_JSON) --target logos-module \
-		--module-name lez_multisig \
-		--ffi-lib-path ../target/release/liblez_multisig_ffi.so \
-		--out-dir $(MODULE_GEN_DIR) || \
+SPEL_GEN_MODULE_FLAGS := --idl $(IDL_JSON) --target logos-module \
+	--module-name lez_multisig \
+	--ffi-lib-path ../target/release/liblez_multisig_ffi.so \
+	--out-dir $(MODULE_GEN_DIR)
+
+generate-module: ## Regenerate backend/plugin/build files; preserves hand-written qml/Main.qml (use generate-module-scaffold for first run)
+	@echo "🔨 Generating logos-module backend from $(IDL_JSON)..."
+	source ~/.cargo/env && spel-client-gen $(SPEL_GEN_MODULE_FLAGS) --skip-ui || \
+		(echo "ERROR: spel-client-gen not found. Run: make install-tools" && exit 1)
+	@cp $(MODULE_GEN_DIR)/src/LezMultisigBackend.h   $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/src/LezMultisigBackend.cpp $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/src/LezMultisigPlugin.h    $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/src/LezMultisigPlugin.cpp  $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/src/main.cpp               $(MODULE_SRC)/
+	@cp $(MODULE_GEN_DIR)/CMakeLists.txt             $(MODULE_DIR)/
+	@cp $(MODULE_GEN_DIR)/manifest.json              $(MODULE_DIR)/
+	@cp $(MODULE_GEN_DIR)/module.yaml                $(MODULE_DIR)/
+	@echo "✅ Backend/plugin/build files written (qml/Main.qml preserved)"
+
+generate-module-scaffold: ## First-time: generate ALL files including qml/Main.qml scaffold (overwrites existing QML)
+	@echo "🔨 Generating full logos-module scaffold from $(IDL_JSON)..."
+	source ~/.cargo/env && spel-client-gen $(SPEL_GEN_MODULE_FLAGS) || \
 		(echo "ERROR: spel-client-gen not found. Run: make install-tools" && exit 1)
 	@cp $(MODULE_GEN_DIR)/src/LezMultisigBackend.h   $(MODULE_SRC)/
 	@cp $(MODULE_GEN_DIR)/src/LezMultisigBackend.cpp $(MODULE_SRC)/
@@ -93,7 +109,7 @@ generate-module: ## Regenerate Qt module files (backend, plugin, QML, CMakeLists
 	@cp $(MODULE_GEN_DIR)/CMakeLists.txt             $(MODULE_DIR)/
 	@cp $(MODULE_GEN_DIR)/manifest.json              $(MODULE_DIR)/
 	@cp $(MODULE_GEN_DIR)/module.yaml                $(MODULE_DIR)/
-	@echo "✅ Module files written to $(MODULE_SRC)/, $(MODULE_QML)/, and $(MODULE_DIR)/"
+	@echo "✅ Full scaffold written to $(MODULE_SRC)/, $(MODULE_QML)/, and $(MODULE_DIR)/"
 
 generate: ## Regenerate IDL, FFI client, C header, and Qt module from Rust annotations (run after changing lib.rs)
 	@echo "🔄 Regenerating all generated files..."
@@ -131,7 +147,8 @@ help: ## Show this help
 	@echo "  make generate-idl          Regen IDL only"
 	@echo "  make generate-ffi          Regen FFI client only (requires IDL)"
 	@echo "  make generate-header       Regen C header via cbindgen (requires cbindgen)"
-	@echo "  make generate-module       Regen Qt module files (backend, plugin, QML)"
+	@echo "  make generate-module          Regen backend/plugin/build (preserves hand-written QML)"
+	@echo "  make generate-module-scaffold First-time: regen everything incl. qml/Main.qml scaffold"
 	@echo "  make check-generated       CI: regenerate and verify C header not drifted"
 	@echo ""
 	@echo "  Build & Deploy:"
