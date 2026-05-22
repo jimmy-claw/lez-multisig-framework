@@ -243,49 +243,51 @@ The multisig Qt module calls spelbook via `logos.callModule()` signal/slot mecha
 
 **Deliver:** spelbook module with `fetchIdl` + `searchPrograms`
 
-### Phase 1 — spel-framework codec FFI
+### Phase 1 — spel-framework codec FFI ✅ DONE
 
-- [ ] Add `spel_encode_instruction(idl_json, ix_name, args_json) → CString` to `lez-multisig-ffi`
-- [ ] Add `spel_decode_instruction(idl_json, instruction_data_hex) → CString` returning `{name, args}` JSON
-- [ ] Expose both in `lez_multisig.h` via cbindgen
-- [ ] Expose both in `LezMultisigBackend` as Q_INVOKABLE returning `QString`
+- [x] Add `lez_multisig_encode_instruction(idl_json, ix_name, args_json) → CString` to `lez-multisig-ffi/src/codec.rs`
+- [x] Add `lez_multisig_decode_instruction(idl_json, words_json) → CString` returning `{instruction, args}` JSON
+- [x] Expose both in `lez_multisig.h` via cbindgen (`make generate-header`)
+- [x] Expose both as Q_INVOKABLE via `LezMultisigCodec.h` (tracked) registered as `codec` context property
 
-**Deliver:** QML can call `backend.encodeInstruction(idl, name, args)` and `backend.decodeInstruction(idl, data)`
+**Deliver:** QML calls `codec.encodeInstruction(idl, name, args)` and `codec.decodeInstruction(idl, wordsJson)`
 
-### Phase 2 — Dashboard + Multisig Detail (read-only)
+### Phase 2 — Dashboard + Multisig Detail (read-only) ✅ DONE
 
-- [ ] Dashboard: `loadMultisigs()` on appear → render cards with pending proposal count
-- [ ] Multisig detail: `loadProposals(multisig_id)` → render proposal list with approval bars
-- [ ] Proposal card: fetch program name from spelbook async (fallback to hex if not found)
-- [ ] Approval bar component: colored progress at `approvals / threshold`
+- [x] Dashboard: watch/create dialogs; card list from persisted createKeys in fieldHistory
+- [x] Multisig detail: sequential proposal fetch (state machine via `_fetchNext`/`_fetchTarget`)
+- [x] Proposal card: target program hex shown; config_action decoded inline
+- [x] Approval bar: colored progress at `approvals / threshold`; green when executable
 
-**Deliver:** read-only browsing of all multisigs and proposals
+**Deliver:** read-only browsing of all multisigs and proposals ✅
 
-### Phase 3 — Proposal Detail screen
+### Phase 3 — Proposal Detail decode ✅ DONE (fallback path; spelbook path blocked on Phase 0)
 
-- [ ] Load proposal data (already in model from Phase 2)
-- [ ] Decode `instruction_data`: `getProgram(target_id)` → `idl_cid` → `fetchIdl` → `decodeInstruction(idl, data)` → render arg table
-- [ ] Fallback path: "Program not in spelbook — raw bytes shown"
-- [ ] Approve / Execute / Reject buttons wired to backend Q_INVOKABLEs
+- [x] Per-proposal Decode button: tries codec with multisig IDL, shows decoded args inline
+- [x] Error shown inline if decode fails (e.g. wrong IDL for the target program)
+- [x] Approve / Execute / Reject buttons via account picker dialog
+- [ ] Full path: spelbook IDL lookup by target_program_id → decode (blocked on Phase 0)
 
-**Deliver:** full proposal detail with human-readable decoded args + action buttons
+**Deliver:** fallback decode (multisig IDL) + action buttons ✅; spelbook-backed decode pending Phase 0
 
-### Phase 4 — New Proposal wizard
+### Phase 4 — New Proposal wizard ✅ DONE (Encode-from-IDL mode; spelbook search pending Phase 0)
 
-- [ ] Step 1: search field → spelbook `searchPrograms(query)` → result list; paste-by-id fallback
-- [ ] Step 2: render instruction picker from fetched IDL JSON
-- [ ] Step 3: dynamic form from IDL arg types (String → TextInput, u64 → numeric, AccountId → validated hex)
-- [ ] Step 3: live encode preview via `backend.encodeInstruction(idl, name, args)`
-- [ ] Submit: `backend.proposeTransaction(multisig_id, target_program_id, encoded_data, accounts)`
+- [x] Raw words mode: paste u32 words directly (advanced)
+- [x] Encode-from-IDL mode: paste IDL JSON + instruction name + args JSON → live encode via codec → words pre-filled
+- [ ] Spelbook search (Step 1): blocked on Phase 0 `searchPrograms` Q_INVOKABLE
+- [ ] Instruction picker from IDL (Step 2): could be added after Phase 0
 
-**Deliver:** end-to-end proposal creation
+**Deliver:** self-contained encode-from-IDL propose flow ✅; spelbook-integrated wizard pending Phase 0
 
-### Phase 5 — Create Multisig flow
+### Phase 5 — Create Multisig + governance ✅ DONE
 
-- [ ] "New Multisig" button → dialog: threshold slider + member list (add/remove by account ID)
-- [ ] Submit → `backend.createMultisig(threshold, members)`
+- [x] Create Multisig dialog: threshold + member list
+- [x] Watch (add existing by createKey) dialog
+- [x] Propose Add Member dialog
+- [x] Propose Remove Member dialog
+- [x] Propose Change Threshold dialog
 
-**Deliver:** complete onboarding flow
+**Deliver:** complete onboarding + governance flow ✅
 
 ---
 
