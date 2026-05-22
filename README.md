@@ -284,7 +284,7 @@ make generate build-module
 | Component | Role |
 |---|---|
 | [spel-client-gen](https://github.com/logos-co/spel) | Generates Basecamp Qt module (backend, plugin, QML scaffold) from IDL |
-| [logos-lez-spelbook](https://github.com/jimmy-claw/spelbook) | On-chain LEZ program registry — program ID → IDL lookup for proposal decode/encode |
+| [logos-lez-spelbook](https://github.com/vpavlin/spelbook) | On-chain LEZ program registry — program ID → IDL lookup for proposal decode/encode |
 | Logos Messaging | In-band signing notifications; required for private TX flow |
 
 ## References
