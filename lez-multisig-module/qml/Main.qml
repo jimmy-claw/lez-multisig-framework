@@ -1081,61 +1081,222 @@ Item {
         }
     }
 
-    // ── Propose (generic ChainedCall) dialog ──────────────────────────────────
+    // ── Propose dialog ────────────────────────────────────────────────────────
     Dialog {
         id: proposeDialog
         title: "New Proposal"
         modal: true; anchors.centerIn: parent
-        width: Math.min(500, parent.width - 48)
+        width: Math.min(540, parent.width - 48)
         background: Rectangle { color: Theme.palette.backgroundSecondary; border.color: Theme.palette.border; radius: Theme.spacing.radiusLarge }
+
+        // 0 = raw words mode, 1 = encode-from-IDL mode
+        property int proposeMode: 0
+        property string _encodeError: ""
+        property string _encodePreview: ""  // "N words: [0, 1000, …]"
+
+        function _runEncode() {
+            _encodeError = ""
+            _encodePreview = ""
+            var idlStr = pIdlJson.text.trim()
+            var ixName = pIxName.text.trim()
+            var argsStr = pArgsJson.text.trim()
+            if (!idlStr || !ixName || !argsStr) {
+                _encodeError = "Fill in IDL, instruction name, and args JSON"
+                return false
+            }
+            var resultStr = codec.encodeInstruction(idlStr, ixName, argsStr)
+            var result = JSON.parse(resultStr)
+            if (!result.success) {
+                _encodeError = result.error || "encode failed"
+                return false
+            }
+            var words = result.result.words
+            pInstrData.text = words.join("\n")
+            _encodePreview = words.length + " words · " + result.result.hex.slice(0, 18) + "…"
+            proposeMode = 0  // switch back to raw view to confirm
+            return true
+        }
 
         header: Item {
             height: 52
-            Text {
-                anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 20 }
-                text: proposeDialog.title; color: Theme.palette.text
-                font.pixelSize: 15; font.bold: true; font.family: Theme.typography.publicSans
+            RowLayout {
+                anchors { fill: parent; leftMargin: 20; rightMargin: 16 }
+                Text {
+                    text: "New Proposal"
+                    color: Theme.palette.text
+                    font.pixelSize: 15; font.bold: true; font.family: Theme.typography.publicSans
+                    Layout.fillWidth: true
+                }
+                // Mode toggle
+                Rectangle {
+                    width: modeToggleText.implicitWidth + 16; height: 28; radius: Theme.spacing.radiusLarge
+                    color: modeToggleArea.containsMouse ? Theme.palette.backgroundMuted : Theme.palette.background
+                    border.color: proposeDialog.proposeMode === 1 ? Theme.palette.primary : Theme.palette.border
+                    Text {
+                        id: modeToggleText; anchors.centerIn: parent
+                        text: proposeDialog.proposeMode === 0 ? "Encode from IDL…" : "← Raw words"
+                        color: proposeDialog.proposeMode === 1 ? Theme.palette.primary : Theme.palette.textMuted
+                        font.pixelSize: 11; font.family: Theme.typography.publicSans
+                    }
+                    MouseArea {
+                        id: modeToggleArea; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                        onClicked: {
+                            proposeDialog.proposeMode = proposeDialog.proposeMode === 0 ? 1 : 0
+                            proposeDialog._encodeError = ""
+                            proposeDialog._encodePreview = ""
+                        }
+                    }
+                }
             }
         }
 
         ColumnLayout {
             width: parent.width; spacing: 10
 
+            // ── Fields common to both modes ────────────────────────────────
             Text { text: "Proposer account ID"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
             LogosTextField { id: pProposerId; Layout.fillWidth: true; placeholderText: "your account ID" }
 
             Text { text: "Target program ID (hex)"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
             LogosTextField { id: pTargetProgram; Layout.fillWidth: true; placeholderText: "64-char hex" }
 
-            Text { text: "Instruction data (u32 words, one per line)"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
-            TextArea {
-                id: pInstrData; Layout.fillWidth: true; implicitHeight: 72
-                placeholderText: "123456789\n987654321\n…"
-                color: Theme.palette.text
-                placeholderTextColor: Theme.palette.textPlaceholder
-                wrapMode: TextArea.Wrap
-                background: Rectangle {
-                    color: Theme.palette.backgroundSecondary
-                    border.color: Theme.palette.border
-                    radius: Theme.spacing.radiusSmall
+            // ── Raw words mode ─────────────────────────────────────────────
+            ColumnLayout {
+                visible: proposeDialog.proposeMode === 0
+                Layout.fillWidth: true; spacing: 6
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text { text: "Instruction data (u32 words, one per line)"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans; Layout.fillWidth: true }
+                    Text {
+                        visible: proposeDialog._encodePreview !== ""
+                        text: "✓ " + proposeDialog._encodePreview
+                        color: Theme.palette.success; font.pixelSize: 10; font.family: Theme.typography.publicSans
+                    }
+                }
+                TextArea {
+                    id: pInstrData; Layout.fillWidth: true; implicitHeight: 72
+                    placeholderText: "0\n1000\n0\n…  (or use Encode from IDL →)"
+                    color: Theme.palette.text
+                    placeholderTextColor: Theme.palette.textPlaceholder
+                    wrapMode: TextArea.Wrap
+                    background: Rectangle {
+                        color: Theme.palette.backgroundSecondary
+                        border.color: Theme.palette.border
+                        radius: Theme.spacing.radiusSmall
+                    }
                 }
             }
 
-            Text { text: "Target account count"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
-            LogosTextField { id: pAcctCount; Layout.fillWidth: true; placeholderText: "0" }
+            // ── Encode-from-IDL mode ───────────────────────────────────────
+            ColumnLayout {
+                visible: proposeDialog.proposeMode === 1
+                Layout.fillWidth: true; spacing: 6
 
-            Text { text: "Proposal index (next tx index)"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
-            LogosTextField {
-                id: pPropIdx; Layout.fillWidth: true
-                placeholderText: String(parseInt(backend.multisigState["transaction_index"]) || 0)
+                Text { text: "Program IDL (paste JSON)"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+                TextArea {
+                    id: pIdlJson; Layout.fillWidth: true; implicitHeight: 80
+                    placeholderText: '{"name":"token","instructions":[…]}'
+                    color: Theme.palette.text; font.pixelSize: 11; font.family: "monospace"
+                    placeholderTextColor: Theme.palette.textPlaceholder
+                    wrapMode: TextArea.WrapAtWordBoundaryOrAnywhere
+                    background: Rectangle {
+                        color: Theme.palette.backgroundSecondary
+                        border.color: Theme.palette.border; radius: Theme.spacing.radiusSmall
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true; spacing: 8
+                    ColumnLayout {
+                        Layout.fillWidth: true; spacing: 4
+                        Text { text: "Instruction name"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+                        LogosTextField { id: pIxName; Layout.fillWidth: true; placeholderText: "e.g. transfer_tokens" }
+                    }
+                }
+
+                Text { text: "Args (JSON object)"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+                TextArea {
+                    id: pArgsJson; Layout.fillWidth: true; implicitHeight: 60
+                    placeholderText: '{"amount": 1000, "recipient": "0x01020304…"}'
+                    color: Theme.palette.text; font.pixelSize: 11; font.family: "monospace"
+                    placeholderTextColor: Theme.palette.textPlaceholder
+                    wrapMode: TextArea.WrapAtWordBoundaryOrAnywhere
+                    background: Rectangle {
+                        color: Theme.palette.backgroundSecondary
+                        border.color: Theme.palette.border; radius: Theme.spacing.radiusSmall
+                    }
+                }
+
+                // Error + Encode button row
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        visible: proposeDialog._encodeError !== ""
+                        text: proposeDialog._encodeError
+                        color: Theme.palette.error; font.pixelSize: 10; font.family: Theme.typography.publicSans
+                        wrapMode: Text.WordWrap; Layout.fillWidth: true
+                    }
+                    Item { Layout.fillWidth: true; visible: proposeDialog._encodeError === "" }
+                    Rectangle {
+                        width: encodeText.implicitWidth + 20; height: 32; radius: Theme.spacing.radiusXlarge
+                        color: encodeArea.containsMouse ? Theme.palette.primaryHover : Theme.palette.primary
+                        Text {
+                            id: encodeText; anchors.centerIn: parent
+                            text: "Encode →"; color: Theme.palette.text
+                            font.pixelSize: 12; font.family: Theme.typography.publicSans
+                        }
+                        MouseArea {
+                            id: encodeArea; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                            onClicked: proposeDialog._runEncode()
+                        }
+                    }
+                }
+            }
+
+            // ── Common: account count + proposal index ─────────────────────
+            RowLayout {
+                Layout.fillWidth: true; spacing: 12
+                ColumnLayout {
+                    Layout.fillWidth: true; spacing: 4
+                    Text { text: "Target account count"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+                    LogosTextField { id: pAcctCount; Layout.fillWidth: true; placeholderText: "0" }
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true; spacing: 4
+                    Text { text: "Proposal index"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+                    LogosTextField {
+                        id: pPropIdx; Layout.fillWidth: true
+                        placeholderText: String(parseInt(backend.multisigState["transaction_index"]) || 0)
+                    }
+                }
             }
         }
 
         footer: RowLayout {
             spacing: 8; Layout.rightMargin: 16; Layout.bottomMargin: 12
             Item { Layout.fillWidth: true }
-            LogosButton { text: "Cancel"; onClicked: proposeDialog.close() }
+            LogosButton {
+                text: "Cancel"
+                onClicked: { proposeDialog.close(); proposeDialog.proposeMode = 0 }
+            }
+            // In encode mode, show Encode button only; in raw mode, show Propose
             Rectangle {
+                visible: proposeDialog.proposeMode === 1
+                width: encodeFooterText.implicitWidth + 24; height: 40; radius: Theme.spacing.radiusXlarge
+                color: encodeFooterArea.containsMouse ? Theme.palette.primaryHover : Theme.palette.primary
+                Text {
+                    id: encodeFooterText; anchors.centerIn: parent
+                    text: "Encode"; color: Theme.palette.text
+                    font.pixelSize: 13; font.family: Theme.typography.publicSans
+                }
+                MouseArea {
+                    id: encodeFooterArea; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                    onClicked: proposeDialog._runEncode()
+                }
+            }
+            Rectangle {
+                visible: proposeDialog.proposeMode === 0
                 width: propOkText.implicitWidth + 24; height: 40; radius: Theme.spacing.radiusXlarge
                 color: propOkArea.containsMouse ? Theme.palette.primaryHover : Theme.palette.primary
                 opacity: backend.busy ? 0.5 : 1.0
@@ -1147,7 +1308,7 @@ Item {
                 MouseArea {
                     id: propOkArea; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
                     onClicked: {
-                        if (!backend.busy) {
+                        if (!backend.busy && proposeDialog.proposeMode === 0) {
                             var instrWords = pInstrData.text.split("\n")
                                 .map(function(s){ return s.trim() })
                                 .filter(function(s){ return s.length > 0 })
@@ -1158,6 +1319,8 @@ Item {
                                             instrWords, parseInt(pAcctCount.text) || 0,
                                             [], [], activeCreateKey, propIdx)
                             proposeDialog.close()
+                            proposeDialog.proposeMode = 0
+                            proposeDialog._encodePreview = ""
                         }
                     }
                 }

@@ -120,6 +120,7 @@ generate-module-scaffold: ## First-time: generate ALL files including qml/Main.q
 	@cp $(MODULE_GEN_DIR)/manifest.json              $(MODULE_DIR)/
 	@cp $(MODULE_GEN_DIR)/module.yaml                $(MODULE_DIR)/
 	@echo "✅ Full scaffold written to $(MODULE_SRC)/, $(MODULE_QML)/, and $(MODULE_DIR)/"
+	$(MAKE) patch-generated
 
 generate: ## Regenerate IDL, FFI client, C header, and Qt module from Rust annotations (run after changing lib.rs)
 	@echo "🔄 Regenerating all generated files..."
