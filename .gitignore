@@ -19,8 +19,10 @@ lez-multisig-module/src/LezMultisigBackend.cpp
 lez-multisig-module/src/LezMultisigPlugin.h
 lez-multisig-module/src/LezMultisigPlugin.cpp
 lez-multisig-module/src/main.cpp
-lez-multisig-module/CMakeLists.txt
-lez-multisig-module/manifest.json
-lez-multisig-module/module.yaml
+# CMakeLists.txt, manifest.json, module.yaml are hand-edited for v0.2 and tracked in git
+# (run 'make generate-module-scaffold' to regenerate a base, then re-apply edits)
+#lez-multisig-module/CMakeLists.txt
+#lez-multisig-module/manifest.json
+#lez-multisig-module/module.yaml
 multisig.json
 .scaffold

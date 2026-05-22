@@ -229,12 +229,31 @@ MODULE_APP      := $(MODULE_BUILD)/LezMultisigApp
 MODULE_PLUGIN   := $(MODULE_BUILD)/liblez_multisig_plugin.so
 FFI_LIB_DIR    := target/release
 
+# Logos Design System source root — provides Logos.Theme and Logos.Controls QML modules.
+# Set to the logos-design-system repo checkout, e.g.:
+#   LOGOS_DESIGN_SYSTEM_DIR=../logos-design-system make build-module
+LOGOS_DESIGN_SYSTEM_DIR ?=
+
+# Workspace default (used if LOGOS_DESIGN_SYSTEM_DIR not set explicitly)
+_LOGOS_DS_WORKSPACE := $(HOME)/devel/github.com/logos-co/logos-workspace/repos/logos-design-system
+ifeq ($(LOGOS_DESIGN_SYSTEM_DIR),)
+  ifneq ($(wildcard $(_LOGOS_DS_WORKSPACE)/src/qml/theme/qmldir),)
+    LOGOS_DESIGN_SYSTEM_DIR := $(_LOGOS_DS_WORKSPACE)
+  endif
+endif
+
+_CMAKE_LOGOS_DS :=
+ifneq ($(LOGOS_DESIGN_SYSTEM_DIR),)
+  _CMAKE_LOGOS_DS := -DLOGOS_DESIGN_SYSTEM_DIR=$(LOGOS_DESIGN_SYSTEM_DIR)
+endif
+
 .PHONY: build-module run-module
 
 build-module: build-ffi generate-module ## Build the Basecamp UI module plugin + standalone preview app
 	@echo "🔨 Building UI module..."
+	$(if $(LOGOS_DESIGN_SYSTEM_DIR),@echo "  Design system: $(LOGOS_DESIGN_SYSTEM_DIR)",@echo "  ⚠️  LOGOS_DESIGN_SYSTEM_DIR not set — Logos.Theme unavailable")
 	@mkdir -p $(MODULE_BUILD)
-	cd $(MODULE_BUILD) && cmake .. -DCMAKE_BUILD_TYPE=Release
+	cd $(MODULE_BUILD) && cmake .. -DCMAKE_BUILD_TYPE=Release $(_CMAKE_LOGOS_DS)
 	cmake --build $(MODULE_BUILD) --parallel
 	@echo "✅ Plugin: $(MODULE_PLUGIN)"
 	@echo "✅ App:    $(MODULE_APP)"
@@ -242,6 +261,7 @@ build-module: build-ffi generate-module ## Build the Basecamp UI module plugin +
 run-module: build-module ## Run the standalone multisig UI preview (set LEZ_MULTISIG_PROGRAM_ID=<hex> to inject program ID)
 	LD_LIBRARY_PATH=$(CURDIR)/$(FFI_LIB_DIR):$$LD_LIBRARY_PATH \
 	  LEZ_MULTISIG_PROGRAM_ID=$(LEZ_MULTISIG_PROGRAM_ID) \
+	  QML_IMPORT_PATH=$(CURDIR)/$(MODULE_BUILD)/logos-qml \
 	  $(MODULE_APP)
 
 # ── Headless Demo ─────────────────────────────────────────────────────────────

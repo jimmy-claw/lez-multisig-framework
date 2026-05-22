@@ -1,0 +1,16 @@
+{
+  "author": "",
+  "category": "tools",
+  "dependencies": [],
+  "description": "Qt/QML Basecamp module for the multisig_program program",
+  "icon": "",
+  "main": {
+    "linux-amd64": "liblez_multisig_plugin.so",
+    "linux-amd64-dev": "liblez_multisig_plugin.so",
+    "linux-x86_64-dev": "liblez_multisig_plugin.so"
+  },
+  "manifestVersion": "0.2.0",
+  "name": "lez_multisig",
+  "type": "ui",
+  "version": "0.1.0"
+}
