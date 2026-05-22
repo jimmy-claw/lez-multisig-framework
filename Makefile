@@ -95,15 +95,23 @@ generate-module: ## Regenerate backend/plugin/build files; preserves hand-writte
 	@echo "✅ Backend/plugin/build files written (qml/Main.qml, CMakeLists.txt, manifest.json, module.yaml preserved)"
 	$(MAKE) patch-generated
 
-patch-generated: ## Patch generated LezMultisigPlugin.cpp to register the codec context property
-	@echo "🔧 Patching generated LezMultisigPlugin.cpp to add codec context property..."
-	@# Add #include "LezMultisigCodec.h" after the last #include in the generated file
+patch-generated: ## Patch generated LezMultisigPlugin.cpp to register codec + spelbook context properties
+	@echo "🔧 Patching generated LezMultisigPlugin.cpp..."
+	@# 1) Add codec include + context property (idempotent)
 	@if ! grep -q 'LezMultisigCodec' $(MODULE_SRC)/LezMultisigPlugin.cpp; then \
 		sed -i 's|#include "LezMultisigBackend.h"|#include "LezMultisigBackend.h"\n#include "LezMultisigCodec.h"|' $(MODULE_SRC)/LezMultisigPlugin.cpp; \
 		sed -i 's|setContextProperty("backend", m_backend);|setContextProperty("backend", m_backend);\n\tview->engine()->rootContext()->setContextProperty("codec", new LezMultisigCodec(this));|' $(MODULE_SRC)/LezMultisigPlugin.cpp; \
-		echo "✅ Patched: codec context property added"; \
+		echo "  ✅ Added: codec context property"; \
 	else \
-		echo "ℹ️  Already patched (LezMultisigCodec already present)"; \
+		echo "  ℹ️  Skipped: LezMultisigCodec already present"; \
+	fi
+	@# 2) Add spelbook include + context property (idempotent)
+	@if ! grep -q 'LezSpelbookBridge' $(MODULE_SRC)/LezMultisigPlugin.cpp; then \
+		sed -i 's|#include "LezMultisigCodec.h"|#include "LezMultisigCodec.h"\n#include "LezSpelbookBridge.h"|' $(MODULE_SRC)/LezMultisigPlugin.cpp; \
+		sed -i 's|setContextProperty("codec", new LezMultisigCodec(this));|setContextProperty("codec", new LezMultisigCodec(this));\n\tview->engine()->rootContext()->setContextProperty("spelbook", new LezSpelbookBridge(this));|' $(MODULE_SRC)/LezMultisigPlugin.cpp; \
+		echo "  ✅ Added: spelbook context property"; \
+	else \
+		echo "  ℹ️  Skipped: LezSpelbookBridge already present"; \
 	fi
 
 generate-module-scaffold: ## First-time: generate ALL files including qml/Main.qml scaffold (overwrites existing QML)
@@ -240,6 +248,16 @@ MODULE_APP      := $(MODULE_BUILD)/LezMultisigApp
 MODULE_PLUGIN   := $(MODULE_BUILD)/liblez_multisig_plugin.so
 FFI_LIB_DIR    := target/release
 
+# Spelbook FFI library directory — set to vpavlin/spelbook target/release.
+# e.g.: SPELBOOK_FFI_DIR=../spelbook/target/release make build-module
+SPELBOOK_FFI_DIR ?=
+_SPELBOOK_WORKSPACE := $(HOME)/devel/github.com/vpavlin/spelbook/target/release
+ifeq ($(SPELBOOK_FFI_DIR),)
+  ifneq ($(wildcard $(_SPELBOOK_WORKSPACE)/liblez_registry_ffi.so),)
+    SPELBOOK_FFI_DIR := $(_SPELBOOK_WORKSPACE)
+  endif
+endif
+
 # Logos Design System source root — provides Logos.Theme and Logos.Controls QML modules.
 # Set to the logos-design-system repo checkout, e.g.:
 #   LOGOS_DESIGN_SYSTEM_DIR=../logos-design-system make build-module
@@ -258,19 +276,25 @@ ifneq ($(LOGOS_DESIGN_SYSTEM_DIR),)
   _CMAKE_LOGOS_DS := -DLOGOS_DESIGN_SYSTEM_DIR=$(LOGOS_DESIGN_SYSTEM_DIR)
 endif
 
+_CMAKE_SPELBOOK :=
+ifneq ($(SPELBOOK_FFI_DIR),)
+  _CMAKE_SPELBOOK := -DSPELBOOK_FFI_DIR=$(SPELBOOK_FFI_DIR)
+endif
+
 .PHONY: build-module run-module
 
 build-module: build-ffi generate-module ## Build the Basecamp UI module plugin + standalone preview app
 	@echo "🔨 Building UI module..."
 	$(if $(LOGOS_DESIGN_SYSTEM_DIR),@echo "  Design system: $(LOGOS_DESIGN_SYSTEM_DIR)",@echo "  ⚠️  LOGOS_DESIGN_SYSTEM_DIR not set — Logos.Theme unavailable")
+	$(if $(SPELBOOK_FFI_DIR),@echo "  Spelbook FFI:  $(SPELBOOK_FFI_DIR)",@echo "  ⚠️  SPELBOOK_FFI_DIR not set — spelbook bridge unavailable")
 	@mkdir -p $(MODULE_BUILD)
-	cd $(MODULE_BUILD) && cmake .. -DCMAKE_BUILD_TYPE=Release $(_CMAKE_LOGOS_DS)
+	cd $(MODULE_BUILD) && cmake .. -DCMAKE_BUILD_TYPE=Release $(_CMAKE_LOGOS_DS) $(_CMAKE_SPELBOOK)
 	cmake --build $(MODULE_BUILD) --parallel
 	@echo "✅ Plugin: $(MODULE_PLUGIN)"
 	@echo "✅ App:    $(MODULE_APP)"
 
 run-module: build-module ## Run the standalone multisig UI preview (set LEZ_MULTISIG_PROGRAM_ID=<hex> to inject program ID)
-	LD_LIBRARY_PATH=$(CURDIR)/$(FFI_LIB_DIR):$$LD_LIBRARY_PATH \
+	LD_LIBRARY_PATH=$(CURDIR)/$(FFI_LIB_DIR):$(SPELBOOK_FFI_DIR):$$LD_LIBRARY_PATH \
 	  LEZ_MULTISIG_PROGRAM_ID=$(LEZ_MULTISIG_PROGRAM_ID) \
 	  QML_IMPORT_PATH=$(CURDIR)/$(MODULE_BUILD)/logos-qml \
 	  $(MODULE_APP)

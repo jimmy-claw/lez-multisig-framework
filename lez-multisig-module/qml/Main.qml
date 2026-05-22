@@ -19,6 +19,7 @@ Item {
     property int _fetchTarget: 0
     property int _fetchNext: 0
     property string _multisigIdl: ""    // lazily loaded from codec.getMultisigIdl()
+    property string _storageUrl: ""     // Logos Storage URL (Codex) — for IDL fetching via spelbook
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     function u8ArrayToHex(arr) {
@@ -138,6 +139,8 @@ Item {
         loadKnownMultisigs()
         backend.listAccounts()
         _multisigIdl = codec.getMultisigIdl()
+        var rawStorageUrl = backend.fieldHistory("storage_url")
+        if (rawStorageUrl) _storageUrl = rawStorageUrl
     }
 
     // ── Backend connections ───────────────────────────────────────────────────
@@ -581,11 +584,52 @@ Item {
                                         if (!instrData) { _decodeError = "no instruction data"; return }
                                         var words = Array.isArray(instrData) ? instrData : [instrData]
                                         var wordsJson = JSON.stringify(words.map(function(w){ return (parseInt(w) >>> 0) }))
+
+                                        // Try multisig IDL first
                                         var idl = _multisigIdl
                                         var resultStr = codec.decodeInstruction(idl, wordsJson)
                                         var result = JSON.parse(resultStr)
-                                        if (result.success) { _decoded = result.result; _decodeError = "" }
-                                        else { _decoded = null; _decodeError = result.error || "decode failed" }
+                                        if (result.success) { _decoded = result.result; _decodeError = ""; return }
+
+                                        // Fallback: look up target program in spelbook cache
+                                        if (!spelbook.isAvailable()) {
+                                            _decoded = null; _decodeError = result.error || "decode failed"
+                                            return
+                                        }
+                                        var targetHex = u32ArrayToHex(pdata["target_program_id"] || [])
+                                        if (!targetHex) { _decoded = null; _decodeError = result.error || "decode failed"; return }
+
+                                        var searchStr = spelbook.searchPrograms("")
+                                        var searchRes = JSON.parse(searchStr)
+                                        if (!searchRes.success) {
+                                            _decoded = null; _decodeError = result.error || "decode failed"; return
+                                        }
+                                        var entry = null
+                                        for (var i = 0; i < searchRes.programs.length; i++) {
+                                            if ((searchRes.programs[i]["program_id"] || "").toLowerCase() === targetHex.toLowerCase()) {
+                                                entry = searchRes.programs[i]; break
+                                            }
+                                        }
+                                        if (!entry || !entry["idl_cid"]) {
+                                            _decoded = null
+                                            _decodeError = (result.error || "decode failed") + " · program not in spelbook cache"
+                                            return
+                                        }
+                                        if (!_storageUrl) {
+                                            _decoded = null
+                                            _decodeError = "program in spelbook (idl_cid: " + entry["idl_cid"].slice(0, 12) + "…) — set Storage URL in Settings to fetch IDL"
+                                            return
+                                        }
+                                        var idlFetchStr = spelbook.fetchIdl(_storageUrl, entry["idl_cid"])
+                                        var idlFetch = JSON.parse(idlFetchStr)
+                                        if (!idlFetch.success) {
+                                            _decoded = null; _decodeError = "IDL fetch failed: " + (idlFetch.error || "unknown"); return
+                                        }
+                                        var externalIdl = JSON.stringify(idlFetch.idl)
+                                        var resultStr2 = codec.decodeInstruction(externalIdl, wordsJson)
+                                        var result2 = JSON.parse(resultStr2)
+                                        if (result2.success) { _decoded = result2.result; _decodeError = "" }
+                                        else { _decoded = null; _decodeError = result2.error || "decode failed (spelbook IDL)" }
                                     }
 
                                     ColumnLayout {
@@ -786,7 +830,9 @@ Item {
                             model: [
                                 { label: "Wallet Path",      getter: function(){ return backend.walletPath },    setter: function(v){ backend.setWalletPath(v) } },
                                 { label: "Sequencer URL",    getter: function(){ return backend.sequencerUrl },  setter: function(v){ backend.setSequencerUrl(v) } },
-                                { label: "Program ID (hex)", getter: function(){ return backend.programIdHex }, setter: function(v){ backend.setProgramIdHex(v) } }
+                                { label: "Program ID (hex)", getter: function(){ return backend.programIdHex }, setter: function(v){ backend.setProgramIdHex(v) } },
+                                { label: "Storage URL (Codex)", getter: function(){ return root._storageUrl },
+                                  setter: function(v){ root._storageUrl = v; backend.saveHistory("storage_url", v) } }
                             ]
                             ColumnLayout {
                                 Layout.fillWidth: true; Layout.leftMargin: 24; Layout.rightMargin: 24; spacing: 4
@@ -1100,6 +1146,8 @@ Item {
         property int proposeMode: 0
         property string _encodeError: ""
         property string _encodePreview: ""  // "N words: [0, 1000, …]"
+        property var _spelResults: []
+        property string _spelQuery: ""
 
         function _runEncode() {
             _encodeError = ""
@@ -1199,6 +1247,100 @@ Item {
             ColumnLayout {
                 visible: proposeDialog.proposeMode === 1
                 Layout.fillWidth: true; spacing: 6
+
+                // Spelbook search (only when spelbook is linked)
+                ColumnLayout {
+                    visible: spelbook.isAvailable()
+                    Layout.fillWidth: true; spacing: 4
+
+                    Text { text: "Search spelbook registry"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
+                    RowLayout {
+                        Layout.fillWidth: true; spacing: 6
+                        LogosTextField {
+                            id: pSpelQuery; Layout.fillWidth: true
+                            placeholderText: "program name or leave blank for all"
+                            onTextChanged: proposeDialog._spelQuery = text
+                        }
+                        Rectangle {
+                            width: spelSearchText.implicitWidth + 16; height: 36
+                            radius: Theme.spacing.radiusLarge
+                            color: spelSearchArea.containsMouse ? Theme.palette.backgroundMuted : Theme.palette.background
+                            border.color: Theme.palette.border
+                            Text {
+                                id: spelSearchText; anchors.centerIn: parent
+                                text: "Search"; color: Theme.palette.textMuted
+                                font.pixelSize: 11; font.family: Theme.typography.publicSans
+                            }
+                            MouseArea {
+                                id: spelSearchArea; anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                                onClicked: {
+                                    var resStr = spelbook.searchPrograms(proposeDialog._spelQuery)
+                                    var res = JSON.parse(resStr)
+                                    proposeDialog._spelResults = res.success ? res.programs : []
+                                }
+                            }
+                        }
+                    }
+
+                    // Search results
+                    Repeater {
+                        model: proposeDialog._spelResults
+                        Rectangle {
+                            Layout.fillWidth: true; height: 44; radius: Theme.spacing.radiusSmall
+                            color: spelResultArea.containsMouse
+                                ? Qt.rgba(Theme.palette.primary.r, Theme.palette.primary.g, Theme.palette.primary.b, 0.10)
+                                : Theme.palette.background
+                            border.color: spelResultArea.containsMouse ? Theme.palette.primary : Theme.palette.border
+
+                            ColumnLayout {
+                                anchors { fill: parent; margins: 8 }; spacing: 2
+                                Text {
+                                    text: (modelData["name"] || "Unknown") + (modelData["version"] ? "  v" + modelData["version"] : "")
+                                    color: Theme.palette.text; font.pixelSize: 12; font.bold: true
+                                    font.family: Theme.typography.publicSans
+                                    elide: Text.ElideRight; Layout.fillWidth: true
+                                }
+                                Text {
+                                    text: shortHex(modelData["program_id"] || "") +
+                                          (modelData["idl_cid"] ? "  · IDL available" : "  · no IDL")
+                                    color: Theme.palette.textMuted; font.pixelSize: 10
+                                    font.family: "monospace"; elide: Text.ElideRight; Layout.fillWidth: true
+                                }
+                            }
+
+                            MouseArea {
+                                id: spelResultArea; anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                                onClicked: {
+                                    // Populate target program field
+                                    pTargetProgram.text = modelData["program_id"] || ""
+                                    // Fetch IDL if cid + storage URL available
+                                    var idlCid = modelData["idl_cid"] || ""
+                                    if (idlCid && _storageUrl) {
+                                        var idlStr = spelbook.fetchIdl(_storageUrl, idlCid)
+                                        var idlRes = JSON.parse(idlStr)
+                                        if (idlRes.success) {
+                                            pIdlJson.text = JSON.stringify(idlRes.idl)
+                                            proposeDialog._encodeError = ""
+                                        } else {
+                                            proposeDialog._encodeError = "IDL fetch failed: " + (idlRes.error || "unknown")
+                                        }
+                                    } else if (idlCid && !_storageUrl) {
+                                        proposeDialog._encodeError = "IDL cid: " + idlCid.slice(0, 16) + "… — set Storage URL in Settings to fetch"
+                                    }
+                                    proposeDialog._spelResults = []
+                                    pSpelQuery.text = ""
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        visible: proposeDialog._spelResults.length === 0 && pSpelQuery.text.length > 0
+                        Layout.fillWidth: true; height: 1; color: Theme.palette.border
+                    }
+                }
 
                 Text { text: "Program IDL (paste JSON)"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
                 TextArea {

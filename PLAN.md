@@ -235,13 +235,17 @@ The multisig Qt module calls spelbook via `logos.callModule()` signal/slot mecha
 
 ## 3. Implementation Plan
 
-### Phase 0 — Spelbook enhancements (prerequisite)
+### Phase 0 — Spelbook enhancements ✅ DONE
 
-- [ ] Add `fetchIdl(idl_cid: String)` Q_INVOKABLE to spelbook Qt module — calls `lez_storage_fetch_idl(cid)` FFI, returns IDL JSON string
-- [ ] Add `searchPrograms(query: String)` Q_INVOKABLE wrapping `listPrograms` + client-side name filter
-- [ ] Verify program_id hex ↔ `[u32;8]` conversion is consistent between multisig and spelbook
+- [x] Add `fetchIdl(idl_cid: String)` Q_INVOKABLE to spelbook Qt module — calls `lez_storage_fetch_idl(cid)` FFI, returns IDL JSON string
+- [x] Add `searchPrograms(query: String)` Q_INVOKABLE — local JSON cache search via `lez_registry_search` FFI; cache at `~/.local/share/spelbook/programs.json`
+- [x] `getProgram` + `register` auto-populate cache so search works offline after any registry query
+- [ ] Verify program_id hex ↔ `[u32;8]` conversion is consistent between multisig and spelbook (endianness TBD)
+- [x] `LezSpelbookBridge.h` added to lez-multisig module; wired as `spelbook` context property
+- [x] Spelbook search integrated in propose dialog (encode-from-IDL mode)
+- [x] Spelbook IDL fallback in proposal decode (`tryDecode`)
 
-**Deliver:** spelbook module with `fetchIdl` + `searchPrograms`
+**Deliver:** spelbook module with `fetchIdl` + `searchPrograms` (vpavlin/spelbook `feat/spelbook-qt-module`); multisig wired to spelbook FFI ✅
 
 ### Phase 1 — spel-framework codec FFI ✅ DONE
 
@@ -266,18 +270,18 @@ The multisig Qt module calls spelbook via `logos.callModule()` signal/slot mecha
 - [x] Per-proposal Decode button: tries codec with multisig IDL, shows decoded args inline
 - [x] Error shown inline if decode fails (e.g. wrong IDL for the target program)
 - [x] Approve / Execute / Reject buttons via account picker dialog
-- [ ] Full path: spelbook IDL lookup by target_program_id → decode (blocked on Phase 0)
+- [x] Full path: spelbook IDL lookup by target_program_id → decode (spelbook cache search + Codex fetch)
 
-**Deliver:** fallback decode (multisig IDL) + action buttons ✅; spelbook-backed decode pending Phase 0
+**Deliver:** fallback decode (multisig IDL) + spelbook-backed decode + action buttons ✅
 
 ### Phase 4 — New Proposal wizard ✅ DONE (Encode-from-IDL mode; spelbook search pending Phase 0)
 
 - [x] Raw words mode: paste u32 words directly (advanced)
 - [x] Encode-from-IDL mode: paste IDL JSON + instruction name + args JSON → live encode via codec → words pre-filled
-- [ ] Spelbook search (Step 1): blocked on Phase 0 `searchPrograms` Q_INVOKABLE
-- [ ] Instruction picker from IDL (Step 2): could be added after Phase 0
+- [x] Spelbook search (Step 1): search field in encode-from-IDL mode → select program → auto-populate target + IDL
+- [ ] Instruction picker from IDL (Step 2): show instruction list from IDL instead of manual name entry (future improvement)
 
-**Deliver:** self-contained encode-from-IDL propose flow ✅; spelbook-integrated wizard pending Phase 0
+**Deliver:** spelbook-integrated encode-from-IDL propose flow ✅
 
 ### Phase 5 — Create Multisig + governance ✅ DONE
 

@@ -50,11 +50,27 @@ set_target_properties(lez_multisig_ffi PROPERTIES
     IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../target/release/liblez_multisig_ffi.so"
 )
 
+# ── Spelbook registry FFI (liblez_registry_ffi.so from vpavlin/spelbook) ──────
+# Set SPELBOOK_FFI_DIR to the spelbook target/release dir, e.g.:
+#   cmake -DSPELBOOK_FFI_DIR=/path/to/spelbook/target/release ..
+set(SPELBOOK_FFI_DIR "" CACHE PATH "spelbook target/release dir containing liblez_registry_ffi.so")
+if(NOT "${SPELBOOK_FFI_DIR}" STREQUAL "")
+    add_library(lez_registry_ffi SHARED IMPORTED)
+    set_target_properties(lez_registry_ffi PROPERTIES
+        IMPORTED_LOCATION "${SPELBOOK_FFI_DIR}/liblez_registry_ffi.so"
+    )
+    add_compile_definitions(SPELBOOK_AVAILABLE)
+    message(STATUS "Spelbook FFI: ${SPELBOOK_FFI_DIR}/liblez_registry_ffi.so")
+else()
+    message(STATUS "Spelbook FFI: not configured (set -DSPELBOOK_FFI_DIR=...)")
+endif()
+
 # ── Plugin (loaded by Basecamp) ────────────────────────────────────────────
 add_library(LezMultisigPlugin SHARED
     src/LezMultisigBackend.cpp
     src/LezMultisigPlugin.cpp
-    src/LezMultisigCodec.h   # header-only; listed for IDE visibility
+    src/LezMultisigCodec.h        # header-only; listed for IDE visibility
+    src/LezSpelbookBridge.h       # header-only; listed for IDE visibility
 )
 
 # Resource name "lez_multisig_qml" must match Q_INIT_RESOURCE(lez_multisig_qml) in LezMultisigPlugin.cpp
@@ -66,6 +82,7 @@ qt_add_resources(LezMultisigPlugin "lez_multisig_qml"
 target_link_libraries(LezMultisigPlugin PRIVATE
     Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickWidgets Qt6::Concurrent
     lez_multisig_ffi
+    $<$<BOOL:${SPELBOOK_FFI_DIR}>:lez_registry_ffi>
 )
 
 # Output name must match manifest.json "main" value (lib<name>_plugin.so)
@@ -76,7 +93,8 @@ add_executable(LezMultisigApp
     src/main.cpp
     src/LezMultisigBackend.cpp
     src/LezMultisigPlugin.cpp
-    src/LezMultisigCodec.h   # header-only; listed for IDE visibility
+    src/LezMultisigCodec.h        # header-only; listed for IDE visibility
+    src/LezSpelbookBridge.h       # header-only; listed for IDE visibility
 )
 
 # Same resource name as the plugin so Q_INIT_RESOURCE resolves in both targets
@@ -88,8 +106,9 @@ qt_add_resources(LezMultisigApp "lez_multisig_qml"
 target_link_libraries(LezMultisigApp PRIVATE
     Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickWidgets Qt6::Concurrent
     lez_multisig_ffi
+    $<$<BOOL:${SPELBOOK_FFI_DIR}>:lez_registry_ffi>
 )
 
 set_target_properties(LezMultisigApp PROPERTIES
-    BUILD_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/../target/release"
+    BUILD_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/../target/release:${SPELBOOK_FFI_DIR}"
 )
