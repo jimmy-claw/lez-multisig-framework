@@ -91,10 +91,20 @@ generate-module: ## Regenerate backend/plugin/build files; preserves hand-writte
 	@cp $(MODULE_GEN_DIR)/src/LezMultisigPlugin.h    $(MODULE_SRC)/
 	@cp $(MODULE_GEN_DIR)/src/LezMultisigPlugin.cpp  $(MODULE_SRC)/
 	@cp $(MODULE_GEN_DIR)/src/main.cpp               $(MODULE_SRC)/
-	@cp $(MODULE_GEN_DIR)/CMakeLists.txt             $(MODULE_DIR)/
-	@cp $(MODULE_GEN_DIR)/manifest.json              $(MODULE_DIR)/
-	@cp $(MODULE_GEN_DIR)/module.yaml                $(MODULE_DIR)/
-	@echo "✅ Backend/plugin/build files written (qml/Main.qml preserved)"
+	@# CMakeLists.txt, manifest.json, module.yaml are hand-edited and tracked in git — do NOT overwrite
+	@echo "✅ Backend/plugin/build files written (qml/Main.qml, CMakeLists.txt, manifest.json, module.yaml preserved)"
+	$(MAKE) patch-generated
+
+patch-generated: ## Patch generated LezMultisigPlugin.cpp to register the codec context property
+	@echo "🔧 Patching generated LezMultisigPlugin.cpp to add codec context property..."
+	@# Add #include "LezMultisigCodec.h" after the last #include in the generated file
+	@if ! grep -q 'LezMultisigCodec' $(MODULE_SRC)/LezMultisigPlugin.cpp; then \
+		sed -i 's|#include "LezMultisigBackend.h"|#include "LezMultisigBackend.h"\n#include "LezMultisigCodec.h"|' $(MODULE_SRC)/LezMultisigPlugin.cpp; \
+		sed -i 's|setContextProperty("backend", m_backend);|setContextProperty("backend", m_backend);\n\tview->engine()->rootContext()->setContextProperty("codec", new LezMultisigCodec(this));|' $(MODULE_SRC)/LezMultisigPlugin.cpp; \
+		echo "✅ Patched: codec context property added"; \
+	else \
+		echo "ℹ️  Already patched (LezMultisigCodec already present)"; \
+	fi
 
 generate-module-scaffold: ## First-time: generate ALL files including qml/Main.qml scaffold (overwrites existing QML)
 	@echo "🔨 Generating full logos-module scaffold from $(IDL_JSON)..."

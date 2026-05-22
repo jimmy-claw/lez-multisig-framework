@@ -6,6 +6,7 @@
 //! and adds read-only query helpers not covered by the IDL.
 
 mod multisig;
+pub mod codec;
 
 
 use nssa_core::program::ProgramId;

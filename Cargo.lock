@@ -2961,6 +2961,7 @@ dependencies = [
  "nssa",
  "nssa_core",
  "reqwest",
+ "risc0-zkvm",
  "sequencer_service_rpc",
  "serde",
  "serde_json",

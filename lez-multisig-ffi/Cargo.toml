@@ -26,3 +26,4 @@ wallet = { git = "https://github.com/logos-blockchain/logos-execution-zone.git",
 borsh = "1.5"
 sha2 = "0.10"
 sequencer_service_rpc = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3" }
+risc0-zkvm = { version = "3.0.5", features = ["std"] }

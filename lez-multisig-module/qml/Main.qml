@@ -18,6 +18,7 @@ Item {
     property var proposals: []           // accumulated for activeCreateKey
     property int _fetchTarget: 0
     property int _fetchNext: 0
+    property string _multisigIdl: ""    // lazily loaded from codec.getMultisigIdl()
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     function u8ArrayToHex(arr) {
@@ -136,6 +137,7 @@ Item {
     Component.onCompleted: {
         loadKnownMultisigs()
         backend.listAccounts()
+        _multisigIdl = codec.getMultisigIdl()
     }
 
     // ── Backend connections ───────────────────────────────────────────────────
@@ -564,6 +566,20 @@ Item {
                                     property int pRejected: rejectCount(pdata)
                                     property int pThreshold: threshold()
                                     property bool pExecutable: pStatus === "Pending" && pApproved >= pThreshold
+                                    property var _decoded: null
+                                    property string _decodeError: ""
+
+                                    function tryDecode() {
+                                        var instrData = pdata["target_instruction_data"]
+                                        if (!instrData) { _decodeError = "no instruction data"; return }
+                                        var words = Array.isArray(instrData) ? instrData : [instrData]
+                                        var wordsJson = JSON.stringify(words.map(function(w){ return (parseInt(w) >>> 0) }))
+                                        var idl = _multisigIdl
+                                        var resultStr = codec.decodeInstruction(idl, wordsJson)
+                                        var result = JSON.parse(resultStr)
+                                        if (result.success) { _decoded = result.result; _decodeError = "" }
+                                        else { _decoded = null; _decodeError = result.error || "decode failed" }
+                                    }
 
                                     ColumnLayout {
                                         id: proposalCardCol
@@ -604,6 +620,67 @@ Item {
                                             color: Theme.palette.textMuted
                                             font.pixelSize: 11; font.family: "monospace"
                                             elide: Text.ElideRight; Layout.fillWidth: true
+                                        }
+
+                                        // Decoded instruction (shown after clicking Decode)
+                                        Rectangle {
+                                            visible: _decoded !== null || _decodeError !== ""
+                                            Layout.fillWidth: true
+                                            height: decodedCol.implicitHeight + 10
+                                            radius: Theme.spacing.radiusSmall
+                                            color: _decodeError !== ""
+                                                ? Qt.rgba(Theme.palette.error.r, Theme.palette.error.g, Theme.palette.error.b, 0.08)
+                                                : Qt.rgba(Theme.palette.primary.r, Theme.palette.primary.g, Theme.palette.primary.b, 0.06)
+                                            border.color: _decodeError !== "" ? Theme.palette.error : Theme.palette.border
+
+                                            ColumnLayout {
+                                                id: decodedCol
+                                                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
+                                                spacing: 4
+
+                                                Text {
+                                                    visible: _decodeError !== ""
+                                                    text: "Decode error: " + _decodeError
+                                                    color: Theme.palette.error
+                                                    font.pixelSize: 10; font.family: "monospace"
+                                                    wrapMode: Text.WordWrap; Layout.fillWidth: true
+                                                }
+                                                Text {
+                                                    visible: _decoded !== null
+                                                    text: _decoded ? ("ix: " + _decoded["instruction"]) : ""
+                                                    color: Theme.palette.primary
+                                                    font.pixelSize: 11; font.bold: true
+                                                    font.family: Theme.typography.publicSans
+                                                }
+                                                Text {
+                                                    visible: _decoded !== null && _decoded["args"] !== undefined
+                                                    text: _decoded ? JSON.stringify(_decoded["args"], null, 2) : ""
+                                                    color: Theme.palette.text
+                                                    font.pixelSize: 10; font.family: "monospace"
+                                                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                                                    Layout.fillWidth: true
+                                                }
+                                            }
+                                        }
+
+                                        // Decode button (only for proposals with instruction data)
+                                        Rectangle {
+                                            visible: !!pdata["target_instruction_data"]
+                                            width: decodeText.implicitWidth + 14; height: 22
+                                            radius: Theme.spacing.radiusSmall
+                                            color: decodeArea.containsMouse ? Theme.palette.backgroundMuted : "transparent"
+                                            border.color: Theme.palette.border
+                                            Text {
+                                                id: decodeText; anchors.centerIn: parent
+                                                text: _decoded ? "Re-decode" : "Decode"
+                                                color: Theme.palette.textMuted
+                                                font.pixelSize: 10; font.family: Theme.typography.publicSans
+                                            }
+                                            MouseArea {
+                                                id: decodeArea; anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                                                onClicked: tryDecode()
+                                            }
                                         }
 
                                         // Approval progress bar

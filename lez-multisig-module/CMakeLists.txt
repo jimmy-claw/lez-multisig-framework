@@ -54,6 +54,7 @@ set_target_properties(lez_multisig_ffi PROPERTIES
 add_library(LezMultisigPlugin SHARED
     src/LezMultisigBackend.cpp
     src/LezMultisigPlugin.cpp
+    src/LezMultisigCodec.h   # header-only; listed for IDE visibility
 )
 
 # Resource name "lez_multisig_qml" must match Q_INIT_RESOURCE(lez_multisig_qml) in LezMultisigPlugin.cpp
@@ -75,6 +76,7 @@ add_executable(LezMultisigApp
     src/main.cpp
     src/LezMultisigBackend.cpp
     src/LezMultisigPlugin.cpp
+    src/LezMultisigCodec.h   # header-only; listed for IDE visibility
 )
 
 # Same resource name as the plugin so Q_INIT_RESOURCE resolves in both targets
