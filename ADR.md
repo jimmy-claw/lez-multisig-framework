@@ -44,8 +44,8 @@
 
 ---
 
-## ADR-6: Signer management deferred to v0.2
+## ADR-6: Signer management included in v0.1
 
-**Decision:** `AddMember`, `RemoveMember`, and `ChangeThreshold` instructions are implemented in the program but marked v0.2 in the FURPS scope. The v0.1 deliverable is create + propose + approve + execute + reject.
+**Decision:** `AddMember`, `RemoveMember`, and `ChangeThreshold` are implemented as `ProposeConfig` variants — they go through the same propose → approve → execute flow as any other multisig action, gated by the current threshold.
 
-**Rationale:** Member management adds significant test surface and UX complexity (quorum changes mid-flight proposals). Deferring keeps v0.1 scope tight and shippable while the spec documents the full design.
+**Rationale:** Member management reuses the existing proposal machinery rather than adding a separate code path. A threshold guard on `RemoveMember` ensures N never drops below M.

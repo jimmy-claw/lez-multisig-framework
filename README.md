@@ -195,7 +195,7 @@ This means you can use lez-cli with any program's IDL to generate the instructio
 ## Known Issues
 
 - [ ] No `CloseProposal` instruction yet (executed/rejected proposals stay on-chain)
-- [ ] `ProposeConfig` (AddMember/RemoveMember/ChangeThreshold) not yet in program
+- [ ] No GUI — Basecamp Qt module planned for v0.2
 
 ## Dependencies
 
