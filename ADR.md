@@ -32,7 +32,7 @@
 
 **Rationale:** LEZ runtime requires explicit account claiming before a program can write to an account. Reusing existing keypairs would conflict with their existing owners. This is a runtime constraint, not a design preference — see [LSSA #339](https://github.com/logos-blockchain/lssa/issues/339).
 
-**Known limitation:** Users must generate and manage a dedicated keypair per multisig membership. Future runtime changes (LSSA #339) may relax this.
+**Known limitation:** Users must generate and manage a dedicated keypair per multisig membership. Future runtime changes (logos-execution-zone #339) may relax this.
 
 ---
 
