@@ -40,7 +40,9 @@ lez-multisig-framework/
 │   ├── demo-full-flow.sh    — full end-to-end demo script
 │   └── DEMO-RUNBOOK.md      — manual CLI runbook for live presentation
 ├── SPEC.md                  — full technical specification
-└── docs/FURPS.md            — requirements specification
+├── FURPS.md                 — requirements specification
+├── ADR.md                   — architecture decision records
+└── docs/
 ```
 
 ## Quick Start
@@ -195,12 +197,30 @@ This means you can use lez-cli with any program's IDL to generate the instructio
 - [ ] No `CloseProposal` instruction yet (executed/rejected proposals stay on-chain)
 - [ ] `ProposeConfig` (AddMember/RemoveMember/ChangeThreshold) not yet in program
 
+## Dependencies
+
+### v0.1
+
+| Component | Role |
+|---|---|
+| [LSSA (LEZ runtime)](https://github.com/logos-blockchain/lssa) | ChainedCall, PDA derivation, account ownership, nonce replay protection |
+| [Token Program](https://github.com/logos-blockchain/logos-execution-zone) | Native token (λ) transfers — primary ChainedCall target |
+| [spel-framework](https://github.com/logos-co/spel) | IDL generation, FFI client codegen, C header |
+| [RISC0 zkVM](https://github.com/risc0/risc0) | Guest program execution environment |
+
+### v0.2
+
+| Component | Role |
+|---|---|
+| [spel-client-gen](https://github.com/logos-co/spel) | Generates Basecamp Qt module (backend, plugin, QML scaffold) from IDL |
+| [logos-lez-spelbook](https://github.com/jimmy-claw/spelbook) | On-chain LEZ program registry — program ID → IDL lookup for proposal decode/encode |
+| Logos Messaging | In-band signing notifications; required for private TX flow |
+
 ## References
 
 - [Technical Specification (SPEC.md)](SPEC.md)
+- [FURPS Requirements (FURPS.md)](FURPS.md)
+- [Architecture Decisions (ADR.md)](ADR.md)
 - [Demo Runbook (scripts/DEMO-RUNBOOK.md)](scripts/DEMO-RUNBOOK.md)
-- [FURPS Requirements (docs/FURPS.md)](docs/FURPS.md)
-- [LEZ Framework](https://github.com/jimmy-claw/lez-framework)
-- [LEZ Registry](https://github.com/jimmy-claw/lez-registry)
 - [LSSA (LEZ runtime)](https://github.com/logos-blockchain/lssa)
 - [Squads Protocol v4](https://squads.so/) — design inspiration
