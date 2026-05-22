@@ -240,7 +240,7 @@ The multisig Qt module calls spelbook via `logos.callModule()` signal/slot mecha
 - [x] Add `fetchIdl(idl_cid: String)` Q_INVOKABLE to spelbook Qt module — calls `lez_storage_fetch_idl(cid)` FFI, returns IDL JSON string
 - [x] Add `searchPrograms(query: String)` Q_INVOKABLE — local JSON cache search via `lez_registry_search` FFI; cache at `~/.local/share/spelbook/programs.json`
 - [x] `getProgram` + `register` auto-populate cache so search works offline after any registry query
-- [ ] Verify program_id hex ↔ `[u32;8]` conversion is consistent between multisig and spelbook (endianness TBD)
+- [x] Verify program_id hex ↔ `[u32;8]` conversion is consistent between multisig and spelbook — both now use `u32::from_le_bytes` (spel-client-gen canonical convention)
 - [x] `LezSpelbookBridge.h` added to lez-multisig module; wired as `spelbook` context property
 - [x] Spelbook search integrated in propose dialog (encode-from-IDL mode)
 - [x] Spelbook IDL fallback in proposal decode (`tryDecode`)
