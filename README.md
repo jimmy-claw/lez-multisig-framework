@@ -52,7 +52,7 @@ lez-multisig-framework/
 - Rust nightly (edition 2024)
 - [Risc0 toolchain](https://dev.risczero.com/api/zkvm/install): `curl -L https://risczero.com/install | bash && rzup install`
 - Docker (for reproducible guest builds)
-- Clone of [logos-execution-zone](https://github.com/logos-blockchain/logos-execution-zone) (for sequencer + wallet) and [lez-programs](https://github.com/logos-blockchain/lez-programs) (for token binary)
+- Clone of [logos-execution-zone](https://github.com/logos-blockchain/logos-execution-zone) (for sequencer + wallet) and built [lez-programs](https://github.com/logos-blockchain/lez-programs) (token binary at `target/riscv32im-risc0-zkvm-elf/docker/token.bin`)
 
 ### Important: Member Accounts
 
@@ -103,7 +103,7 @@ See [scripts/DEMO-RUNBOOK.md](scripts/DEMO-RUNBOOK.md) for a manual step-by-step
 
 ```bash
 # Requires running sequencer + token binary
-export TOKEN_PROGRAM=/path/to/lez-programs/artifacts/token.bin
+export TOKEN_PROGRAM=/path/to/lez-programs/target/riscv32im-risc0-zkvm-elf/docker/token.bin
 cargo test -p lez-multisig-e2e -- --nocapture
 ```
 
