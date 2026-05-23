@@ -2966,7 +2966,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?branch=feat%2F207-logos-module-codegen)",
+ "spel-framework-core",
  "tokio",
  "wallet",
 ]
@@ -2977,7 +2977,7 @@ version = "0.1.0"
 dependencies = [
  "multisig_program",
  "serde_json",
- "spel-framework 0.3.0 (git+https://github.com/logos-co/spel.git?rev=4b8a71c)",
+ "spel-framework",
 ]
 
 [[package]]
@@ -3748,7 +3748,7 @@ dependencies = [
  "nssa_core",
  "risc0-zkvm",
  "serde_json",
- "spel-framework 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
+ "spel-framework",
 ]
 
 [[package]]
@@ -3765,7 +3765,7 @@ dependencies = [
  "borsh",
  "nssa_core",
  "serde",
- "spel-framework 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
+ "spel-framework",
 ]
 
 [[package]]
@@ -3777,7 +3777,7 @@ dependencies = [
  "nssa_core",
  "risc0-zkvm",
  "serde",
- "spel-framework 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
+ "spel-framework",
 ]
 
 [[package]]
@@ -5541,8 +5541,8 @@ dependencies = [
 
 [[package]]
 name = "spel"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel.git?tag=v0.3.0#ea07765e4291bd253e1de267ddb1cde0e38062d3"
+version = "0.4.0"
+source = "git+https://github.com/logos-co/spel.git?tag=v0.4.0#43523275e1f95b97a0cf84cd83361449ea9bd1bf"
 dependencies = [
  "base58",
  "borsh",
@@ -5554,7 +5554,7 @@ dependencies = [
  "sequencer_service_rpc",
  "serde",
  "serde_json",
- "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
+ "spel-framework-core",
  "tokio",
  "toml",
  "wallet",
@@ -5562,62 +5562,22 @@ dependencies = [
 
 [[package]]
 name = "spel-framework"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel.git?tag=v0.3.0#ea07765e4291bd253e1de267ddb1cde0e38062d3"
+version = "0.4.0"
+source = "git+https://github.com/logos-co/spel.git?tag=v0.4.0#43523275e1f95b97a0cf84cd83361449ea9bd1bf"
 dependencies = [
  "borsh",
  "nssa_core",
  "serde_json",
- "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
- "spel-framework-macros 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
-]
-
-[[package]]
-name = "spel-framework"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel.git?rev=4b8a71c#4b8a71c4956992411f826045ab734d7454c0a4a4"
-dependencies = [
- "borsh",
- "nssa_core",
- "serde_json",
- "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?rev=4b8a71c)",
- "spel-framework-macros 0.3.0 (git+https://github.com/logos-co/spel.git?rev=4b8a71c)",
+ "spel-framework-core",
+ "spel-framework-macros",
 ]
 
 [[package]]
 name = "spel-framework-core"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel.git?tag=v0.3.0#ea07765e4291bd253e1de267ddb1cde0e38062d3"
-dependencies = [
- "borsh",
- "nssa_core",
- "proc-macro2",
- "serde",
- "serde_json",
- "sha2",
- "syn 2.0.117",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "spel-framework-core"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel.git?branch=feat%2F207-logos-module-codegen#95063978b25e7648360001c6cb6ed62404607fb0"
+version = "0.4.0"
+source = "git+https://github.com/logos-co/spel.git?tag=v0.4.0#43523275e1f95b97a0cf84cd83361449ea9bd1bf"
 dependencies = [
  "base58",
- "borsh",
- "nssa_core",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "spel-framework-core"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel.git?rev=4b8a71c#4b8a71c4956992411f826045ab734d7454c0a4a4"
-dependencies = [
  "borsh",
  "nssa_core",
  "proc-macro2",
@@ -5631,27 +5591,14 @@ dependencies = [
 
 [[package]]
 name = "spel-framework-macros"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel.git?tag=v0.3.0#ea07765e4291bd253e1de267ddb1cde0e38062d3"
+version = "0.4.0"
+source = "git+https://github.com/logos-co/spel.git?tag=v0.4.0#43523275e1f95b97a0cf84cd83361449ea9bd1bf"
 dependencies = [
  "proc-macro2",
  "quote",
  "serde_json",
  "sha2",
- "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?tag=v0.3.0)",
- "syn 2.0.117",
-]
-
-[[package]]
-name = "spel-framework-macros"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel.git?rev=4b8a71c#4b8a71c4956992411f826045ab734d7454c0a4a4"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde_json",
- "sha2",
- "spel-framework-core 0.3.0 (git+https://github.com/logos-co/spel.git?rev=4b8a71c)",
+ "spel-framework-core",
  "syn 2.0.117",
 ]
 
