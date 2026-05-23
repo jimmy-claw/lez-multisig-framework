@@ -1,6 +1,6 @@
 # LEZ Multisig — M-of-N On-Chain Governance
 
-An M-of-N multisig governance program for the [Logos Execution Zone (LEZ)](https://github.com/logos-blockchain/lssa). Inspired by [Squads Protocol v4](https://squads.so/) — proposals live on-chain as separate PDA accounts. Signers approve asynchronously, no offline coordination needed.
+An M-of-N multisig governance program for the [Logos Execution Zone (LEZ)](https://github.com/logos-blockchain/logos-execution-zone). Inspired by [Squads Protocol v4](https://squads.so/) — proposals live on-chain as separate PDA accounts. Signers approve asynchronously, no offline coordination needed.
 
 📄 **[Technical Specification](SPEC.md)** · 📋 **[Demo Runbook](scripts/DEMO-RUNBOOK.md)**
 
@@ -40,7 +40,9 @@ lez-multisig-framework/
 │   ├── demo-full-flow.sh    — full end-to-end demo script
 │   └── DEMO-RUNBOOK.md      — manual CLI runbook for live presentation
 ├── SPEC.md                  — full technical specification
-└── docs/FURPS.md            — requirements specification
+├── FURPS.md                 — requirements specification
+├── ADR.md                   — architecture decision records
+└── docs/
 ```
 
 ## Quick Start
@@ -50,7 +52,7 @@ lez-multisig-framework/
 - Rust nightly (edition 2024)
 - [Risc0 toolchain](https://dev.risczero.com/api/zkvm/install): `curl -L https://risczero.com/install | bash && rzup install`
 - Docker (for reproducible guest builds)
-- Clone of [lssa](https://github.com/logos-blockchain/lssa) (for sequencer + wallet + token binary)
+- Clone of [logos-execution-zone](https://github.com/logos-blockchain/logos-execution-zone) (for sequencer + wallet) and built [lez-programs](https://github.com/logos-blockchain/lez-programs) (token binary at `target/riscv32im-risc0-zkvm-elf/docker/token.bin`)
 
 ### Important: Member Accounts
 
@@ -101,7 +103,7 @@ See [scripts/DEMO-RUNBOOK.md](scripts/DEMO-RUNBOOK.md) for a manual step-by-step
 
 ```bash
 # Requires running sequencer + token binary
-export TOKEN_PROGRAM=/path/to/lssa/artifacts/program_methods/token.bin
+export TOKEN_PROGRAM=/path/to/lez-programs/target/riscv32im-risc0-zkvm-elf/docker/token.bin
 cargo test -p lez-multisig-e2e -- --nocapture
 ```
 
@@ -193,14 +195,34 @@ This means you can use lez-cli with any program's IDL to generate the instructio
 ## Known Issues
 
 - [ ] No `CloseProposal` instruction yet (executed/rejected proposals stay on-chain)
-- [ ] `ProposeConfig` (AddMember/RemoveMember/ChangeThreshold) not yet in program
+- [ ] No GUI — Basecamp Qt module planned for v0.2
+
+## Dependencies
+
+### v0.1
+
+| Component | Role |
+|---|---|
+| [LEZ (logos-execution-zone)](https://github.com/logos-blockchain/logos-execution-zone) | Runtime: ChainedCall, PDA derivation, account ownership, nonce replay protection, wallet, sequencer |
+| [lez-programs](https://github.com/logos-blockchain/lez-programs) | Token program — primary ChainedCall target |
+| [spel](https://github.com/logos-co/spel) | spel-framework (IDL macros, account model in program + FFI), spel-client-gen (code generation) |
+| [spelbook / lez-registry](https://github.com/jimmy-claw/spelbook) | Program registry — used in demo scripts for program discovery |
+| [RISC0 zkVM](https://github.com/risc0/risc0) | Guest program execution environment |
+
+### v0.2
+
+| Component | Role |
+|---|---|
+| [spel-client-gen](https://github.com/logos-co/spel) | Generates Basecamp Qt module (backend, plugin, QML scaffold) from IDL |
+| [spelbook](https://github.com/jimmy-claw/spelbook) | Full integration — program ID → IDL lookup for human-readable proposal decode/encode in UI |
+| Logos Messaging | In-band signing notifications; required for private TX flow |
 
 ## References
 
 - [Technical Specification (SPEC.md)](SPEC.md)
+- [FURPS Requirements (FURPS.md)](FURPS.md)
+- [Architecture Decisions (ADR.md)](ADR.md)
 - [Demo Runbook (scripts/DEMO-RUNBOOK.md)](scripts/DEMO-RUNBOOK.md)
-- [FURPS Requirements (docs/FURPS.md)](docs/FURPS.md)
-- [LEZ Framework](https://github.com/jimmy-claw/lez-framework)
-- [LEZ Registry](https://github.com/jimmy-claw/lez-registry)
-- [LSSA (LEZ runtime)](https://github.com/logos-blockchain/lssa)
+- [LEZ (logos-execution-zone)](https://github.com/logos-blockchain/logos-execution-zone)
+- [lez-programs](https://github.com/logos-blockchain/lez-programs)
 - [Squads Protocol v4](https://squads.so/) — design inspiration
