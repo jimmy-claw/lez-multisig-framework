@@ -105,7 +105,7 @@ This ensures the multisig program has minimal surface area and cannot directly m
 
 ### Member Account Claiming
 
-Due to LEZ runtime validation rules, member accounts must be **fresh keypairs** dedicated to each multisig. During `CreateMultisig`, all member accounts are claimed by the multisig program. See [LEZ runtime issue #339](https://github.com/logos-blockchain/lssa/issues/339) for context.
+Due to LEZ runtime validation rules, member accounts must be **fresh keypairs** dedicated to each multisig. During `CreateMultisig`, all member accounts are claimed by the multisig program. See [logos-execution-zone issue #339](https://github.com/logos-blockchain/logos-execution-zone/issues/339) for context.
 
 ---
 
