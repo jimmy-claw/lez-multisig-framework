@@ -26,9 +26,11 @@ jobs:
           SPEL_TAG=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'tag = "\K[^"]+')
           SPEL_REV=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'rev = "\K[^"]+')
           if [ -n "$SPEL_TAG" ]; then
-            cargo install --git https://github.com/logos-co/spel.git --tag "$SPEL_TAG" spel-client-gen --locked
+            cargo install --git https://github.com/logos-co/spel.git --tag "$SPEL_TAG" spel-client-gen --locked 2>/dev/null \
+              || cargo install --git https://github.com/logos-co/spel.git --tag "$SPEL_TAG" spel-client-gen
           else
-            cargo install --git https://github.com/logos-co/spel.git --rev "$SPEL_REV" spel-client-gen --locked
+            cargo install --git https://github.com/logos-co/spel.git --rev "$SPEL_REV" spel-client-gen --locked 2>/dev/null \
+              || cargo install --git https://github.com/logos-co/spel.git --rev "$SPEL_REV" spel-client-gen
           fi
 
       - name: Install cbindgen
