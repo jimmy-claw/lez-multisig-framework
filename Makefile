@@ -95,7 +95,48 @@ generate-module: ## Regenerate backend/plugin/build files; preserves hand-writte
 	@echo "✅ Backend/plugin/build files written (qml/Main.qml, CMakeLists.txt, manifest.json, module.yaml preserved)"
 	$(MAKE) patch-generated
 
-patch-generated: ## Patch generated LezMultisigPlugin.cpp to register codec + spelbook context properties
+patch-generated: ## Patch generated files to register codec + spelbook context properties
+	@echo "🔧 Patching generated main.cpp (codec, spelbook, LOGOS_QML_IMPORT_PATH)..."
+	@sed -i 's|#include "LezMultisigPlugin.h"|#include "LezMultisigCodec.h"\n#include "LezMultisigPlugin.h"\n#include "LezSpelbookBridge.h"|' $(MODULE_SRC)/main.cpp 2>/dev/null || true
+	@sed -i 's|LezMultisigBackend backend(nullptr);|LezMultisigBackend backend(nullptr);\n\tLezMultisigCodec codec(nullptr);\n\tLezSpelbookBridge spelbook(nullptr);|' $(MODULE_SRC)/main.cpp 2>/dev/null || true
+	@sed -i 's|setContextProperty("backend", \&backend);|setContextProperty("backend", \&backend);\n\tview.engine()->rootContext()->setContextProperty("codec", \&codec);\n\tview.engine()->rootContext()->setContextProperty("spelbook", \&spelbook);|' $(MODULE_SRC)/main.cpp 2>/dev/null || true
+	@if ! grep -q 'LOGOS_QML_IMPORT_PATH' $(MODULE_SRC)/main.cpp; then \
+		sed -i 's|const char\* qmlPath|// Logos.Theme / Logos.Controls import path\n#ifdef LOGOS_QML_IMPORT_PATH\n\tview.engine()->addImportPath(QStringLiteral(LOGOS_QML_IMPORT_PATH));\n#endif\n\tconst char* runtimeImportPath = std::getenv("LOGOS_QML_IMPORT_PATH");\n\tif (runtimeImportPath)\n\t\tview.engine()->addImportPath(QString::fromUtf8(runtimeImportPath));\n\n\tconst char* qmlPath|' $(MODULE_SRC)/main.cpp; \
+	fi
+	@echo "  ✅ Patched: main.cpp"
+	@echo "🔧 Patching generated LezMultisigBackend.cpp (normalizeCreateKey)..."
+	@if ! grep -q 'normalizeCreateKey' $(MODULE_SRC)/LezMultisigBackend.cpp; then \
+		sed -i 's|#include <QJsonArray>|#include <QCryptographicHash>\n#include <QJsonArray>|' $(MODULE_SRC)/LezMultisigBackend.cpp; \
+		sed -i 's|#include <QSettings>|#include <QRegularExpression>\n#include <QSettings>|' $(MODULE_SRC)/LezMultisigBackend.cpp; \
+		printf '\nstatic QString normalizeCreateKey(const QString& key) {\n    static const QRegularExpression hexRe(QStringLiteral("^[0-9a-fA-F]{64}$$"));\n    if (hexRe.match(key).hasMatch()) return key;\n    return QString::fromLatin1(QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Sha256).toHex());\n}\n' >> $(MODULE_SRC)/LezMultisigBackend.cpp.tmp && \
+		head -n $$(grep -n '#include' $(MODULE_SRC)/LezMultisigBackend.cpp | tail -1 | cut -d: -f1) $(MODULE_SRC)/LezMultisigBackend.cpp > $(MODULE_SRC)/LezMultisigBackend.cpp.new && \
+		cat $(MODULE_SRC)/LezMultisigBackend.cpp.tmp >> $(MODULE_SRC)/LezMultisigBackend.cpp.new && \
+		tail -n +$$(( $$(grep -n '#include' $(MODULE_SRC)/LezMultisigBackend.cpp | tail -1 | cut -d: -f1) + 1 )) $(MODULE_SRC)/LezMultisigBackend.cpp >> $(MODULE_SRC)/LezMultisigBackend.cpp.new && \
+		mv $(MODULE_SRC)/LezMultisigBackend.cpp.new $(MODULE_SRC)/LezMultisigBackend.cpp && \
+		rm -f $(MODULE_SRC)/LezMultisigBackend.cpp.tmp && \
+		sed -i 's|args\["create_key"\] = createKey;|args["create_key"] = normalizeCreateKey(createKey);|g' $(MODULE_SRC)/LezMultisigBackend.cpp; \
+		echo "  ✅ Added: normalizeCreateKey"; \
+	else \
+		echo "  ℹ️  Skipped: normalizeCreateKey already present"; \
+	fi
+	@echo "🔧 Patching generated LezMultisigBackend.cpp (target_accounts for execute)..."
+	@if ! grep -q 'target_accounts' $(MODULE_SRC)/LezMultisigBackend.cpp; then \
+		sed -i 's|args\["create_key"\] = normalizeCreateKey(createKey);\n    dispatchFfi("execute"|args["create_key"] = normalizeCreateKey(createKey);\n    args["target_accounts"] = QJsonArray();\n    dispatchFfi("execute"|' $(MODULE_SRC)/LezMultisigBackend.cpp; \
+		python3 -c "\
+import re, sys;\
+path='$(MODULE_SRC)/LezMultisigBackend.cpp';\
+txt=open(path).read();\
+patched=re.sub(\
+    r'(void LezMultisigBackend::execute\b.*?args\[\"create_key\"\] = normalizeCreateKey\(createKey\);)',\
+    r'\1\n    args[\"target_accounts\"] = QJsonArray();',\
+    txt, flags=re.DOTALL);\
+open(path,'w').write(patched);\
+print('  patched') if patched != txt else print('  no-op')\
+"; \
+		echo "  ✅ Added: target_accounts to execute"; \
+	else \
+		echo "  ℹ️  Skipped: target_accounts already present"; \
+	fi
 	@echo "🔧 Patching generated LezMultisigPlugin.cpp..."
 	@# 1) Add codec include + context property (idempotent)
 	@if ! grep -q 'LezMultisigCodec' $(MODULE_SRC)/LezMultisigPlugin.cpp; then \
@@ -112,6 +153,52 @@ patch-generated: ## Patch generated LezMultisigPlugin.cpp to register codec + sp
 		echo "  ✅ Added: spelbook context property"; \
 	else \
 		echo "  ℹ️  Skipped: LezSpelbookBridge already present"; \
+	fi
+	@# 3) Add storage bridge include + context property (idempotent)
+	@if ! grep -q 'LezStorageBridge' $(MODULE_SRC)/LezMultisigPlugin.cpp; then \
+		sed -i 's|#include "LezSpelbookBridge.h"|#include "LezSpelbookBridge.h"\n#include "LezStorageBridge.h"|' $(MODULE_SRC)/LezMultisigPlugin.cpp; \
+		sed -i 's|setContextProperty("spelbook", new LezSpelbookBridge(this));|setContextProperty("spelbook", new LezSpelbookBridge(this));\n\tview->engine()->rootContext()->setContextProperty("storage", new LezStorageBridge(m_api, this));|' $(MODULE_SRC)/LezMultisigPlugin.cpp; \
+		echo "  ✅ Added: storage context property"; \
+	else \
+		echo "  ℹ️  Skipped: LezStorageBridge already present"; \
+	fi
+	@echo "🔧 Patching generated LezMultisigBackend.h (clearHistory, computePda)..."
+	@if ! grep -q 'clearHistory' $(MODULE_SRC)/LezMultisigBackend.h; then \
+		sed -i 's|Q_INVOKABLE void        saveHistory(const QString\& key, const QString\& value);|Q_INVOKABLE void        saveHistory(const QString\& key, const QString\& value);\n    Q_INVOKABLE void        clearHistory(const QString\& key);\n    Q_INVOKABLE QVariantMap computePda(const QString\& createKey, const QString\& purpose) const;\n    Q_INVOKABLE QString     pdaFromSeed(const QString\& seedHex) const;|' $(MODULE_SRC)/LezMultisigBackend.h; \
+		echo "  ✅ Added: clearHistory + computePda + pdaFromSeed declarations"; \
+	else \
+		echo "  ℹ️  Skipped: clearHistory already present"; \
+	fi
+	@echo "🔧 Patching generated LezMultisigBackend.cpp (clearHistory, computePda, pdaFromSeed, FFI)..."
+	@if ! grep -q 'lez_multisig_compute_pda' $(MODULE_SRC)/LezMultisigBackend.cpp; then \
+		sed -i 's|    char\* multisig_program_decode_account(const char\* args_json);|    char* multisig_program_decode_account(const char* args_json);\n    char* lez_multisig_compute_pda(const char* args_json);\n    void  lez_multisig_free_string(char* s);\n    char* lez_multisig_pda_from_seed(const char* args_json);|' $(MODULE_SRC)/LezMultisigBackend.cpp; \
+		python3 -c "\
+path='$(MODULE_SRC)/LezMultisigBackend.cpp';\
+txt=open(path).read();\
+impl='''\n\nvoid LezMultisigBackend::clearHistory(const QString& key) {\n    QSettings(\"logos-co\", \"lez_multisig\").remove(\"history/\" + key);\n}\n\nQVariantMap LezMultisigBackend::computePda(const QString& createKey, const QString& purpose) const {\n    QJsonObject args;\n    args[\"program_id_hex\"] = m_programIdHex;\n    args[\"create_key\"]     = createKey;\n    args[\"purpose\"]        = purpose;\n    QByteArray json = QJsonDocument(args).toJson(QJsonDocument::Compact);\n    char* raw = lez_multisig_compute_pda(json.constData());\n    if (!raw) return {};\n    auto result = QJsonDocument::fromJson(QByteArray(raw)).object().toVariantMap();\n    lez_multisig_free_string(raw);\n    return result;\n}\n\nQString LezMultisigBackend::pdaFromSeed(const QString& seedHex) const {\n    QJsonObject args;\n    args[\"program_id_hex\"] = m_programIdHex;\n    args[\"seed_hex\"]       = seedHex;\n    QByteArray json = QJsonDocument(args).toJson(QJsonDocument::Compact);\n    char* raw = lez_multisig_pda_from_seed(json.constData());\n    if (!raw) return {};\n    auto obj = QJsonDocument::fromJson(QByteArray(raw)).object();\n    lez_multisig_free_string(raw);\n    return obj.value(\"account_id\").toString();\n}''';\
+patched=txt.replace('    s.setValue(\"history/\" + key, h);\n}', '    s.setValue(\"history/\" + key, h);\n}' + impl, 1);\
+open(path,'w').write(patched);\
+print('  patched') if patched != txt else print('  no-op')\
+"; \
+		echo "  ✅ Added: clearHistory + computePda + pdaFromSeed implementations"; \
+	else \
+		echo "  ℹ️  Skipped: lez_multisig_compute_pda already present"; \
+	fi
+	@echo "🔧 Patching generated LezMultisigBackend.h/.cpp (executeWithAccounts)..."
+	@if ! grep -q 'executeWithAccounts' $(MODULE_SRC)/LezMultisigBackend.h; then \
+		sed -i 's|Q_INVOKABLE QString     pdaFromSeed(const QString\& seedHex) const;|Q_INVOKABLE QString     pdaFromSeed(const QString\& seedHex) const;\n    Q_INVOKABLE void        executeWithAccounts(const QString\& executorId, const QString\& proposalIndex, const QString\& createKey, const QVariantList\& targetAccounts);|' $(MODULE_SRC)/LezMultisigBackend.h; \
+		python3 -c "\
+path='$(MODULE_SRC)/LezMultisigBackend.cpp';\
+txt=open(path).read();\
+impl='''\nvoid LezMultisigBackend::executeWithAccounts(const QString& executorId, const QString& proposalIndex, const QString& createKey, const QVariantList& targetAccounts) {\n    QJsonObject args = baseArgs();\n    args[\"executor\"]        = executorId;\n    args[\"proposal_index\"]  = proposalIndex;\n    args[\"create_key\"]      = normalizeCreateKey(createKey);\n    QJsonArray accts;\n    for (const QVariant& v : targetAccounts) accts.append(QJsonValue::fromVariant(v));\n    args[\"target_accounts\"] = accts;\n    dispatchFfi(\"execute\", [this, args]() {\n        return callFfi(multisig_program_execute, args);\n    });\n}''';\
+anchor='    return obj.value(\"account_id\").toString();\n}';\
+patched=txt.replace(anchor, anchor + impl, 1);\
+open(path,'w').write(patched);\
+print('  patched') if patched != txt else print('  no-op')\
+"; \
+		echo "  ✅ Added: executeWithAccounts"; \
+	else \
+		echo "  ℹ️  Skipped: executeWithAccounts already present"; \
 	fi
 
 generate-module-scaffold: ## First-time: generate ALL files including qml/Main.qml scaffold (overwrites existing QML)
@@ -283,7 +370,7 @@ endif
 
 .PHONY: build-module run-module
 
-build-module: build-ffi generate-module ## Build the Basecamp UI module plugin + standalone preview app
+build-module: build-ffi ## Build the Basecamp UI module plugin + standalone preview app (run generate-module separately to regenerate backend scaffold)
 	@echo "🔨 Building UI module..."
 	$(if $(LOGOS_DESIGN_SYSTEM_DIR),@echo "  Design system: $(LOGOS_DESIGN_SYSTEM_DIR)",@echo "  ⚠️  LOGOS_DESIGN_SYSTEM_DIR not set — Logos.Theme unavailable")
 	$(if $(SPELBOOK_FFI_DIR),@echo "  Spelbook FFI:  $(SPELBOOK_FFI_DIR)",@echo "  ⚠️  SPELBOOK_FFI_DIR not set — spelbook bridge unavailable")

@@ -65,13 +65,44 @@ else()
     message(STATUS "Spelbook FFI: not configured (set -DSPELBOOK_FFI_DIR=...)")
 endif()
 
+# ── Logos CPP SDK (optional — provides StorageModule for native IDL fetch) ──
+# Set LOGOS_CPP_SDK_INC to the directory containing logos_api.h, logos_types.h, etc.
+# e.g.: cmake -DLOGOS_CPP_SDK_INC=/path/to/logos-cpp-sdk/cpp ..
+# Workspace default is auto-detected from repos/logos-cpp-sdk/cpp/.
+set(LOGOS_CPP_SDK_INC "" CACHE PATH "logos-cpp-sdk include dir (contains logos_api.h)")
+if("${LOGOS_CPP_SDK_INC}" STREQUAL "")
+    set(_LOGOS_SDK_WORKSPACE "$ENV{HOME}/devel/github.com/logos-co/logos-workspace/repos/logos-cpp-sdk/cpp")
+    if(EXISTS "${_LOGOS_SDK_WORKSPACE}/logos_api.h")
+        set(LOGOS_CPP_SDK_INC "${_LOGOS_SDK_WORKSPACE}")
+    endif()
+endif()
+if(NOT "${LOGOS_CPP_SDK_INC}" STREQUAL "")
+    message(STATUS "Logos CPP SDK include: ${LOGOS_CPP_SDK_INC} — StorageModule enabled for plugin")
+else()
+    message(STATUS "Logos CPP SDK include: not configured (set -DLOGOS_CPP_SDK_INC=...) — StorageModule disabled")
+endif()
+# LOGOS_STORAGE_AVAILABLE is set per-target (plugin only) below to avoid
+# linking storage_module_api.cpp into LezMultisigApp where logos_sdk is absent.
+
+set(_STORAGE_API_SRC vendor/storage_module_api/storage_module_api.cpp)
+set(_STORAGE_API_INC vendor/storage_module_api)
+
 # ── Plugin (loaded by Basecamp) ────────────────────────────────────────────
 add_library(LezMultisigPlugin SHARED
     src/LezMultisigBackend.cpp
     src/LezMultisigPlugin.cpp
     src/LezMultisigCodec.h        # header-only; listed for IDE visibility
     src/LezSpelbookBridge.h       # header-only; listed for IDE visibility
+    src/LezStorageBridge.h        # header-only; listed for IDE visibility
 )
+
+# storage_module_api.cpp added only to the plugin (.so) — undefined LogosAPI symbols
+# are resolved at runtime from Basecamp's process. The standalone app can't link them.
+if(NOT "${LOGOS_CPP_SDK_INC}" STREQUAL "")
+    target_sources(LezMultisigPlugin PRIVATE ${_STORAGE_API_SRC})
+    target_compile_definitions(LezMultisigPlugin PRIVATE LOGOS_STORAGE_AVAILABLE)
+    target_include_directories(LezMultisigPlugin PRIVATE ${_STORAGE_API_INC} ${LOGOS_CPP_SDK_INC} src)
+endif()
 
 # Resource name "lez_multisig_qml" must match Q_INIT_RESOURCE(lez_multisig_qml) in LezMultisigPlugin.cpp
 qt_add_resources(LezMultisigPlugin "lez_multisig_qml"
@@ -95,7 +126,15 @@ add_executable(LezMultisigApp
     src/LezMultisigPlugin.cpp
     src/LezMultisigCodec.h        # header-only; listed for IDE visibility
     src/LezSpelbookBridge.h       # header-only; listed for IDE visibility
+    src/LezStorageBridge.h        # header-only; listed for IDE visibility
 )
+
+# App only needs include dirs so LezStorageBridge.h compiles (storage disabled
+# at runtime — no LOGOS_STORAGE_AVAILABLE, no storage_module_api.cpp linked).
+target_include_directories(LezMultisigApp PRIVATE src)
+if(NOT "${LOGOS_CPP_SDK_INC}" STREQUAL "")
+    target_include_directories(LezMultisigApp PRIVATE ${_STORAGE_API_INC} ${LOGOS_CPP_SDK_INC})
+endif()
 
 # Same resource name as the plugin so Q_INIT_RESOURCE resolves in both targets
 qt_add_resources(LezMultisigApp "lez_multisig_qml"
