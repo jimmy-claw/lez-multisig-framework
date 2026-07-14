@@ -8,7 +8,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RISC0_VERSION: "3.0.5"
-  LSSA_REF: "v0.2.0-rc3"
+  LSSA_REF: "v0.2.0"
 
 jobs:
   unit-tests:
@@ -21,20 +21,15 @@ jobs:
         with:
           prefix-key: "unit"
 
-      - name: Install logos-blockchain-circuits
-        run: |
-          curl -sSL https://raw.githubusercontent.com/logos-blockchain/logos-blockchain/main/scripts/setup-logos-blockchain-circuits.sh | bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install spel-client-gen
         run: |
           SPEL_TAG=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'tag = "\K[^"]+')
-          cargo install \
-            --git https://github.com/logos-co/spel.git \
-            --tag "$SPEL_TAG" \
-            spel-client-gen \
-            --locked
+          SPEL_REV=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'rev = "\K[^"]+')
+          if [ -n "$SPEL_TAG" ]; then
+            cargo install --git https://github.com/logos-co/spel.git --tag "$SPEL_TAG" spel-client-gen --locked
+          else
+            cargo install --git https://github.com/logos-co/spel.git --rev "$SPEL_REV" spel-client-gen --locked
+          fi
 
       - name: Generate IDL + FFI client
         env:
@@ -95,20 +90,15 @@ jobs:
           prefix-key: "e2e"
           cache-targets: true
 
-      - name: Install logos-blockchain-circuits
-        run: |
-          curl -sSL https://raw.githubusercontent.com/logos-blockchain/logos-blockchain/main/scripts/setup-logos-blockchain-circuits.sh | bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install spel-client-gen
         run: |
           SPEL_TAG=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'tag = "\K[^"]+')
-          cargo install \
-            --git https://github.com/logos-co/spel.git \
-            --tag "$SPEL_TAG" \
-            spel-client-gen \
-            --locked
+          SPEL_REV=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'rev = "\K[^"]+')
+          if [ -n "$SPEL_TAG" ]; then
+            cargo install --git https://github.com/logos-co/spel.git --tag "$SPEL_TAG" spel-client-gen --locked
+          else
+            cargo install --git https://github.com/logos-co/spel.git --rev "$SPEL_REV" spel-client-gen --locked
+          fi
 
       - name: Generate IDL + FFI client
         run: |

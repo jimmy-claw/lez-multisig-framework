@@ -20,20 +20,15 @@ jobs:
         with:
           prefix-key: "ci"
 
-      - name: Install logos-blockchain-circuits
-        run: |
-          curl -sSL https://raw.githubusercontent.com/logos-blockchain/logos-blockchain/main/scripts/setup-logos-blockchain-circuits.sh | bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install spel-client-gen
         run: |
           SPEL_TAG=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'tag = "\K[^"]+')
-          cargo install \
-            --git https://github.com/logos-co/spel.git \
-            --tag "$SPEL_TAG" \
-            spel-client-gen \
-            --locked
+          SPEL_REV=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'rev = "\K[^"]+')
+          if [ -n "$SPEL_TAG" ]; then
+            cargo install --git https://github.com/logos-co/spel.git --tag "$SPEL_TAG" spel-client-gen --locked
+          else
+            cargo install --git https://github.com/logos-co/spel.git --rev "$SPEL_REV" spel-client-gen --locked
+          fi
 
       - name: Install cbindgen
         run: cargo install cbindgen --version 0.29.2 --locked
