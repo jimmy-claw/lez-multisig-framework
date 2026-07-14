@@ -273,7 +273,7 @@ mod multisig_queries {
 
     fn load_wallet(v: &Value) -> Result<WalletCore, String> {
         if let Some(p) = v["wallet_path"].as_str() {
-            std::env::set_var("NSSA_WALLET_HOME_DIR", p);
+            std::env::set_var("LEE_WALLET_HOME_DIR", p);
         }
         WalletCore::from_env().map_err(|e| format!("wallet: {}", e))
     }
