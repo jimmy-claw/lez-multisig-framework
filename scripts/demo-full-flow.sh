@@ -45,12 +45,12 @@ TOKEN_BIN="$LSSA_DIR/artifacts/program_methods/token.bin"
 SEQUENCER_URL="${SEQUENCER_URL:-http://127.0.0.1:3040}"
 
 # Use a demo-local wallet dir so the demo never touches your real wallet storage
-# Override by setting NSSA_WALLET_HOME_DIR before running
+# Override by setting LEE_WALLET_HOME_DIR before running
 DEMO_WALLET_DIR="$MULTISIG_DIR/demo-wallet"
-export NSSA_WALLET_HOME_DIR="${NSSA_WALLET_HOME_DIR:-$DEMO_WALLET_DIR}"
+export LEE_WALLET_HOME_DIR="${LEE_WALLET_HOME_DIR:-$DEMO_WALLET_DIR}"
 
 # Ensure demo wallet dir exists (wallet CLI creates fresh accounts as needed)
-mkdir -p "$NSSA_WALLET_HOME_DIR"
+mkdir -p "$LEE_WALLET_HOME_DIR"
 # REGISTRY_PROGRAM_ID_HEX set dynamically from inspect below
 STORAGE_URL="http://127.0.0.1:8080"
 MOCK_CODEX_PY="$MULTISIG_DIR/scripts/mock-codex.py"
@@ -136,14 +136,14 @@ sleep 2
 # Wipe RocksDB state
 rm -rf "${LSSA_DIR}/sequencer_runner/rocksdb" "${LSSA_DIR}/sequencer_runner/mempool" "${LSSA_DIR}/rocksdb" "${LSSA_DIR}/mempool"
 # Reset wallet nonce cache
-cp "${NSSA_WALLET_HOME_DIR}/storage.json" "${NSSA_WALLET_HOME_DIR}/storage.json.bak" 2>/dev/null || true
-rm -f "${NSSA_WALLET_HOME_DIR}/storage.json"
+cp "${LEE_WALLET_HOME_DIR}/storage.json" "${LEE_WALLET_HOME_DIR}/storage.json.bak" 2>/dev/null || true
+rm -f "${LEE_WALLET_HOME_DIR}/storage.json"
 
 # Speed up tx confirmation polling for demo
-if command -v python3 &>/dev/null && [ -f "${NSSA_WALLET_HOME_DIR}/wallet_config.json" ]; then
+if command -v python3 &>/dev/null && [ -f "${LEE_WALLET_HOME_DIR}/wallet_config.json" ]; then
   python3 -c "
 import json, sys
-p = '${NSSA_WALLET_HOME_DIR}/wallet_config.json'
+p = '${LEE_WALLET_HOME_DIR}/wallet_config.json'
 with open(p) as f: c = json.load(f)
 c['seq_poll_timeout_millis'] = 3000
 c['seq_tx_poll_max_blocks'] = 30

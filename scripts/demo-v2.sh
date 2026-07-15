@@ -45,8 +45,8 @@ SEQUENCER_URL="${SEQUENCER_URL:-http://127.0.0.1:3040}"
 
 # Demo-local wallet dir so we never touch your real wallet storage
 DEMO_WALLET_DIR="$MULTISIG_DIR/demo-wallet"
-export NSSA_WALLET_HOME_DIR="${NSSA_WALLET_HOME_DIR:-$DEMO_WALLET_DIR}"
-mkdir -p "$NSSA_WALLET_HOME_DIR"
+export LEE_WALLET_HOME_DIR="${LEE_WALLET_HOME_DIR:-$DEMO_WALLET_DIR}"
+mkdir -p "$LEE_WALLET_HOME_DIR"
 
 STORAGE_URL="http://127.0.0.1:8081"
 MOCK_CODEX_PY="$MULTISIG_DIR/scripts/mock-codex.py"
@@ -137,13 +137,13 @@ sleep 2
 # Nuke ALL rocksdb/mempool dirs the sequencer might use
 find "${LSSA_DIR}" -name rocksdb -type d -exec rm -rf {} + 2>/dev/null || true
 find "${LSSA_DIR}" -name mempool -type d -exec rm -rf {} + 2>/dev/null || true
-cp "${NSSA_WALLET_HOME_DIR}/storage.json" "${NSSA_WALLET_HOME_DIR}/storage.json.bak" 2>/dev/null || true
-rm -f "${NSSA_WALLET_HOME_DIR}/storage.json"
+cp "${LEE_WALLET_HOME_DIR}/storage.json" "${LEE_WALLET_HOME_DIR}/storage.json.bak" 2>/dev/null || true
+rm -f "${LEE_WALLET_HOME_DIR}/storage.json"
 
-if command -v python3 &>/dev/null && [ -f "${NSSA_WALLET_HOME_DIR}/wallet_config.json" ]; then
+if command -v python3 &>/dev/null && [ -f "${LEE_WALLET_HOME_DIR}/wallet_config.json" ]; then
   python3 -c "
 import json, sys
-p = '${NSSA_WALLET_HOME_DIR}/wallet_config.json'
+p = '${LEE_WALLET_HOME_DIR}/wallet_config.json'
 with open(p) as f: c = json.load(f)
 c['seq_poll_timeout_millis'] = 5000
 c['seq_tx_poll_max_blocks'] = 60

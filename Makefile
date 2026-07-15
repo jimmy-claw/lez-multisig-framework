@@ -46,6 +46,7 @@ endef
 
 SPEL_FW_GIT  := https://github.com/logos-co/spel.git
 SPEL_FW_TAG  := $(shell grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'tag = "\K[^"]+')
+SPEL_FW_REV  := $(shell grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'rev = "\K[^"]+')
 IDL_JSON    := lez-multisig-ffi/src/multisig_idl.json
 FFI_RS      := lez-multisig-ffi/src/multisig.rs
 HEADER_H    := lez-multisig-ffi/include/lez_multisig.h
@@ -58,8 +59,11 @@ MODULE_GEN_DIR := /tmp/lez-module-gen
 .PHONY: generate generate-idl generate-ffi generate-header generate-module generate-module-scaffold check-generated install-tools
 
 install-tools: ## Install spel-client-gen + cbindgen (required for generate/generate-header)
-	source ~/.cargo/env && cargo install --git $(SPEL_FW_GIT) --tag $(SPEL_FW_TAG) spel-client-gen --locked 2>/dev/null || \
-	cargo install --git $(SPEL_FW_GIT) --tag $(SPEL_FW_TAG) spel-client-gen
+	$(if $(SPEL_FW_TAG), \
+	  source ~/.cargo/env && cargo install --git $(SPEL_FW_GIT) --tag $(SPEL_FW_TAG) spel-client-gen --locked 2>/dev/null || \
+	  cargo install --git $(SPEL_FW_GIT) --tag $(SPEL_FW_TAG) spel-client-gen, \
+	  source ~/.cargo/env && cargo install --git $(SPEL_FW_GIT) --rev $(SPEL_FW_REV) spel-client-gen --locked 2>/dev/null || \
+	  cargo install --git $(SPEL_FW_GIT) --rev $(SPEL_FW_REV) spel-client-gen)
 	source ~/.cargo/env && cargo install cbindgen --version 0.29.2 --locked 2>/dev/null || true
 
 generate-idl: ## Regenerate IDL from Rust annotations in lib.rs
