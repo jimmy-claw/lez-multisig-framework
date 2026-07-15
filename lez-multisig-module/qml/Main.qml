@@ -182,6 +182,8 @@ Item {
     function fetchNextProposal() {
         if (_fetchNext < _fetchTarget)
             backend.fetchProposal(activeCreateKey, _fetchNext)
+        else
+            backend.markFetchDone()
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────
@@ -230,6 +232,8 @@ Item {
 
         function onOperationError(operation, error) {
             toast.show("✗ " + operation + ": " + error, Theme.palette.error)
+            if (operation === "fetch_multisig_state" || operation === "fetch_proposal")
+                backend.markFetchDone()
         }
 
         function onWalletAccountsChanged() {}
@@ -1190,7 +1194,15 @@ Item {
                             Item { height: 12; Layout.fillWidth: true }
 
                             Text {
-                                visible: proposals.length === 0 && !backend.busy
+                                visible: backend.fetching
+                                text: "Loading proposals…"
+                                color: Theme.palette.textMuted
+                                font.pixelSize: 13; font.family: Theme.typography.publicSans
+                                Layout.leftMargin: 24
+                            }
+
+                            Text {
+                                visible: proposals.length === 0 && !backend.busy && !backend.fetching
                                 text: "No proposals yet."
                                 color: Theme.palette.textMuted
                                 font.pixelSize: 13; font.family: Theme.typography.publicSans

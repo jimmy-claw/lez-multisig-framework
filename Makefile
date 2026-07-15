@@ -166,6 +166,27 @@ print('  patched') if patched != txt else print('  no-op')\
 	else \
 		echo "  ℹ️  Skipped: LezStorageBridge already present"; \
 	fi
+	@echo "🔧 Patching generated LezMultisigBackend.h/.cpp (fetching flag)..."
+	@if ! grep -q 'fetching' $(MODULE_SRC)/LezMultisigBackend.h; then \
+		sed -i 's|Q_PROPERTY(bool       busy       READ busy       NOTIFY busyChanged)|Q_PROPERTY(bool       busy       READ busy       NOTIFY busyChanged)\n    Q_PROPERTY(bool       fetching   READ fetching   NOTIFY fetchingChanged)|' $(MODULE_SRC)/LezMultisigBackend.h; \
+		sed -i 's|bool       busy()       const { return m_busy; }|bool       busy()       const { return m_busy; }\n    bool       fetching()   const { return m_fetching; }|' $(MODULE_SRC)/LezMultisigBackend.h; \
+		sed -i 's|void busyChanged();|void busyChanged();\n    void fetchingChanged();|' $(MODULE_SRC)/LezMultisigBackend.h; \
+		sed -i 's|bool       m_busy      = false;|bool       m_busy      = false;\n    bool       m_fetching  = false;|' $(MODULE_SRC)/LezMultisigBackend.h; \
+		python3 -c "\
+path='$(MODULE_SRC)/LezMultisigBackend.cpp';\
+txt=open(path).read();\
+txt=txt.replace(\
+    'void LezMultisigBackend::fetchMultisigState(const QString& createKey) {\n    QJsonObject args = baseArgs();',\
+    'void LezMultisigBackend::fetchMultisigState(const QString& createKey) {\n    m_fetching = true;\n    emit fetchingChanged();\n    QJsonObject args = baseArgs();',\
+    1);\
+txt += '\nvoid LezMultisigBackend::markFetchDone() {\n    if (!m_fetching) return;\n    m_fetching = false;\n    emit fetchingChanged();\n}\n';\
+open(path,'w').write(txt);\
+"; \
+		sed -i 's|Q_INVOKABLE QStringList fieldHistory|Q_INVOKABLE void        markFetchDone();\n    Q_INVOKABLE QStringList fieldHistory|' $(MODULE_SRC)/LezMultisigBackend.h; \
+		echo "  ✅ Added: fetching property + markFetchDone"; \
+	else \
+		echo "  ℹ️  Skipped: fetching already present"; \
+	fi
 	@echo "🔧 Patching generated LezMultisigBackend.h (clearHistory, computePda)..."
 	@if ! grep -q 'clearHistory' $(MODULE_SRC)/LezMultisigBackend.h; then \
 		sed -i 's|Q_INVOKABLE void        saveHistory(const QString\& key, const QString\& value);|Q_INVOKABLE void        saveHistory(const QString\& key, const QString\& value);\n    Q_INVOKABLE void        clearHistory(const QString\& key);\n    Q_INVOKABLE QVariantMap computePda(const QString\& createKey, const QString\& purpose) const;\n    Q_INVOKABLE QString     pdaFromSeed(const QString\& seedHex) const;|' $(MODULE_SRC)/LezMultisigBackend.h; \
