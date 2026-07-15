@@ -187,6 +187,16 @@ jobs:
           prefix-key: "spel-compat-e2e"
           cache-targets: true
 
+      - name: Install logos-blockchain-circuits
+        run: |
+          PLATFORM="linux-x86_64"
+          VERSION="v0.4.2"
+          ARTIFACT="logos-blockchain-circuits-${VERSION}-${PLATFORM}.tar.gz"
+          URL="https://github.com/logos-blockchain/logos-blockchain-circuits/releases/download/${VERSION}/${ARTIFACT}"
+          curl -L -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o "/tmp/${ARTIFACT}" "$URL"
+          mkdir -p "$HOME/.logos-blockchain-circuits"
+          tar -xzf "/tmp/${ARTIFACT}" -C "$HOME/.logos-blockchain-circuits" --strip-components=1
+
       - name: Install spel-client-gen
         run: |
           cargo install \
