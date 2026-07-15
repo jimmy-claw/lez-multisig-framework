@@ -188,6 +188,29 @@ print('  patched') if patched != txt else print('  no-op')\
 	else \
 		echo "  ℹ️  Skipped: lez_multisig_compute_pda already present"; \
 	fi
+	@echo "🔧 Patching generated LezMultisigBackend.cpp (error handling for fetch/list)..."
+	@if ! grep -q 'operationError.*fetch_multisig_state' $(MODULE_SRC)/LezMultisigBackend.cpp; then \
+		python3 -c "\
+path='$(MODULE_SRC)/LezMultisigBackend.cpp';\
+txt=open(path).read();\
+txt=txt.replace(\
+    '            if (obj.value(\"success\").toBool() && obj.contains(\"state\")) {\n                m_multisigState = obj.value(\"state\").toObject().toVariantMap();\n                emit multisigStateChanged();\n            }\n        }, Qt::QueuedConnection);\n    });\n}\n\nvoid LezMultisigBackend::fetchProposal',\
+    '            if (obj.value(\"success\").toBool() && obj.contains(\"state\")) {\n                m_multisigState = obj.value(\"state\").toObject().toVariantMap();\n                emit multisigStateChanged();\n            } else if (!obj.value(\"success\").toBool()) {\n                emit operationError(\"fetch_multisig_state\", obj.value(\"error\").toString(result));\n            }\n        }, Qt::QueuedConnection);\n    });\n}\n\nvoid LezMultisigBackend::fetchProposal',\
+    1);\
+txt=txt.replace(\
+    '            if (obj.value(\"success\").toBool() && obj.contains(\"state\")) {\n                m_proposal = obj.value(\"state\").toObject().toVariantMap();\n                emit proposalChanged();\n            }\n        }, Qt::QueuedConnection);\n    });\n}',\
+    '            if (obj.value(\"success\").toBool() && obj.contains(\"state\")) {\n                m_proposal = obj.value(\"state\").toObject().toVariantMap();\n                emit proposalChanged();\n            } else if (!obj.value(\"success\").toBool()) {\n                emit operationError(\"fetch_proposal\", obj.value(\"error\").toString(result));\n            }\n        }, Qt::QueuedConnection);\n    });\n}',\
+    1);\
+txt=txt.replace(\
+    '                m_lastError = obj.value(\"error\").toString(result);\n                emit lastErrorChanged();\n            }\n        }, Qt::QueuedConnection);\n    });\n}\n\nvoid LezMultisigBackend::createAccount',\
+    '                emit operationError(\"list_accounts\", obj.value(\"error\").toString(result));\n            }\n        }, Qt::QueuedConnection);\n    });\n}\n\nvoid LezMultisigBackend::createAccount',\
+    1);\
+open(path,'w').write(txt);\
+"; \
+		echo "  ✅ Added: error handling for fetchMultisigState, fetchProposal, listAccounts"; \
+	else \
+		echo "  ℹ️  Skipped: fetch error handling already present"; \
+	fi
 	@echo "🔧 Patching generated LezMultisigBackend.h/.cpp (executeWithAccounts)..."
 	@if ! grep -q 'executeWithAccounts' $(MODULE_SRC)/LezMultisigBackend.h; then \
 		sed -i 's|Q_INVOKABLE QString     pdaFromSeed(const QString\& seedHex) const;|Q_INVOKABLE QString     pdaFromSeed(const QString\& seedHex) const;\n    Q_INVOKABLE void        executeWithAccounts(const QString\& executorId, const QString\& proposalIndex, const QString\& createKey, const QVariantList\& targetAccounts);|' $(MODULE_SRC)/LezMultisigBackend.h; \

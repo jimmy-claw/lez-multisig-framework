@@ -2616,6 +2616,12 @@ Item {
                 Layout.fillWidth: true; spacing: 4
                 Text { text: "Target account count"; color: Theme.palette.textMuted; font.pixelSize: 11; font.family: Theme.typography.publicSans }
                 LogosTextField { id: pAcctCount; Layout.fillWidth: true; placeholderText: "0" }
+                Text {
+                    visible: (parseInt(pAcctCount.text) || 0) === 0
+                    text: "⚠ 0 means no target accounts — correct only for instructions that don't access any accounts (e.g. governance ops)."
+                    color: Theme.palette.textMuted; font.pixelSize: 10; font.family: Theme.typography.publicSans
+                    wrapMode: Text.WordWrap; Layout.fillWidth: true
+                }
             }
         } // ColumnLayout proposeContent
 
@@ -2890,7 +2896,9 @@ Item {
                     if (parseInt(authIdx[j]) === i) { pdaPos = j; break }
                 }
                 if (pdaPos >= 0) {
-                    result.push(backend.pdaFromSeed(seeds[pdaPos] || ""))
+                    var rawSeed = seeds[pdaPos]
+                    var seedHex = Array.isArray(rawSeed) ? u8ArrayToHex(rawSeed) : (rawSeed || "")
+                    result.push(backend.pdaFromSeed(seedHex))
                 } else {
                     result.push(_extAccts[i] || "")
                 }
@@ -2943,7 +2951,11 @@ Item {
                             return -1
                         }
                         property bool isPda: pdaPos >= 0
-                        property string pdaId: isPda ? backend.pdaFromSeed(_seeds[pdaPos] || "") : ""
+                        property string pdaId: {
+                            if (!isPda) return ""
+                            var s = _seeds[pdaPos]
+                            return backend.pdaFromSeed(Array.isArray(s) ? u8ArrayToHex(s) : (s || ""))
+                        }
 
                         Text {
                             text: "Account " + parent.slotIdx + (parent.isPda ? "  (PDA — auto)" : "  (external)")
@@ -3058,7 +3070,7 @@ Item {
                         cursorShape: pickerRow.canAct ? Qt.PointingHandCursor : Qt.ForbiddenCursor
                         hoverEnabled: true
                         onClicked: {
-                            if (!pickerRow.canAct) return
+                            if (!pickerRow.canAct || backend.busy) return
                             var acctId = modelData["id"] || ""
                             if      (accountPicker.action === "Approve") backend.approve(acctId, accountPicker.proposalIndex, activeCreateKey)
                             else if (accountPicker.action === "Reject")  backend.reject(acctId, accountPicker.proposalIndex, activeCreateKey)
