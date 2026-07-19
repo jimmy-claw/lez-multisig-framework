@@ -226,3 +226,9 @@ This means you can use lez-cli with any program's IDL to generate the instructio
 - [LEZ (logos-execution-zone)](https://github.com/logos-blockchain/logos-execution-zone)
 - [lez-programs](https://github.com/logos-blockchain/lez-programs)
 - [Squads Protocol v4](https://squads.so/) — design inspiration
+
+## Disclaimer
+
+This repository contains a POC implementation forming part of an experimental development environment and is not intended for production use.
+
+See the [Logos Core repository](https://github.com/logos-co/logos-liblogos) for additional information about the experimental development environment.
