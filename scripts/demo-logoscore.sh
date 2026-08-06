@@ -33,7 +33,7 @@ export PATH="$HOME/.nix-profile/bin:$PATH"
 LOGOSCORE="$HOME/logos-lez-multisig-module/result/bin/logoscore"
 MODULES_DIR="$HOME/logos-lez-multisig-module/result/modules"
 SEQUENCER_URL="${SEQUENCER_URL:-http://127.0.0.1:3040}"
-WALLET_DIR="${NSSA_WALLET_HOME_DIR:-$HOME/lez-multisig-framework/demo-wallet}"
+WALLET_DIR="${LEE_WALLET_HOME_DIR:-$HOME/lez-multisig-framework/demo-wallet}"
 MULTISIG_DIR="${MULTISIG_DIR:-$HOME/lez-multisig-framework}"
 
 # ── Colours ──────────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ on:
     branches: [main, "*"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,20 +21,20 @@ jobs:
         with:
           prefix-key: "ci"
 
-      - name: Install logos-blockchain-circuits
-        run: |
-          curl -sSL https://raw.githubusercontent.com/logos-blockchain/logos-blockchain/main/scripts/setup-logos-blockchain-circuits.sh | bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install spel-client-gen
         run: |
-          SPEL_TAG=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'tag = "\K[^"]+')
-          cargo install \
-            --git https://github.com/logos-co/spel.git \
-            --tag "$SPEL_TAG" \
-            spel-client-gen \
-            --locked
+          SPEL_TAG=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'tag = "\K[^"]+' || true)
+          SPEL_REV=$(grep -m1 'git = "https://github.com/logos-co/spel.git"' lez-multisig-ffi/Cargo.toml | grep -oP 'rev = "\K[^"]+' || true)
+          if [ -n "$SPEL_TAG" ]; then
+            cargo install --git https://github.com/logos-co/spel.git --tag "$SPEL_TAG" spel-client-gen --locked 2>/dev/null \
+              || cargo install --git https://github.com/logos-co/spel.git --tag "$SPEL_TAG" spel-client-gen
+          else
+            cargo install --git https://github.com/logos-co/spel.git --rev "$SPEL_REV" spel-client-gen --locked 2>/dev/null \
+              || cargo install --git https://github.com/logos-co/spel.git --rev "$SPEL_REV" spel-client-gen
+          fi
+
+      - name: Install cbindgen
+        run: cargo install cbindgen --version 0.29.2 --locked
 
       - name: Generate IDL from Rust annotations
         run: |
@@ -51,6 +52,18 @@ jobs:
           sed -i 's#let create_key = serde_json::from_value#let create_key: [u8; 32] = serde_json::from_value#g' lez-multisig-ffi/src/multisig.rs
           grep -q 'create_key: \[u8; 32\]' lez-multisig-ffi/src/multisig.rs || (echo "ERROR: create_key type patch did not apply" && exit 1)
           echo "✅ FFI client generated"
+
+      - name: Generate C header from FFI
+        run: |
+          mkdir -p lez-multisig-ffi/include
+          cd lez-multisig-ffi && cbindgen --config cbindgen.toml --output include/lez_multisig.h
+          echo "✅ C header generated"
+
+      - name: Check for C header drift
+        run: |
+          git diff --quiet HEAD -- lez-multisig-ffi/include/lez_multisig.h || \
+            (echo "⚠️ C header drift detected. Run 'make generate-header' to update." && exit 1)
+          echo "✅ No drift detected"
 
       - name: Run unit tests
         env:

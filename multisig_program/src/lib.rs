@@ -40,7 +40,7 @@ mod multisig_program {
     /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn propose(
-        #[account(mut)]
+        #[account(mut, pda = arg("create_key"))]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         proposer: AccountWithMetadata,
@@ -71,7 +71,7 @@ mod multisig_program {
     /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn approve(
-        #[account(mut)]
+        #[account(mut, pda = arg("create_key"))]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         approver: AccountWithMetadata,
@@ -91,7 +91,7 @@ mod multisig_program {
     /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn reject(
-        #[account(mut)]
+        #[account(mut, pda = arg("create_key"))]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         rejector: AccountWithMetadata,
@@ -111,7 +111,7 @@ mod multisig_program {
     /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn execute(
-        #[account(mut)]
+        #[account(mut, pda = arg("create_key"))]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         executor: AccountWithMetadata,
@@ -134,7 +134,7 @@ mod multisig_program {
     /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn propose_add_member(
-        #[account(mut)]
+        #[account(mut, pda = arg("create_key"))]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         proposer: AccountWithMetadata,
@@ -157,7 +157,7 @@ mod multisig_program {
     /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn propose_remove_member(
-        #[account(mut)]
+        #[account(mut, pda = arg("create_key"))]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         proposer: AccountWithMetadata,
@@ -180,7 +180,7 @@ mod multisig_program {
     /// proposal PDA seeds: ["multisig_prop___", create_key, proposal_index]
     #[instruction]
     pub fn propose_change_threshold(
-        #[account(mut)]
+        #[account(mut, pda = arg("create_key"))]
         multisig_state: AccountWithMetadata,
         #[account(signer)]
         proposer: AccountWithMetadata,

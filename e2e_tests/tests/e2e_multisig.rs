@@ -34,7 +34,7 @@ use lez_multisig_ffi::{
     compute_multisig_state_pda, compute_proposal_pda, compute_vault_pda, vault_pda_seed_bytes,
 };
 use sequencer_service_rpc::{SequencerClient, SequencerClientBuilder, RpcClient as _};
-use common::transaction::NSSATransaction;
+use common::transaction::LeeTransaction;
 use token_core::{Instruction as TokenInstruction, TokenHolding};
 
 const BLOCK_WAIT_SECS: u64 = 15;
@@ -51,7 +51,7 @@ fn sequencer_client() -> SequencerClient {
 }
 
 async fn submit_tx(client: &SequencerClient, tx: PublicTransaction) {
-    let response = client.send_transaction(NSSATransaction::Public(tx)).await.expect("Failed to submit tx");
+    let response = client.send_transaction(LeeTransaction::Public(tx)).await.expect("Failed to submit tx");
     let tx_hash = response;
     println!("  tx_hash: {}", hex::encode(tx_hash.0));
 
@@ -135,7 +135,7 @@ async fn get_proposal(client: &SequencerClient, proposal_id: AccountId) -> Propo
 }
 
 fn deploy_program(bytecode: Vec<u8>) -> (ProgramDeploymentTransaction, nssa::ProgramId) {
-    let program = Program::new(bytecode.clone()).expect("Invalid program");
+    let program = Program::new(bytecode.clone().into()).expect("Invalid program");
     let program_id = program.id();
     let msg = nssa::program_deployment_transaction::Message::new(bytecode);
     (ProgramDeploymentTransaction::new(msg), program_id)
@@ -168,7 +168,7 @@ async fn test_multisig_token_transfer() {
 
     // Deploy both (skip if already deployed)
     for (name, tx) in [("token", token_deploy_tx), ("multisig", multisig_deploy_tx)] {
-        match client.send_transaction(NSSATransaction::ProgramDeployment(tx)).await {
+        match client.send_transaction(LeeTransaction::ProgramDeployment(tx)).await {
             Ok(r) => {
                 println!("  {} deployed: {}", name, hex::encode(r.0));
                 tokio::time::sleep(Duration::from_secs(BLOCK_WAIT_SECS)).await;

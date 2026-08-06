@@ -6,6 +6,7 @@
 //! and adds read-only query helpers not covered by the IDL.
 
 mod multisig;
+pub mod codec;
 
 
 use nssa_core::program::ProgramId;
@@ -42,6 +43,26 @@ pub fn compute_vault_pda(program_id: &ProgramId, create_key: &[u8; 32]) -> Accou
     compute_pda_multi(program_id, &[&tag as &dyn ToSeed, create_key])
 }
 
+/// Seed bytes for a named PDA: SHA256(pad32("multisig_vault__") || create_key || purpose).
+/// `purpose` is arbitrary bytes differentiating this PDA from others (e.g. token def ID, label).
+/// Empty purpose gives the same result as `vault_pda_seed_bytes` — the default vault.
+pub fn named_pda_seed_bytes(create_key: &[u8; 32], purpose: &[u8]) -> [u8; 32] {
+    use sha2::{Sha256, Digest};
+    let tag = seed_from_str("multisig_vault__");
+    let mut hasher = Sha256::new();
+    hasher.update(tag);
+    hasher.update(create_key);
+    hasher.update(purpose);
+    hasher.finalize().into()
+}
+
+/// PDA for a named vault: same derivation as the default vault but with an additional
+/// `purpose` discriminator, giving each (multisig, purpose) pair a unique address.
+pub fn compute_named_pda(program_id: &ProgramId, create_key: &[u8; 32], purpose: &[u8]) -> AccountId {
+    let seed = named_pda_seed_bytes(create_key, purpose);
+    nssa_core::account::AccountId::for_public_pda(program_id, &nssa_core::program::PdaSeed::new(seed))
+}
+
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
@@ -61,56 +82,182 @@ fn error_str(msg: &str) -> *mut c_char {
 }
 
 // ── Generated instruction wrappers ───────────────────────────────────────────
+//
+// All functions below:
+//   - Take args_json: UTF-8 JSON string (null-terminated C string), caller owns.
+//   - Return a heap-allocated UTF-8 JSON string (null-terminated) that the caller
+//     MUST free with lez_multisig_free_string(). Never pass the pointer to free().
+//   - On error: {"success": false, "error": "<message>"}
+//   - On success: see individual function docs.
 
+/// Create a new M-of-N multisig.
+///
+/// args_json: {"threshold": u32, "members": [hex_pubkey, ...], "create_key": hex32,
+///             "program_id_hex": hex64, "wallet_path": "/path/to/wallet"}
+/// Returns: {"success": true, "tx_hash": "..."}
 #[no_mangle]
 pub extern "C" fn lez_multisig_create(args_json: *const c_char) -> *mut c_char {
     multisig::multisig_program_create_multisig(args_json)
 }
 
+/// Submit a transaction proposal to a multisig.
+///
+/// args_json: {"create_key": hex32, "program_id_hex": hex64, "wallet_path": "...",
+///             "pda_seeds": [...], "payload": {...}}
+/// Returns: {"success": true, "tx_hash": "...", "proposal_index": u64}
 #[no_mangle]
 pub extern "C" fn lez_multisig_propose(args_json: *const c_char) -> *mut c_char {
     multisig::multisig_program_propose(args_json)
 }
 
+/// Approve a pending proposal.
+///
+/// args_json: {"create_key": hex32, "proposal_index": u64,
+///             "program_id_hex": hex64, "wallet_path": "..."}
+/// Returns: {"success": true, "tx_hash": "..."}
 #[no_mangle]
 pub extern "C" fn lez_multisig_approve(args_json: *const c_char) -> *mut c_char {
     multisig::multisig_program_approve(args_json)
 }
 
+/// Reject a pending proposal.
+///
+/// args_json: {"create_key": hex32, "proposal_index": u64,
+///             "program_id_hex": hex64, "wallet_path": "..."}
+/// Returns: {"success": true, "tx_hash": "..."}
 #[no_mangle]
 pub extern "C" fn lez_multisig_reject(args_json: *const c_char) -> *mut c_char {
     multisig::multisig_program_reject(args_json)
 }
 
+/// Execute an approved proposal.
+///
+/// args_json: {"create_key": hex32, "proposal_index": u64,
+///             "program_id_hex": hex64, "wallet_path": "..."}
+/// Returns: {"success": true, "tx_hash": "..."}
 #[no_mangle]
 pub extern "C" fn lez_multisig_execute(args_json: *const c_char) -> *mut c_char {
     multisig::multisig_program_execute(args_json)
 }
 
+/// Free a string returned by any lez_multisig_* function.
+/// Must be called exactly once per returned pointer. Do NOT pass to libc free().
 #[no_mangle]
 pub extern "C" fn lez_multisig_free_string(s: *mut c_char) {
     multisig::multisig_program_free_string(s)
 }
 
+/// Return the library version string as a JSON object.
+/// Returns: {"version": "x.y.z"}  — caller must free with lez_multisig_free_string.
 #[no_mangle]
 pub extern "C" fn lez_multisig_version() -> *mut c_char {
     multisig::multisig_program_version()
 }
 
+/// Return the program IDL (JSON schema) as a string.
+/// Returns: the raw IDL JSON — caller must free with lez_multisig_free_string.
 #[no_mangle]
 pub extern "C" fn lez_multisig_get_idl() -> *mut c_char {
     const IDL_JSON: &str = include_str!("multisig_idl.json");
     to_cstring(IDL_JSON.to_string())
 }
 
+/// Return the program ID baked in at compile time via MULTISIG_PROGRAM_ID_HEX env var.
+/// Returns: {"program_id_hex":"<64-hex-chars>"}  — or {"program_id_hex":""} if not embedded.
+/// Caller must free with lez_multisig_free_string.
+#[no_mangle]
+pub extern "C" fn lez_multisig_program_id() -> *mut c_char {
+    to_cstring(format!(
+        r#"{{"program_id_hex":"{}"}}"#,
+        env!("MULTISIG_PROGRAM_ID_HEX", "")
+    ))
+}
+
+/// Compute a named PDA and its seed for use in proposals.
+///
+/// args_json: {"create_key": hex32, "program_id_hex": hex64, "purpose": "any string"}
+/// `purpose` differentiates PDAs — empty string gives the default vault, any other string
+/// gives a unique PDA for that (multisig, purpose) pair.
+/// Returns: {"pda": "<account_id>", "seed_hex": "<64-hex-chars>"}
+/// Caller must free with lez_multisig_free_string.
+#[no_mangle]
+pub extern "C" fn lez_multisig_compute_pda(args_json: *const c_char) -> *mut c_char {
+    let args = match cstr_to_str(args_json) { Ok(s) => s, Err(e) => return error_str(&e) };
+    let v: serde_json::Value = match serde_json::from_str(args) {
+        Ok(v) => v,
+        Err(e) => return error_str(&format!("json: {}", e)),
+    };
+    let result = (|| -> Result<String, String> {
+        let program_id = multisig_queries::parse_program_id_hex(
+            v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+        let create_key_hex = v["create_key"].as_str().ok_or("missing create_key")?;
+        let create_key_bytes = hex::decode(create_key_hex.trim_start_matches("0x"))
+            .map_err(|e| format!("create_key hex: {}", e))?;
+        if create_key_bytes.len() != 32 { return Err("create_key must be 32 bytes".into()); }
+        let mut create_key = [0u8; 32];
+        create_key.copy_from_slice(&create_key_bytes);
+        let purpose = v["purpose"].as_str().unwrap_or("").as_bytes().to_vec();
+        let seed = named_pda_seed_bytes(&create_key, &purpose);
+        let pda = compute_named_pda(&program_id, &create_key, &purpose);
+        Ok(serde_json::json!({
+            "pda": pda.to_string(),
+            "seed_hex": hex::encode(seed),
+        }).to_string())
+    })();
+    to_cstring(result.unwrap_or_else(|e| serde_json::json!({"error": e}).to_string()))
+}
+
+/// Given a raw 32-byte PDA seed (as stored in proposal.pda_seeds), compute the
+/// corresponding account ID so the execute flow can reconstruct target_accounts
+/// without needing the original purpose string.
+///
+/// args_json: {"program_id_hex": "<hex64>", "seed_hex": "<hex64>"}
+/// Returns:   {"account_id": "<account_id>"} or {"error": "..."}
+#[no_mangle]
+pub extern "C" fn lez_multisig_pda_from_seed(args_json: *const c_char) -> *mut c_char {
+    let args = match cstr_to_str(args_json) { Ok(s) => s, Err(e) => return error_str(&e) };
+    let v: serde_json::Value = match serde_json::from_str(args) {
+        Ok(v) => v,
+        Err(e) => return error_str(&format!("json: {}", e)),
+    };
+    let result = (|| -> Result<String, String> {
+        let program_id = multisig_queries::parse_program_id_hex(
+            v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
+        let seed_hex = v["seed_hex"].as_str().ok_or("missing seed_hex")?;
+        let seed_bytes = hex::decode(seed_hex.trim_start_matches("0x"))
+            .map_err(|e| format!("seed_hex: {}", e))?;
+        if seed_bytes.len() != 32 { return Err("seed_hex must be 32 bytes (64 hex chars)".into()); }
+        let mut seed = [0u8; 32];
+        seed.copy_from_slice(&seed_bytes);
+        let account_id = nssa_core::account::AccountId::for_public_pda(
+            &program_id,
+            &nssa_core::program::PdaSeed::new(seed),
+        );
+        Ok(serde_json::json!({ "account_id": account_id.to_string() }).to_string())
+    })();
+    to_cstring(result.unwrap_or_else(|e| serde_json::json!({"error": e}).to_string()))
+}
+
 // ── Read-only helpers (not in IDL) ───────────────────────────────────────────
 
+/// List all proposals for a multisig.
+///
+/// args_json: {"multisig_state": "<account_id>", "program_id_hex": hex64,
+///             "wallet_path": "..."}
+/// Returns: {"success": true, "proposals": [{index, status, proposer, approvals,
+///           rejections, threshold}, ...]}
 #[no_mangle]
 pub extern "C" fn lez_multisig_list_proposals(args_json: *const c_char) -> *mut c_char {
     let args = match cstr_to_str(args_json) { Ok(s) => s, Err(e) => return error_str(&e) };
     to_cstring(multisig_queries::list_proposals(args))
 }
 
+/// Get the current state of a multisig.
+///
+/// args_json: {"create_key": hex32, "program_id_hex": hex64, "wallet_path": "..."}
+/// Returns: {"success": true, "threshold": u32, "member_count": u32,
+///           "members": [hex_pubkey, ...], "transaction_index": u64,
+///           "multisig_state_id": "<account_id>"}
 #[no_mangle]
 pub extern "C" fn lez_multisig_get_state(args_json: *const c_char) -> *mut c_char {
     let args = match cstr_to_str(args_json) { Ok(s) => s, Err(e) => return error_str(&e) };
@@ -121,23 +268,23 @@ mod multisig_queries {
     use wallet::WalletCore;
     use serde_json::{Value, json};
     use multisig_core::{MultisigState, Proposal};
-    use crate::{compute_proposal_pda, compute_multisig_state_pda};
+    use crate::{compute_proposal_pda, compute_multisig_state_pda, compute_vault_pda};
     use nssa_core::account::AccountId;
 
     fn load_wallet(v: &Value) -> Result<WalletCore, String> {
         if let Some(p) = v["wallet_path"].as_str() {
-            std::env::set_var("NSSA_WALLET_HOME_DIR", p);
+            std::env::set_var("LEE_WALLET_HOME_DIR", p);
         }
         WalletCore::from_env().map_err(|e| format!("wallet: {}", e))
     }
 
-    fn parse_program_id_hex(s: &str) -> Result<nssa_core::program::ProgramId, String> {
+    pub(super) fn parse_program_id_hex(s: &str) -> Result<nssa_core::program::ProgramId, String> {
         let s = s.trim_start_matches("0x");
         if s.len() != 64 { return Err(format!("program_id must be 64 hex chars")); }
         let bytes = hex::decode(s).map_err(|e| format!("hex: {}", e))?;
         let mut pid = [0u32; 8];
         for (i, chunk) in bytes.chunks(4).enumerate() {
-            pid[i] = u32::from_le_bytes(chunk.try_into().unwrap());
+            pid[i] = u32::from_be_bytes(chunk.try_into().unwrap());
         }
         Ok(pid)
     }
@@ -208,6 +355,7 @@ mod multisig_queries {
             let mut create_key = [0u8; 32];
             create_key.copy_from_slice(&create_key_bytes);
             let ms_id = compute_multisig_state_pda(&program_id, &create_key);
+            let vault_id = compute_vault_pda(&program_id, &create_key);
             match fetch_borsh::<MultisigState>(&wallet, ms_id).await? {
                 Some(state) => {
                     let members: Vec<String> = state.members.iter()
@@ -220,6 +368,7 @@ mod multisig_queries {
                         "members": members,
                         "transaction_index": state.transaction_index,
                         "multisig_state_id": ms_id.to_string(),
+                        "vault_id": vault_id.to_string(),
                     }).to_string())
                 }
                 None => Err("multisig_state not found".to_string()),

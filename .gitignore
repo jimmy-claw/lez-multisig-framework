@@ -1,4 +1,8 @@
 target/
+nohup.out
+scaffold.toml
+lez-multisig-module/build/
+lez-multisig-module/build-spel-gen/
 
 # Local multisig state
 .multisig-state
@@ -9,4 +13,16 @@ demo-wallet/
 lez-multisig-ffi/src/multisig_idl.json
 lez-multisig-ffi/src/multisig.rs
 lez-multisig-ffi/src/generated/
+lez-multisig-ffi/include/lez_multisig.h
+lez-multisig-module/src/LezMultisigBackend.h
+lez-multisig-module/src/LezMultisigBackend.cpp
+lez-multisig-module/src/LezMultisigPlugin.h
+lez-multisig-module/src/LezMultisigPlugin.cpp
+lez-multisig-module/src/main.cpp
+# CMakeLists.txt, manifest.json, module.yaml are hand-edited for v0.2 and tracked in git
+# (run 'make generate-module-scaffold' to regenerate a base, then re-apply edits)
+#lez-multisig-module/CMakeLists.txt
+#lez-multisig-module/manifest.json
+#lez-multisig-module/module.yaml
 multisig.json
+.scaffold

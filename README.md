@@ -192,6 +192,77 @@ The multisig can govern **any LEZ program** via ChainedCall. The proposal stores
 
 This means you can use lez-cli with any program's IDL to generate the instruction bytes, then wrap them in a multisig proposal — without writing any code.
 
+## Basecamp UI Module
+
+The `lez-multisig-module/` directory contains the Qt/QML Basecamp plugin. All files inside it are **fully generated** — do not edit them by hand.
+
+### Code generation pipeline
+
+```
+multisig_program/src/lib.rs   (Rust annotations — edit this)
+        │
+        ▼  make generate-idl
+lez-multisig-ffi/src/multisig_idl.json
+        │
+        ├─▶  make generate-ffi      → lez-multisig-ffi/src/multisig.rs
+        ├─▶  make generate-header   → lez-multisig-ffi/include/lez_multisig.h
+        └─▶  make generate-module   → lez-multisig-module/src/*.{h,cpp}
+                                       lez-multisig-module/qml/Main.qml
+```
+
+Run all steps at once:
+
+```bash
+make generate        # IDL → FFI → C header → Qt module files
+```
+
+### First-time setup
+
+```bash
+# Install code generators (once)
+cargo install --path /path/to/spel/spel-client-gen   # or: make install-tools (tagged release)
+cargo install cbindgen --version 0.29.2
+
+# Install Qt6 dev packages (Debian/Ubuntu)
+apt install qt6-base-dev qt6-declarative-dev
+```
+
+### Build the plugin
+
+```bash
+make build-module    # compiles liblez_multisig_ffi.so + liblez_multisig_plugin.so + preview app
+```
+
+### Run the standalone preview app (no Basecamp needed)
+
+```bash
+make run-module      # launches lez_multisig_app with QML loaded from source
+```
+
+### Install into Basecamp
+
+```bash
+PLUGIN_DIR=~/.local/share/Logos/LogosBasecamp/plugins/lez_multisig
+cp target/release/liblez_multisig_ffi.so   $PLUGIN_DIR/
+cp lez-multisig-module/build/liblez_multisig_plugin.so $PLUGIN_DIR/
+# then restart Basecamp
+```
+
+### Full regen + rebuild cycle
+
+```bash
+make generate build-module
+```
+
+### After changing `lib.rs` or the IDL generator (spel-client-gen)
+
+If you update `spel-client-gen` locally, reinstall it before regenerating:
+
+```bash
+cargo install --path /path/to/spel/spel-client-gen
+make generate build-module
+```
+
 ## Known Issues
 
 - [ ] No `CloseProposal` instruction yet (executed/rejected proposals stay on-chain)
